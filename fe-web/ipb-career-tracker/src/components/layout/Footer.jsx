@@ -8,30 +8,30 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="mb-8 md:mb-0">
                 <Link to="/" className="flex items-center gap-2 mb-4">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center text-white font-bold text-xl">
                     T
                     </div>
-                    <span className="text-xl font-bold text-gray-900 tracking-tight">Tumbuh</span>
+                    <span className="text-xl font-bold text-primary tracking-tight">Tumbuh</span>
                 </Link>
-                <p className="text-gray-500 text-sm leading-6 max-w-xs">
+                <p className="text-secondary text-sm leading-6 max-w-xs">
                     Platform karir mahasiswa untuk mempersiapkan masa depan yang lebih cerah.
                 </p>
             </div>
             
             <div>
-                <h3 className="text-sm font-semibold leading-6 text-gray-900">Mahasiswa</h3>
+                <h3 className="text-sm font-semibold leading-6 text-primary">Mahasiswa</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                    <li><Link to="/lowongan" className="text-sm leading-6 text-gray-600 hover:text-emerald-600">Cari Lowongan</Link></li>
-                    <li><Link to="/panduan" className="text-sm leading-6 text-gray-600 hover:text-emerald-600">Panduan Karir</Link></li>
-                    <li><Link to="/perusahaan" className="text-sm leading-6 text-gray-600 hover:text-emerald-600">Profil Perusahaan</Link></li>
+                    <li><Link to="/lowongan" className="text-sm leading-6 text-secondary hover:text-primary">Cari Lowongan</Link></li>
+                    <li><Link to="/panduan" className="text-sm leading-6 text-secondary hover:text-primary">Panduan Karir</Link></li>
+                    <li><Link to="/perusahaan" className="text-sm leading-6 text-secondary hover:text-primary">Profil Perusahaan</Link></li>
                 </ul>
             </div>
 
             <div>
-                <h3 className="text-sm font-semibold leading-6 text-gray-900">Perusahaan</h3>
+                <h3 className="text-sm font-semibold leading-6 text-primary">Perusahaan</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                    <li><Link to="/register-company" className="text-sm leading-6 text-gray-600 hover:text-emerald-600">Daftar Partner</Link></li>
-                    <li><Link to="/pricing" className="text-sm leading-6 text-gray-600 hover:text-emerald-600">Solusi Rekrutmen</Link></li>
+                    <li><Link to="/register-company" className="text-sm leading-6 text-secondary hover:text-primary">Daftar Partner</Link></li>
+                    <li><Link to="/pricing" className="text-sm leading-6 text-secondary hover:text-primary">Solusi Rekrutmen</Link></li>
                 </ul>
             </div>
 

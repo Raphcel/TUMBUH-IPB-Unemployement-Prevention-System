@@ -1,16 +1,53 @@
-# React + Vite
+# IPB Career Tracker (TUMBUH)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive career development platform for IPB University students, designed to bridge the gap between academic life and professional opportunities.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### For Students
 
-## React Compiler
+- **Career Dashboard**: Notion-inspired personal dashboard to track applications and external experiences.
+- **Opportunity Explorer**: Browse Internships, Full-time jobs, and Scholarships with advanced filtering.
+- **Application Tracking**: Monitor status of applications (Applied, Interview, Accepted, Rejected).
+- **Career Handbook**: Step-by-step guide for students from Year 1 to Year 4.
+- **Externship Management**: Manually log freelance or external project experiences.
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+### For Companies (Mock)
 
-## Expanding the ESLint configuration
+- **Partner Profile**: Showcase company culture, awards, and open positions.
+- **Job Posting**: (Mock) Interface for HR to manage listings.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠 Tech Stack
+
+- **Frontend**: React, Vite
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **Routing**: React Router DOM (v6)
+- **Data**: Mock Data Pattern (No backend required for demo)
+
+## 🎨 Design System
+
+- **Primary Color**: Navy Blue (`#0f2854`)
+- **Accent Color**: Light Blue (`#bde8f5`)
+- **Typography**: Clean, sans-serif, high readability.
+- **Iconography**: `lucide-react` (No emojis).
+
+## 📦 Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+## 📝 Recent Updates (v2.0)
+
+- **UI Overhaul**: Replaced all emojis with professional Lucide icons.
+- **Reduced White Space**: Added subtle backgrounds and gradients for better contrast.
+- **Interactive Filters**: Expandable filter panel in Opportunities page.
+- **Modals**: Working "Apply" authentication check and "Add Externship" forms.
+- **Mobile Responsive**: Grid layouts adapt to screen size.

@@ -4,32 +4,34 @@ import { Button } from '../components/ui/Button';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { OPPORTUNITIES, COMPANIES } from '../data/mockData';
+import { MapPin, DollarSign, ArrowRight } from 'lucide-react';
 
 export function Beranda() {
   const recentJobs = OPPORTUNITIES.slice(0, 3);
-  const topCompanies = COMPANIES.slice(0, 3);
+  // Repeat companies to simulate scrolling effect if needed, but for now just use all
+  const allCompanies = [...COMPANIES, ...COMPANIES]; 
 
   return (
     <>
-      <section className="relative bg-emerald-900 overflow-hidden isolate">
-         <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-            <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#80ffdb] to-[#4ade80] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{clipPath: "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"}}></div>
-        </div>
+      <section className="relative bg-[#bde8f5]/20 pt-24 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
+         <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full bg-highlight/40 blur-3xl opacity-60"></div>
+         <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-72 h-72 rounded-full bg-accent/10 blur-3xl opacity-60"></div>
         
-        <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
-              Temukan Karir Impianmu Bersama Tumbuh
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl lg:mx-0">
+            <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-6xl font-sans text-balance">
+              Growing Talent,<br/>Shaping Futures.
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-300">
-              Platform karir terintegrasi untuk mahasiswa IPB. Temukan magang, lowongan kerja, dan beasiswa yang sesuai dengan potensimu.
+            <p className="mt-6 text-lg leading-8 text-secondary">
+              A thoughtful transition from university to professional life. 
+              Find internships, jobs, and scholarships, and organize your applications in one personal workspace.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Button to="/lowongan" variant="primary" size="lg" className="bg-emerald-500 hover:bg-emerald-400 text-white border-0">
-                Cari Lowongan
+            <div className="mt-8 flex items-center gap-x-6">
+              <Button to="/lowongan" variant="primary" size="lg">
+                Explore Opportunities
               </Button>
-              <Link to="/panduan" className="text-sm font-semibold leading-6 text-white hover:text-emerald-300">
-                Panduan Karir <span aria-hidden="true">→</span>
+              <Link to="/panduan" className="text-sm font-semibold leading-6 text-primary hover:text-accent transition-colors flex items-center gap-1">
+                Read the Guides <ArrowRight size={16} />
               </Link>
             </div>
           </div>
@@ -38,41 +40,41 @@ export function Beranda() {
 
       <section className="py-24 bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
+          <div className="flex justify-between items-end mb-12 border-b border-gray-100 pb-4">
             <div>
-                <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Lowongan Terbaru</h2>
-                <p className="mt-2 text-lg text-gray-600">Peluang terbaru yang mungkin cocok untukmu.</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-primary">Latest Opportunities</h2>
+                <p className="mt-2 text-secondary">Curated openings for students and fresh graduates.</p>
             </div>
-            <Link to="/lowongan" className="text-emerald-600 hover:text-emerald-500 font-semibold">
-                Lihat Semua &rarr;
+            <Link to="/lowongan" className="text-sm font-medium text-primary hover:text-accent mb-1 flex items-center gap-1">
+                View all <ArrowRight size={16} />
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {recentJobs.map((job) => (
-                <Card key={job.id} className="hover:shadow-md transition-shadow">
-                    <CardBody>
+                <Card key={job.id} className="hover:border-primary/30 transition-colors group">
+                    <CardBody className="p-5">
                         <div className="flex justify-between items-start mb-4">
                             <div>
-                                <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">{job.title}</h3>
-                                <p className="text-gray-500 text-sm">{COMPANIES.find(c => c.id === job.companyId)?.name}</p>
+                                <h3 className="font-medium text-lg text-primary line-clamp-1 group-hover:text-primary/80 transition-colors">{job.title}</h3>
+                                <p className="text-secondary text-sm">{COMPANIES.find(c => c.id === job.companyId)?.name}</p>
                             </div>
                             <Badge variant={job.type === 'Internship' ? 'info' : job.type === 'Scholarship' ? 'success' : 'neutral'}>
                                 {job.type}
                             </Badge>
                         </div>
-                        <div className="space-y-2 mb-6">
-                            <div className="flex items-center text-sm text-gray-500 gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <div className="space-y-3 mb-6">
+                            <div className="flex items-center text-sm text-secondary gap-2">
+                                <MapPin size={16} className="text-accent" />
                                 {job.location}
                             </div>
-                            <div className="flex items-center text-sm text-gray-500 gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div className="flex items-center text-sm text-secondary gap-2">
+                                <DollarSign size={16} className="text-accent" />
                                 {job.salary}
                             </div>
                         </div>
-                        <Button to={`/lowongan/${job.id}`} variant="outline" className="w-full">
-                            Detail Lowongan
+                        <Button to={`/lowongan/${job.id}`} variant="outline" className="w-full text-xs py-2 bg-gray-50 border-gray-100 hover:bg-white hover:border-gray-300">
+                            Details
                         </Button>
                     </CardBody>
                 </Card>
@@ -81,19 +83,26 @@ export function Beranda() {
         </div>
       </section>
 
-      <section className="py-24 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-center mb-12">
-                Partner Perusahaan Kami
+      <section className="py-20 bg-gradient-to-r from-[#0f2854] to-[#727272] relative overflow-hidden">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 relative z-10">
+            <h2 className="text-2xl font-semibold tracking-tight text-white/90 text-center mb-12">
+                Join 50+ Partner Companies
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {topCompanies.map((company) => (
-                    <Link key={company.id} to={`/perusahaan/${company.id}`} className="group">
-                        <div className="flex items-center justify-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100 h-32 group-hover:border-emerald-500 transition-colors">
-                            <span className="text-xl font-bold text-gray-400 group-hover:text-emerald-600 transition-colors">{company.name}</span>
-                        </div>
-                    </Link>
-                ))}
+            
+            {/* Scrolling Banner Implementation */}
+            <div className="flex overflow-hidden space-x-12 group">
+                <div className="flex space-x-12 animate-scroll">
+                    {allCompanies.map((company, index) => (
+                         <div key={`${company.id}-${index}`} className="flex items-center justify-center min-w-[150px] opacity-70 hover:opacity-100 transition-opacity">
+                            <Link to={`/perusahaan/${company.id}`} className="flex flex-col items-center">
+                                <div className="h-16 w-16 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center text-white/50 text-xs font-bold mb-2">
+                                    Logo
+                                </div>
+                                <span className="text-white/80 font-medium text-sm">{company.name}</span>
+                            </Link>
+                         </div>
+                    ))}
+                </div>
             </div>
         </div>
       </section>

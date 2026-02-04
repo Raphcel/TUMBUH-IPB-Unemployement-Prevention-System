@@ -1,31 +1,99 @@
 import React from 'react';
+import { BookOpen, GraduationCap, Compass, Award, Briefcase, FileText, CheckCircle, ArrowRight } from 'lucide-react';
+import { Card, CardBody } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 export function Panduan() {
+  const steps = [
+      {
+          title: "Year 1: Exploration",
+          icon: Compass,
+          desc: "Discover your interests and join student organizations (UKM). Keep your GPA high > 3.0.",
+          color: "text-blue-500",
+          bg: "bg-blue-50"
+      },
+      {
+          title: "Year 2: Skill Building",
+          icon: BookOpen,
+          desc: "Take specific courses, learn hard skills (coding, design, data), and start building a portfolio.",
+          color: "text-emerald-500",
+          bg: "bg-emerald-50"
+      },
+      {
+          title: "Year 3: Internships",
+          icon: Briefcase,
+          desc: "Apply for internships or externships. Get real-world experience and start networking.",
+          color: "text-purple-500",
+          bg: "bg-purple-50"
+      },
+      {
+          title: "Year 4: Career Ready",
+          icon: GraduationCap,
+          desc: "Finalize your CV, practice interviews, and apply for full-time positions or graduate programs.",
+          color: "text-orange-500",
+          bg: "bg-orange-50"
+      }
+  ];
+
   return (
-    <div className="bg-white min-h-screen py-24">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-center mb-16">
-            Panduan Karir
+    <div className="bg-white min-h-screen pb-20">
+      <div className="bg-primary/5 py-20 px-6 lg:px-8 text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-primary mb-4">
+            Career Handbook
         </h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-            <div className="bg-gray-50 p-8 rounded-2xl">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Untuk Mahasiswa Tahun Pertama</h2>
-                <ul className="list-disc pl-5 space-y-2 text-gray-600">
-                    <li>Eksplorasi minat dan bakat melalui UKM.</li>
-                    <li>Jaga IPK tetap di atas 3.0.</li>
-                    <li>Mulai pelajari skill teknis dasar.</li>
-                </ul>
+        <p className="text-lg text-secondary max-w-2xl mx-auto">
+            A step-by-step guide to navigating your professional journey at IPB University.
+        </p>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 -mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+            {steps.map((step, idx) => (
+                <Card key={idx} className="border-none shadow-lg shadow-gray-200/50 hover:-translate-y-1 transition-transform duration-300">
+                    <CardBody className="p-6 text-center">
+                        <div className={`w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 ${step.bg}`}>
+                            <step.icon size={28} className={step.color} />
+                        </div>
+                        <h3 className="font-bold text-primary mb-2">{step.title}</h3>
+                        <p className="text-sm text-secondary leading-relaxed">{step.desc}</p>
+                    </CardBody>
+                </Card>
+            ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20">
+            <div>
+                <h2 className="text-3xl font-bold text-primary mb-6">Essential Checklist</h2>
+                <div className="space-y-4">
+                    {[
+                        "Create a professional CV (ATS Friendly)",
+                        "Optimize LinkedIn Profile",
+                        "Prepare Cover Letter Template",
+                        "Build a Portfolio Website / Drive",
+                        "Practice Common Interview Questions"
+                    ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <CheckCircle className="text-accent shrink-0" />
+                            <span className="font-medium text-primary">{item}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
-            
-             <div className="bg-gray-50 p-8 rounded-2xl">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Untuk Mahasiswa Tingkat Akhir</h2>
-                <ul className="list-disc pl-5 space-y-2 text-gray-600">
-                    <li>Persiapkan CV dan Portofolio profesional.</li>
-                    <li>Ikuti program magang bersertifikat.</li>
-                    <li>Networking dengan alumni via LinkedIn.</li>
-                    <li>Latihan interview dan psikotes.</li>
-                </ul>
+            <div className="bg-primary rounded-3xl p-10 text-white relative overflow-hidden">
+                <div className="relative z-10">
+                    <Award size={48} className="text-accent mb-6" />
+                    <h3 className="text-2xl font-bold mb-4">Start your journey today.</h3>
+                    <p className="text-primary-foreground/80 mb-8 leading-relaxed">
+                        Don't wait until graduation. The best time to start building your career is now. 
+                        Browse opportunities and apply to your first role.
+                    </p>
+                    <Button to="/lowongan" className="bg-accent text-primary hover:bg-white border-none shadow-lg shadow-accent/20 font-bold px-8">
+                        Browse Opportunities <ArrowRight size={18} className="ml-2" />
+                    </Button>
+                </div>
+                <div className="absolute top-0 right-0 p-10 opacity-10">
+                    <Compass size={200} />
+                </div>
             </div>
         </div>
       </div>
