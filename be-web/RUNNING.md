@@ -8,12 +8,14 @@ Step-by-step guide to get the backend API running locally.
 
 - **Python 3.10+** installed ([python.org](https://www.python.org/downloads/))
 - **pip** (comes with Python)
+- **PostgreSQL 15+** installed and running ([postgresql.org](https://www.postgresql.org/download/))
 - **Git** (optional, for cloning)
 
-Check your Python version:
+Check your versions:
 
 ```bash
 python --version
+psql --version
 ```
 
 ---
@@ -56,7 +58,27 @@ This installs: FastAPI, Uvicorn, SQLAlchemy, Pydantic, python-jose (JWT), passli
 
 ---
 
-## 4. Configure Environment Variables
+## 4. Create the PostgreSQL Database
+
+Open a terminal (or **psql** shell) and create the database:
+
+```bash
+# Connect as the postgres superuser
+psql -U postgres
+```
+
+Then in the psql prompt:
+
+```sql
+CREATE DATABASE career_tracker;
+\q
+```
+
+> If you use a different username/password, update the `DATABASE_URL` in step 5.
+
+---
+
+## 5. Configure Environment Variables
 
 Copy the example env file and edit it:
 
@@ -71,17 +93,52 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```dotenv
-DATABASE_URL=sqlite:///./career_tracker.db
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/career_tracker
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=10
 SECRET_KEY=change-this-to-a-random-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
+
+Replace `YOUR_PASSWORD` with the password you set for your `postgres` user during PostgreSQL installation.
 
 > **Important:** Change `SECRET_KEY` to a strong random string in production.  
 > Generate one with: `python -c "import secrets; print(secrets.token_hex(32))"`
 
 ---
 
-## 5. Run the Server
+## 6. Run Database Migrations
+
+The database schema is managed by **Alembic**. Run the migrations to create all tables:
+
+```bash
+alembic upgrade head
+```
+
+You should see output like:
+
+```
+INFO  [alembic.runtime.migration] Running upgrade  -> 0b4bae5b7920, initial tables
+INFO  [alembic.runtime.migration] Running upgrade 0b4bae5b7920 -> 489bb7154375, expand schema bookmarks externships
+```
+
+This creates all required tables: `users`, `companies`, `opportunities`, `applications`, `bookmarks`, and `externships`.
+
+---
+
+## 7. (Optional) Seed the Database
+
+Populate the database with realistic mock data:
+
+```bash
+python -m scripts.seed
+```
+
+This creates sample companies, users (password: `password123`), opportunities, applications, bookmarks, and externships.
+
+---
+
+## 8. Run the Server
 
 ```bash
 uvicorn app.main:app --reload
@@ -101,7 +158,7 @@ The `--reload` flag enables auto-reload on code changes (development only).
 
 ---
 
-## 6. Verify It's Running
+## 9. Verify It's Running
 
 Open your browser and visit:
 
@@ -113,7 +170,7 @@ Open your browser and visit:
 
 ---
 
-## 7. Test the API
+## 10. Test the API
 
 ### Using Swagger UI (Recommended for beginners)
 
@@ -182,30 +239,31 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 
 ## Database
 
-The app uses **SQLite** by default. The database file `career_tracker.db` is auto-created on first run.
+The app uses **PostgreSQL**. The database must be created manually (see step 4), and tables are managed by **Alembic migrations** (see step 6).
 
-To reset the database, simply delete the file:
+### Reset the Database
 
-```bash
-# Windows
-Remove-Item career_tracker.db
-
-# macOS / Linux
-rm career_tracker.db
-```
-
-The tables will be recreated on the next server start.
-
-To switch to **PostgreSQL**, update `.env`:
-
-```dotenv
-DATABASE_URL=postgresql://user:password@localhost:5432/career_tracker
-```
-
-And install the driver:
+To wipe all data and re-create tables:
 
 ```bash
-pip install psycopg2-binary
+# Drop and recreate the database (in psql)
+psql -U postgres -c "DROP DATABASE IF EXISTS career_tracker;"
+psql -U postgres -c "CREATE DATABASE career_tracker;"
+
+# Re-run migrations
+alembic upgrade head
+
+# (optional) Re-seed
+python -m scripts.seed
+```
+
+### New Migration After Model Changes
+
+If you modify the SQLAlchemy models, generate a new migration:
+
+```bash
+alembic revision --autogenerate -m "describe your change"
+alembic upgrade head
 ```
 
 ---
@@ -217,8 +275,11 @@ pip install psycopg2-binary
 | `ModuleNotFoundError: No module named 'app'` | Make sure you're running `uvicorn` from the `be-web/` directory         |
 | `No module named 'fastapi'`                  | Activate your virtual environment first: `.\myenv\Scripts\Activate.ps1` |
 | Port already in use                          | Use a different port: `--port 8080`                                     |
-| `.env` not found                             | Copy `.env.example` to `.env` — see step 4                              |
+| `.env` not found                             | Copy `.env.example` to `.env` — see step 5                              |
 | `bcrypt` install error                       | Try: `pip install bcrypt` separately, then retry                        |
+| `relation "users" does not exist`            | Run `alembic upgrade head` — see step 6                                 |
+| `could not connect to server`                | Make sure PostgreSQL is running and `DATABASE_URL` is correct           |
+| `database "career_tracker" does not exist`   | Create it first — see step 4                                            |
 
 ---
 
@@ -229,7 +290,10 @@ cd be-web
 python -m venv myenv
 .\myenv\Scripts\Activate.ps1          # Windows
 pip install -r requirements.txt
-copy .env.example .env                 # then edit SECRET_KEY
+copy .env.example .env                 # then edit DATABASE_URL & SECRET_KEY
+psql -U postgres -c "CREATE DATABASE career_tracker;"  # create DB
+alembic upgrade head                   # create tables
+python -m scripts.seed                 # (optional) load sample data
 uvicorn app.main:app --reload
 # → Open http://localhost:8000/docs
 ```

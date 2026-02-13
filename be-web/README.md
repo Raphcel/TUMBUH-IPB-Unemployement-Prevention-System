@@ -23,6 +23,26 @@ IPB Career Tracker connects IPB University students with career opportunities �
 
 ---
 
+## Quick Start
+
+```bash
+cd be-web
+python -m venv myenv
+.\myenv\Scripts\Activate.ps1              # Windows (use source myenv/bin/activate on macOS/Linux)
+pip install -r requirements.txt
+copy .env.example .env                     # then edit DATABASE_URL & SECRET_KEY
+psql -U postgres -c "CREATE DATABASE career_tracker;"  # create PostgreSQL database
+alembic upgrade head                       # run migrations to create all tables
+python -m scripts.seed                     # (optional) populate with sample data
+uvicorn app.main:app --reload
+# → Open http://localhost:8000/docs
+```
+
+> **Prerequisites:** Python 3.10+, PostgreSQL 15+  
+> See [RUNNING.md](RUNNING.md) for detailed step-by-step instructions.
+
+---
+
 ## Architecture
 
 The project follows **Clean Architecture** with strict layer separation:
@@ -307,6 +327,10 @@ All routes are prefixed with `/api/v1`.
 | `DB_MAX_OVERFLOW`             | `10`                                                                | Max overflow connections                |
 | `SECRET_KEY`                  | —                                                                   | JWT signing key (change in production!) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60`                                                                | Token expiry duration                   |
+
+> **Important**: Tables are managed by [Alembic](https://alembic.sqlalchemy.org/) migrations.  
+> After configuring `.env`, run `alembic upgrade head` to create all database tables.  
+> See [RUNNING.md](RUNNING.md) for full setup instructions.
 
 ---
 
