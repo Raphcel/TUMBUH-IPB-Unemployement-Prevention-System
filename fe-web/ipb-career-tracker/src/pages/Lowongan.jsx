@@ -17,6 +17,7 @@ import {
   Search,
   Briefcase,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Lowongan() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ export function Lowongan() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([opportunitiesApi.list(0, 200), companiesApi.list(0, 200)])
+    Promise.all([opportunitiesApi.list(0, 100), companiesApi.list(0, 100)])
       .then(([oppData, compData]) => {
         const opps = Array.isArray(oppData) ? oppData : oppData.items || [];
         const comps = Array.isArray(compData) ? compData : compData.items || [];
@@ -55,7 +56,7 @@ export function Lowongan() {
         );
         setSavedJobs(ids);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user]);
 
   const locations = [
@@ -96,6 +97,20 @@ export function Lowongan() {
     return matchesSearch && matchesType && matchesLocation && matchesCompany;
   });
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
   return (
     <div className="bg-white min-h-screen py-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -105,7 +120,12 @@ export function Lowongan() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4"
+            >
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-primary">
                   Explore Opportunities
@@ -128,164 +148,188 @@ export function Lowongan() {
                   />
                 </div>
                 <Button
-                  variant={showFilters ? 'primary' : 'outline'}
+                  variant={showFilters ? 'secondary' : 'outline'}
                   onClick={() => setShowFilters(!showFilters)}
                   className="flex items-center gap-2"
                 >
                   <Filter size={18} /> Filters
                 </Button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Expandable Filter Panel */}
-            {showFilters && (
-              <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-100 animate-slide-down">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-primary">Refine Search</h3>
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="text-secondary hover:text-primary"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                      Type
-                    </label>
-                    <Select
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value)}
-                      options={[
-                        { value: 'All', label: 'All Types' },
-                        { value: 'Internship', label: 'Internship' },
-                        { value: 'Full-time', label: 'Full-time' },
-                        { value: 'Scholarship', label: 'Scholarship' },
-                      ]}
-                      className="bg-white"
-                    />
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden mb-8"
+                >
+                  <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold text-primary">Refine Search</h3>
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="text-secondary hover:text-primary"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
+                          Type
+                        </label>
+                        <Select
+                          value={filterType}
+                          onChange={(e) => setFilterType(e.target.value)}
+                          options={[
+                            { value: 'All', label: 'All Types' },
+                            { value: 'Internship', label: 'Internship' },
+                            { value: 'Full-time', label: 'Full-time' },
+                            { value: 'Scholarship', label: 'Scholarship' },
+                          ]}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
+                          Location
+                        </label>
+                        <Select
+                          value={filterLocation}
+                          onChange={(e) => setFilterLocation(e.target.value)}
+                          options={locations.map((loc) => ({
+                            value: loc,
+                            label: loc,
+                          }))}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
+                          Company
+                        </label>
+                        <Select
+                          value={filterCompany}
+                          onChange={(e) => setFilterCompany(e.target.value)}
+                          options={companyOptions.map((c) => ({
+                            value: c,
+                            label: c,
+                          }))}
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        className="text-sm text-secondary hover:text-red-500"
+                        onClick={() => {
+                          setFilterType('All');
+                          setFilterLocation('All');
+                          setFilterCompany('All');
+                        }}
+                      >
+                        Reset Filters
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                      Location
-                    </label>
-                    <Select
-                      value={filterLocation}
-                      onChange={(e) => setFilterLocation(e.target.value)}
-                      options={locations.map((loc) => ({
-                        value: loc,
-                        label: loc,
-                      }))}
-                      className="bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                      Company
-                    </label>
-                    <Select
-                      value={filterCompany}
-                      onChange={(e) => setFilterCompany(e.target.value)}
-                      options={companyOptions.map((c) => ({
-                        value: c,
-                        label: c,
-                      }))}
-                      className="bg-white"
-                    />
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    className="text-sm text-secondary hover:text-red-500"
-                    onClick={() => {
-                      setFilterType('All');
-                      setFilterLocation('All');
-                      setFilterCompany('All');
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => (
-                  <Card
+                  <motion.div
                     key={job.id}
-                    className="hover:border-primary/20 transition-all duration-300 group relative flex flex-col h-full border-gray-200"
+                    initial="hidden"
+                    animate="visible"
+                    variants={itemVariants}
+                    layout
+                    whileHover={{ y: -5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
                   >
-                    <CardBody className="p-6 flex flex-col h-full">
-                      <div className="absolute top-6 right-6 z-10">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleSave(job.id);
-                          }}
-                          className={`transition-all duration-200 ${savedJobs.includes(job.id) ? 'text-accent fill-accent' : 'text-gray-300 hover:text-accent'}`}
-                          title={savedJobs.includes(job.id) ? 'Unsave' : 'Save'}
-                        >
-                          <Bookmark
-                            size={20}
-                            fill={
-                              savedJobs.includes(job.id)
-                                ? 'currentColor'
-                                : 'none'
-                            }
-                          />
-                        </button>
-                      </div>
-
-                      <Link to={`/lowongan/${job.id}`} className="block flex-1">
-                        <div className="mb-4 pr-8">
-                          <h3 className="font-semibold text-lg text-primary line-clamp-1 group-hover:text-accent transition-colors">
-                            {job.title}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-2 text-sm text-secondary">
-                            <Briefcase size={14} />
-                            <span>{job.company?.name}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mb-6">
-                          <Badge
-                            variant={
-                              job.type === 'Internship'
-                                ? 'info'
-                                : job.type === 'Scholarship'
-                                  ? 'success'
-                                  : 'neutral'
-                            }
+                    <Card
+                      className="hover:border-primary/20 transition-all duration-300 group relative flex flex-col h-full border-gray-200"
+                    >
+                      <CardBody className="p-6 flex flex-col h-full">
+                        <div className="absolute top-6 right-6 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleSave(job.id);
+                            }}
+                            className={`transition-all duration-200 ${savedJobs.includes(job.id) ? 'text-accent fill-accent' : 'text-gray-300 hover:text-accent'}`}
+                            title={savedJobs.includes(job.id) ? 'Unsave' : 'Save'}
                           >
-                            {job.type}
-                          </Badge>
+                            <Bookmark
+                              size={20}
+                              fill={
+                                savedJobs.includes(job.id)
+                                  ? 'currentColor'
+                                  : 'none'
+                              }
+                            />
+                          </button>
                         </div>
 
-                        <div className="space-y-2 mb-6 text-sm text-secondary">
-                          <div className="flex items-center gap-2">
-                            <MapPin size={14} className="text-gray-400" />
-                            {job.location}
+                        <Link to={`/lowongan/${job.id}`} className="block flex-1">
+                          <div className="mb-4 pr-8">
+                            <h3 className="font-semibold text-lg text-primary line-clamp-1 group-hover:text-accent transition-colors">
+                              {job.title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2 text-sm text-secondary">
+                              <Briefcase size={14} />
+                              <span>{job.company?.name}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <DollarSign size={14} className="text-gray-400" />
-                            {job.salary}
-                          </div>
-                        </div>
-                      </Link>
 
-                      <div className="mt-auto pt-4 border-t border-gray-100 w-full">
-                        <Button
-                          to={`/lowongan/${job.id}`}
-                          className="w-full justify-center bg-[#0f2854] hover:bg-[#183a6d] text-white font-semibold rounded border-none shadow-sm transition-colors focus:ring-2 focus:ring-accent/30"
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </CardBody>
-                  </Card>
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            <Badge
+                              variant={
+                                job.type === 'Internship'
+                                  ? 'info'
+                                  : job.type === 'Scholarship'
+                                    ? 'success'
+                                    : 'neutral'
+                              }
+                            >
+                              {job.type}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2 mb-6 text-sm text-secondary">
+                            <div className="flex items-center gap-2">
+                              <MapPin size={14} className="text-gray-400" />
+                              {job.location}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign size={14} className="text-gray-400" />
+                              {job.salary}
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="mt-auto pt-4 border-t border-gray-100 w-full">
+                          <Button
+                            to={`/lowongan/${job.id}`}
+                            className="w-full justify-center bg-[#0f2854] hover:bg-[#183a6d] text-white font-semibold rounded border-none shadow-sm transition-colors focus:ring-2 focus:ring-accent/30"
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </motion.div>
                 ))
               ) : (
                 <div className="col-span-full py-20 text-center text-secondary">
@@ -304,7 +348,7 @@ export function Lowongan() {
                   </Button>
                 </div>
               )}
-            </div>
+            </motion.div>
           </>
         )}
       </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { motion } from 'framer-motion';
 
 export function Panduan() {
   const steps = [
@@ -44,42 +45,79 @@ export function Panduan() {
     },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20, x: 20 },
+    visible: { opacity: 1, y: 0, x: 0 }
+  };
+
   return (
-    <div className="bg-white min-h-screen pb-20">
-      <div className="bg-primary/5 py-20 px-6 lg:px-8 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-primary mb-4">
+    <div className="bg-white min-h-screen">
+      <div className="bg-primary/5 py-30 px-6 lg:px-8 text-center">
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-4xl font-bold tracking-tight text-primary mb-4"
+        >
           Career Handbook
-        </h1>
-        <p className="text-lg text-secondary max-w-2xl mx-auto">
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="text-lg text-secondary max-w-2xl mx-auto"
+        >
           A step-by-step guide to navigating your professional journey at IPB
           University.
-        </p>
+        </motion.p>
       </div>
 
       <div className="mx-auto max-w-7xl px-6 lg:px-8 -mt-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16"
+        >
           {steps.map((step, idx) => (
-            <Card
-              key={idx}
-              className="border-none shadow-lg shadow-gray-200/50 hover:-translate-y-1 transition-transform duration-300"
-            >
-              <CardBody className="p-6 text-center">
-                <div
-                  className={`w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 ${step.bg}`}
-                >
-                  <step.icon size={28} className={step.color} />
-                </div>
-                <h3 className="font-bold text-primary mb-2">{step.title}</h3>
-                <p className="text-sm text-secondary leading-relaxed">
-                  {step.desc}
-                </p>
-              </CardBody>
-            </Card>
+            <motion.div key={idx} variants={itemVariants}>
+              <Card
+                className="border-none shadow-lg shadow-gray-200/50 hover:-translate-y-1 transition-transform duration-300 h-full"
+              >
+                <CardBody className="p-6 text-center h-full flex flex-col items-center">
+                  <div
+                    className={`w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 ${step.bg}`}
+                  >
+                    <step.icon size={28} className={step.color} />
+                  </div>
+                  <h3 className="font-bold text-primary mb-2 int">{step.title}</h3>
+                  <p className="text-sm text-secondary leading-relaxed">
+                    {step.desc}
+                  </p>
+                </CardBody>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <h2 className="text-3xl font-bold text-primary mb-6">
               Essential Checklist
             </h2>
@@ -91,17 +129,26 @@ export function Panduan() {
                 'Build a Portfolio Website / Drive',
                 'Practice Common Interview Questions',
               ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
-                >
-                  <CheckCircle className="text-accent shrink-0" />
-                  <span className="font-medium text-primary">{item}</span>
-                </div>
+                <motion.div variants={itemVariants}>
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+                  >
+                    <CheckCircle className="text-accent shrink-0" />
+                    <span className="font-medium text-primary">{item}</span>
+                  </div>
+                </motion.div>
               ))}
             </div>
-          </div>
-          <div className="bg-gradient-to-r from-[#0f2854] to-[#727272] rounded-3xl p-10 text-white relative overflow-hidden">
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="bg-gradient-to-r from-[#0f2854] to-[#727272] rounded-3xl p-10 text-white relative overflow-hidden"
+          >
             <div className="relative z-10">
               <Award size={48} className="text-accent mb-6" />
               <h3 className="text-2xl font-bold mb-4">
@@ -114,7 +161,8 @@ export function Panduan() {
               </p>
               <Button
                 to="/lowongan"
-                className="bg-accent text-primary hover:bg-white border-none shadow-lg shadow-accent/20 font-bold px-8"
+                variant="secondary"
+                className="border-none shadow-lg shadow-accent/20 font-bold px-8"
               >
                 Browse Opportunities <ArrowRight size={18} className="ml-2" />
               </Button>
@@ -122,7 +170,7 @@ export function Panduan() {
             <div className="absolute top-0 right-0 p-10 opacity-10">
               <Compass size={200} />
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
   Award,
   CheckCircle,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function DetailPerusahaan() {
   const { id } = useParams();
@@ -52,22 +53,40 @@ export function DetailPerusahaan() {
     { year: '2024', title: 'Best Workplace for Gen Z' },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="bg-white min-h-screen pb-20">
-      <div className="h-64 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0f2854] to-[#727272]" />
+      <div className="h-80 bg-primary relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0f2854] to-[#1a3a70]" />
         <div className="absolute -bottom-10 -right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 lg:px-8 -mt-20 relative z-10">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 -mt-32 relative z-10">
         <Link
           to="/perusahaan"
-          className="text-white/80 hover:text-white mb-6 inline-flex items-center gap-2 absolute -top-12 left-6 lg:left-8 transition-colors text-sm font-medium"
+          className="text-white/80 hover:text-white mb-6 inline-flex items-center gap-2 absolute -top-16 left-6 lg:left-8 transition-colors text-sm font-medium"
         >
           <ArrowLeft size={16} /> Back to Companies
         </Link>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 flex flex-col md:flex-row gap-8 items-start">
+        <motion.div
+          initial={{ y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 flex flex-col md:flex-row gap-8 items-start"
+        >
           <div className="w-32 h-32 rounded-xl bg-white shadow-md border border-gray-100 flex items-center justify-center p-4 shrink-0 -mt-16 md:mt-0">
             {company.logo ? (
               <img
@@ -93,33 +112,36 @@ export function DetailPerusahaan() {
               </div>
               <div className="flex gap-2">
                 {company.linkedin_url && (
-                  <a
+                  <motion.a
+                    whileHover={{ scale: 1.1 }}
                     href={company.linkedin_url}
                     target="_blank"
                     rel="noreferrer"
                     className="p-2 text-gray-400 hover:text-[#0077b5] bg-gray-50 rounded-full transition-colors"
                   >
                     <Linkedin size={20} />
-                  </a>
+                  </motion.a>
                 )}
                 {company.instagram_url && (
-                  <a
+                  <motion.a
+                    whileHover={{ scale: 1.1 }}
                     href={company.instagram_url}
                     target="_blank"
                     rel="noreferrer"
                     className="p-2 text-gray-400 hover:text-[#E1306C] bg-gray-50 rounded-full transition-colors"
                   >
                     <Instagram size={20} />
-                  </a>
+                  </motion.a>
                 )}
-                <a
+                <motion.a
+                  whileHover={{ scale: 1.1 }}
                   href={company.website}
                   target="_blank"
                   rel="noreferrer"
                   className="p-2 text-gray-400 hover:text-primary bg-gray-50 rounded-full transition-colors"
                 >
                   <Globe size={20} />
-                </a>
+                </motion.a>
               </div>
             </div>
 
@@ -137,11 +159,16 @@ export function DetailPerusahaan() {
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8"
+        >
           <div className="lg:col-span-2 space-y-8">
-            <section>
+            <motion.section variants={itemVariants}>
               <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
                 About Us
               </h2>
@@ -152,9 +179,9 @@ export function DetailPerusahaan() {
                   </p>
                 </CardBody>
               </Card>
-            </section>
+            </motion.section>
 
-            <section>
+            <motion.section variants={itemVariants}>
               <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
                 Awards & Recognition
               </h2>
@@ -162,7 +189,7 @@ export function DetailPerusahaan() {
                 {awards.map((award, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 p-4 bg-yellow-50/50 rounded-xl border border-yellow-100"
+                    className="flex items-center gap-3 p-4 bg-yellow-50/50 rounded-xl border border-yellow-400/50"
                   >
                     <Award className="text-yellow-600" size={24} />
                     <div>
@@ -174,11 +201,11 @@ export function DetailPerusahaan() {
                   </div>
                 ))}
               </div>
-            </section>
+            </motion.section>
           </div>
 
           <div className="space-y-6">
-            <section>
+            <motion.section variants={itemVariants}>
               <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
                 <Briefcase className="text-accent" size={20} /> Open Positions (
                 {companyJobs.length})
@@ -217,9 +244,9 @@ export function DetailPerusahaan() {
                   </div>
                 )}
               </div>
-            </section>
+            </motion.section>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

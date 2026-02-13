@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Input, Select } from '../components/ui/Input';
 import { Card, CardBody } from '../components/ui/Card';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 export function Register() {
   const navigate = useNavigate();
@@ -54,7 +55,12 @@ export function Register() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12">
-      <div className="max-w-md w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full"
+      >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
             <div className="h-10 w-10 rounded-lg bg-[#0f2854] flex items-center justify-center text-white font-bold text-2xl">
@@ -155,7 +161,7 @@ export function Register() {
             </div>
           </CardBody>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

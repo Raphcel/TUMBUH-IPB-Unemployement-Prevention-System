@@ -4,6 +4,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardBody } from '../components/ui/Card';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
 
 export function Login() {
   const navigate = useNavigate();
@@ -14,6 +16,8 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const { addToast } = useToast();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -21,8 +25,19 @@ export function Login() {
     try {
       const user = await login(email, password);
       navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
+      addToast({
+        title: 'Login Berhasil',
+        message: `Selamat datang kembali, ${user.first_name}!`,
+        type: 'success',
+      });
     } catch (err) {
-      setError(err.message || 'Login gagal. Periksa email dan password Anda.');
+      const msg = err.message || 'Login gagal. Periksa email dan password Anda.';
+      setError(msg);
+      addToast({
+        title: 'Login Gagal',
+        message: msg,
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -44,7 +59,12 @@ export function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full"
+      >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
             <div className="h-10 w-10 rounded-lg bg-[#0f2854] flex items-center justify-center text-white font-bold text-2xl">
@@ -54,22 +74,27 @@ export function Login() {
               Tumbuh
             </span>
           </Link>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <motion.h2
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-2xl font-bold text-gray-900"
+          >
             Masuk ke Akun Anda
-          </h2>
-          <p className="mt-2 text-gray-600">
-            Selamat datang kembali! Silakan masukkan detail Anda.
-          </p>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-2 text-gray-600"
+          >
+            Selamat datang kembali! Silakan masukkan detail Anda
+          </motion.p>
         </div>
 
         <Card>
           <CardBody>
             <form onSubmit={handleLogin} className="space-y-6">
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                  {error}
-                </div>
-              )}
 
               <Input
                 label="Email"
@@ -129,33 +154,9 @@ export function Login() {
                 </Link>
               </p>
             </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <p className="text-xs text-center text-gray-400 mb-4">
-                Untuk Demo (Klik akses cepat):
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => quickLogin('budi.santoso@apps.ipb.ac.id')}
-                  disabled={loading}
-                >
-                  Student
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => quickLogin('hr@tokopedia.com')}
-                  disabled={loading}
-                >
-                  HR Staff
-                </Button>
-              </div>
-            </div>
           </CardBody>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

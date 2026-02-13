@@ -17,10 +17,13 @@ import {
   X,
   CheckCircle,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
 
 export function DetailLowongan() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,8 +49,18 @@ export function DetailLowongan() {
     try {
       await applicationsApi.apply(job.id);
       setApplied(true);
+      addToast({
+        title: 'Application Sent!',
+        message: `You ran successfully applied to ${job.title} at ${job.company?.name || 'the company'}.`,
+        type: 'success',
+      });
     } catch (err) {
       setApplyError(err.message || 'Failed to apply');
+      addToast({
+        title: 'Application Failed',
+        message: err.message || 'Something went wrong. Please try again.',
+        type: 'error',
+      });
     } finally {
       setApplying(false);
     }
@@ -73,62 +86,84 @@ export function DetailLowongan() {
   const requirements = Array.isArray(job.requirements) ? job.requirements : [];
   const deadlineStr = job.deadline
     ? new Date(job.deadline).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
     : '-';
 
   return (
-    <div className="bg-white min-h-screen pb-20 relative">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="bg-white min-h-screen pb-20 relative"
+    >
       {/* Auth Modal Overlay */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowAuthModal(false)}
-          ></div>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative z-10 animate-fade-in-up">
-            <button
+      <AnimatePresence>
+        {showAuthModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setShowAuthModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            ></div>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative z-10"
             >
-              <X size={20} />
-            </button>
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock className="text-primary" size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-primary">Login Required</h3>
-              <p className="text-secondary mt-2">
-                You need to sign in to apply for this position.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <Button to="/login" className="w-full justify-center">
-                Log In
-              </Button>
-              <Button
-                to="/register"
-                variant="outline"
-                className="w-full justify-center"
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
               >
-                Create Account
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                <X size={20} />
+              </button>
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="text-primary" size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-primary">Login Required</h3>
+                <p className="text-secondary mt-2">
+                  You need to sign in to apply for this position.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Button to="/login" className="w-full justify-center">
+                  Log In
+                </Button>
+                <Button
+                  to="/register"
+                  variant="outline"
+                  className="w-full justify-center"
+                >
+                  Create Account
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="bg-gradient-to-r from-[#0f2854] to-[#727272] py-12 px-6 lg:px-8">
+      <div className="bg-gradient-to-r from-[#0f2854] to-[#1a3a70] pt-24 pb-12 px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <Link
             to="/lowongan"
-            className="text-primary-foreground/70 hover:text-white mb-6 inline-flex items-center gap-2 transition-colors"
+            className="text-white hover:text-white mb-6 inline-flex items-center gap-2 transition-colors"
           >
             <ArrowLeft size={16} /> Back to Opportunities
           </Link>
-          <div className="flex flex-col md:flex-row gap-6 items-start">
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-col md:flex-row gap-6 items-start"
+          >
             <div className="w-20 h-20 rounded-xl bg-white p-2 flex items-center justify-center shadow-lg">
               {company.logo ? (
                 <img
@@ -137,7 +172,7 @@ export function DetailLowongan() {
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <span className="text-2xl font-bold text-gray-400">
+                <span className="text-2xl font-bold text-gray-400" href={`/perusahaan/${company.id}`}>
                   {company.name?.[0]}
                 </span>
               )}
@@ -146,7 +181,7 @@ export function DetailLowongan() {
               <h1 className="text-3xl font-bold text-white mb-2">
                 {job.title}
               </h1>
-              <div className="flex items-center gap-4 text-primary-foreground/80">
+              <div className="flex items-center gap-4 text-white">
                 <span className="font-medium text-white">{company.name}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
@@ -162,21 +197,24 @@ export function DetailLowongan() {
               <Button
                 onClick={handleApply}
                 disabled={applying}
-                className="bg-accent hover:bg-accent/90 text-primary font-semibold w-full md:w-auto shadow-lg shadow-accent/20 border-none"
+                variant='secondary'
+                className="bg-accent hover:bg-highlight text-primary font-semibold w-full md:w-auto shadow-lg shadow-accent/20 border-none"
               >
                 {applying ? 'Applying...' : 'Apply Now'}
               </Button>
             )}
-          </div>
-          {applyError && (
-            <p className="mt-2 text-red-300 text-sm">{applyError}</p>
-          )}
+          </motion.div>
         </div>
       </div>
 
       <div className="mx-auto max-w-4xl px-6 lg:px-8 -mt-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-6">
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="md:col-span-2 space-y-6"
+          >
             <Card className="shadow-lg border-gray-100/50">
               <CardBody className="p-8">
                 <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -207,9 +245,14 @@ export function DetailLowongan() {
                 )}
               </CardBody>
             </Card>
-          </div>
+          </motion.div>
 
-          <div className="space-y-6">
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="space-y-6"
+          >
             <Card className="shadow-lg border-gray-100/50">
               <CardBody className="p-6">
                 <h3 className="font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
@@ -256,9 +299,9 @@ export function DetailLowongan() {
                 </Link>
               </CardBody>
             </Card>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

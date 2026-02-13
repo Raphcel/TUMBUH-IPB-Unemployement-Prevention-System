@@ -5,6 +5,7 @@ import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Search, Star, Award, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function Perusahaan() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,7 +14,7 @@ export function Perusahaan() {
 
   useEffect(() => {
     companiesApi
-      .list(0, 200)
+      .list(0, 100)
       .then((data) =>
         setCompanies(Array.isArray(data) ? data : data.items || [])
       )
@@ -27,19 +28,43 @@ export function Perusahaan() {
       company.industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="bg-white min-h-screen py-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <h1 className="text-3xl font-semibold tracking-tight text-primary">
               Partner Companies
             </h1>
             <p className="mt-2 text-secondary text-lg">
               Connect with industry leaders and top employers.
             </p>
-          </div>
-          <div className="relative w-full md:w-96">
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative w-full md:w-96"
+          >
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={18}
@@ -50,83 +75,98 @@ export function Perusahaan() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </motion.div>
+        </div>
+
+        {loading ? (
+          <div className="col-span-full flex justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
           </div>
-        </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {filteredCompanies.length > 0 ? (
+              filteredCompanies.map((company, index) => (
+                <motion.div
+                  key={company.id}
+                  initial="hidden"
+                  animate="visible"
+                  variants={itemVariants}
+                  whileHover={{ y: -5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Link
+                    to={`/perusahaan/${company.id}`}
+                    className="group h-full block"
+                  >
+                    <Card className="h-full hover:border-primary/30 hover:shadow-lg transition-all duration-300 relative overflow-hidden bg-white border-gray-100">
+                      {/* Decorative background accent */}
+                      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-[#0f2854]/8 to-[#727272]/5 -z-10" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {loading ? (
-            <div className="col-span-full flex justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
-            </div>
-          ) : filteredCompanies.length > 0 ? (
-            filteredCompanies.map((company, index) => (
-              <Link
-                key={company.id}
-                to={`/perusahaan/${company.id}`}
-                className="group h-full"
-              >
-                <Card className="h-full hover:border-primary/30 hover:shadow-lg transition-all duration-300 relative overflow-hidden bg-white border-gray-100">
-                  {/* Decorative background accent */}
-                  <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-[#0f2854]/8 to-[#727272]/5 -z-10" />
+                      {/* Top Badge for specific items (simulating 'Award') */}
+                      {index % 3 === 0 && (
+                        <div
+                          className="absolute top-4 right-4 bg-yellow-100 text-yellow-700 p-1.5 rounded-full"
+                          title="Top Employer"
+                        >
+                          <Award size={16} />
+                        </div>
+                      )}
 
-                  {/* Top Badge for specific items (simulating 'Award') */}
-                  {index % 3 === 0 && (
-                    <div
-                      className="absolute top-4 right-4 bg-yellow-100 text-yellow-700 p-1.5 rounded-full"
-                      title="Top Employer"
-                    >
-                      <Award size={16} />
-                    </div>
-                  )}
+                      <CardBody className="flex flex-col items-center text-center p-6 pt-10 h-full">
+                        <div className="w-24 h-24 rounded-2xl mb-5 bg-white shadow-sm border border-gray-100 flex items-center justify-center p-4">
+                          <img
+                            src={company.logo}
+                            alt={company.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
 
-                  <CardBody className="flex flex-col items-center text-center p-6 pt-10">
-                    <div className="w-24 h-24 rounded-2xl mb-5 bg-white shadow-sm border border-gray-100 flex items-center justify-center p-4">
-                      <img
-                        src={company.logo}
-                        alt={company.name}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                        <h3 className="text-xl font-semibold text-primary group-hover:text-accent transition-colors mb-2">
+                          {company.name}
+                        </h3>
 
-                    <h3 className="text-xl font-semibold text-primary group-hover:text-accent transition-colors mb-2">
-                      {company.name}
-                    </h3>
+                        <div className="flex items-center gap-2 mb-4">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-accent/20 text-accent bg-accent/5"
+                          >
+                            {company.industry}
+                          </Badge>
+                          <span className="flex items-center text-xs font-medium text-yellow-500 gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
+                            <Star size={12} fill="currentColor" />{' '}
+                            {4 + (index % 10) / 10}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center gap-2 mb-4">
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-accent/20 text-accent bg-accent/5"
-                      >
-                        {company.industry}
-                      </Badge>
-                      <span className="flex items-center text-xs font-medium text-yellow-500 gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
-                        <Star size={12} fill="currentColor" />{' '}
-                        {4 + (index % 10) / 10}
-                      </span>
-                    </div>
+                        <p className="text-sm text-secondary line-clamp-2 mb-6 h-10">
+                          {company.description}
+                        </p>
 
-                    <p className="text-sm text-secondary line-clamp-2 mb-6 h-10">
-                      {company.description}
-                    </p>
-
-                    <div className="mt-auto w-full pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-secondary">
-                      <div className="flex items-center gap-1">
-                        <MapPin size={14} /> Jakarta, ID
-                      </div>
-                      <span className="group-hover:translate-x-1 transition-transform text-primary font-medium">
-                        View Profile &rarr;
-                      </span>
-                    </div>
-                  </CardBody>
-                </Card>
-              </Link>
-            ))
-          ) : (
-            <div className="col-span-full py-20 text-center text-secondary">
-              <p>No companies found matching "{searchTerm}".</p>
-            </div>
-          )}
-        </div>
+                        <div className="mt-auto w-full pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-secondary">
+                          <div className="flex items-center gap-1">
+                            <MapPin size={14} /> Jakarta, ID
+                          </div>
+                          <span className="group-hover:translate-x-1 transition-transform text-primary font-medium">
+                            View Profile &rarr;
+                          </span>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center text-secondary">
+                <p>No companies found matching "{searchTerm}".</p>
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
