@@ -24,6 +24,18 @@
 > **Institution:** IPB University (Institut Pertanian Bogor)  
 > **Academic Year:** 2025/2026
 
+## Team
+
+> IPB University — Analysis and Design Systems (ADS) — Semester 6, 2025/2026
+
+| Name                            | Student ID (NIM) | Role     |
+| ------------------------------- | ---------------- | -------- |
+| Muhammad Chairulridjal Nurvikri | G6401231082      | -        |
+| Adam Naufal                     | G6401231083      | -        |
+| Rafif Muhammad Farras           | G6401231102      | -        |
+
+---
+
 This project is a **group assignment** for the Analysis and Design Systems course at IPB University. It demonstrates a complete software development lifecycle — from requirements analysis and system design through full-stack implementation — following industry-standard architectural patterns and modern web technologies.
 
 **IPB Career & Internship Tracker** is a web-based platform that connects IPB University students with career opportunities — internships, full-time positions, and scholarships — posted by partner companies. The system serves two distinct user roles:
@@ -413,19 +425,6 @@ The application uses **6 relational tables** managed by Alembic migrations. See 
 
 ---
 
-## Team
-
-> IPB University — Analysis and Design Systems (ADS) — Semester 6, 2025/2026
-
-<!-- Add your team members below -->
-
-| Name                            | Student ID (NIM) | Role     |
-| ------------------------------- | ---------------- | -------- |
-| Muhammad Chairulridjal Nurvikri | G6401231082      | -        |
-| Adam Naufal                     | G6401231083      | -        |
-| Rafif Muhammad Farras           | G6401231102      | -        |
-
----
 
 ## References
 
