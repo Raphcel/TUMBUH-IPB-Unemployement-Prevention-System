@@ -419,12 +419,11 @@ The application uses **6 relational tables** managed by Alembic migrations. See 
 
 <!-- Add your team members below -->
 
-| Name | Student ID (NIM) | Role |
-| ---- | ---------------- | ---- |
-|      |                  |      |
-|      |                  |      |
-|      |                  |      |
-|      |                  |      |
+| Name                            | Student ID (NIM) | Role     |
+| ------------------------------- | ---------------- | -------- |
+| Muhammad Chairulridjal Nurvikri | G6401231082      | -        |
+| Adam Naufal                     | G6401231083      | -        |
+| Rafif Muhammad Farras           | G6401231102      | -        |
 
 ---
 
