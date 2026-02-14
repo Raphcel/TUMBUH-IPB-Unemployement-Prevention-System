@@ -5,7 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import { opportunitiesApi } from '../../api/opportunities';
 import { applicationsApi } from '../../api/applications';
 
+import { motion } from 'framer-motion';
+
 export function Pelamar() {
+  // ... (keep state and effects)
   const { user } = useAuth();
   const companyId = user?.company_id;
   const [applicants, setApplicants] = useState([]);
@@ -36,7 +39,7 @@ export function Pelamar() {
                     : `Student #${app.student_id}`,
                 });
               });
-            } catch {}
+            } catch { }
           })
         );
         setApplicants(allApps);
@@ -70,87 +73,115 @@ export function Pelamar() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Daftar Pelamar</h1>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-3">Nama Pelamar</th>
-                <th className="px-6 py-3">Posisi Dilamar</th>
-                <th className="px-6 py-3">Tanggal Melamar</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applicants.map((app) => (
-                <tr
-                  key={app.id}
-                  className="bg-white border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {app.applicantName}
-                  </td>
-                  <td className="px-6 py-4">{app.jobTitle}</td>
-                  <td className="px-6 py-4">
-                    {new Date(app.applied_at).toLocaleDateString('id-ID')}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge
-                      variant={
-                        app.status === 'Rejected'
-                          ? 'error'
-                          : app.status === 'Accepted'
-                            ? 'success'
-                            : 'info'
-                      }
-                    >
-                      {app.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    {app.status === 'Applied' && (
-                      <>
-                        <button
-                          onClick={() =>
-                            handleStatusUpdate(app.id, 'Screening')
-                          }
-                          className="font-medium text-emerald-600 hover:underline"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleStatusUpdate(app.id, 'Rejected')}
-                          className="font-medium text-red-600 hover:underline"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    {app.status !== 'Applied' && (
-                      <span className="text-xs text-gray-400">Reviewed</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {applicants.length === 0 && (
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 }
+    }
+  };
+
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <motion.h1 variants={itemVariants} className="text-2xl font-bold text-gray-900">Daftar Pelamar</motion.h1>
+
+      <motion.div variants={itemVariants}>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <td
-                    colSpan="5"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    Belum ada pelamar.
-                  </td>
+                  <th className="px-6 py-3">Nama Pelamar</th>
+                  <th className="px-6 py-3">Posisi Dilamar</th>
+                  <th className="px-6 py-3">Tanggal Melamar</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Aksi</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+              </thead>
+              <tbody>
+                {applicants.map((app) => (
+                  <motion.tr
+                    key={app.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    layout
+                    className="bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      {app.applicantName}
+                    </td>
+                    <td className="px-6 py-4">{app.jobTitle}</td>
+                    <td className="px-6 py-4">
+                      {new Date(app.applied_at).toLocaleDateString('id-ID')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge
+                        variant={
+                          app.status === 'Rejected'
+                            ? 'error'
+                            : app.status === 'Accepted'
+                              ? 'success'
+                              : 'info'
+                        }
+                      >
+                        {app.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      {app.status === 'Applied' && (
+                        <>
+                          <button
+                            onClick={() =>
+                              handleStatusUpdate(app.id, 'Screening')
+                            }
+                            className="font-medium text-emerald-600 hover:underline"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(app.id, 'Rejected')}
+                            className="font-medium text-red-600 hover:underline"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {app.status !== 'Applied' && (
+                        <span className="text-xs text-gray-400">Reviewed</span>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))}
+                {applicants.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan="5"
+                      className="px-6 py-4 text-center text-gray-500"
+                    >
+                      Belum ada pelamar.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

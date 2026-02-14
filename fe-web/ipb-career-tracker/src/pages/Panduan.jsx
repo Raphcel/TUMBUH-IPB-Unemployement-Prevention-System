@@ -129,9 +129,8 @@ export function Panduan() {
                 'Build a Portfolio Website / Drive',
                 'Practice Common Interview Questions',
               ].map((item, i) => (
-                <motion.div variants={itemVariants}>
+                <motion.div key={i} variants={itemVariants}>
                   <div
-                    key={i}
                     className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
                   >
                     <CheckCircle className="text-accent shrink-0" />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardBody } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { Link } from 'react-router-dom';
 import {
@@ -17,6 +18,9 @@ import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { applicationsApi } from '../../api/applications';
 import { externshipsApi } from '../../api/externships';
+import { CalendarWidget } from '../../components/dashboard/CalendarWidget';
+
+import { motion } from 'framer-motion';
 
 export function StudentDashboard() {
   const { user } = useAuth();
@@ -24,6 +28,7 @@ export function StudentDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Custom Externship State
+  // ... (keep state)
   const [showExternshipModal, setShowExternshipModal] = useState(false);
   const [externships, setExternships] = useState([]);
   const [newExternship, setNewExternship] = useState({
@@ -33,8 +38,10 @@ export function StudentDashboard() {
     status: 'Ongoing',
   });
 
+  // ... (keep useEffect)
   useEffect(() => {
     async function fetchData() {
+      // ... (keep logic)
       try {
         const [appsData, extData] = await Promise.all([
           applicationsApi.mine(),
@@ -56,6 +63,7 @@ export function StudentDashboard() {
   );
 
   const handleAddExternship = async (e) => {
+    // ... (keep logic)
     e.preventDefault();
     try {
       const created = await externshipsApi.create({
@@ -85,20 +93,48 @@ export function StudentDashboard() {
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 }
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8 bg-gray-50/30 min-h-screen pb-20">
-      <div className="border-b border-gray-200 pb-8 bg-white p-8 -mx-8 -mt-8 mb-8 shadow-sm">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-7xl mx-auto space-y-8 bg-gray-50/30 min-h-screen pb-20"
+    >
+      <motion.div variants={itemVariants} className=" pb-0 p-8 -mx-8 -mt-8 mb-8 ">
         <h1 className="text-3xl font-semibold text-primary tracking-tight">
           Hello, {user?.first_name || 'Student'}.
         </h1>
         <p className="text-secondary mt-2 text-lg">
           Here is your career overview for today.
         </p>
-      </div>
+      </motion.div>
 
       {/* Stats Block */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-5 rounded-lg bg-white border border-highlight/50 shadow-sm relative overflow-hidden group">
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+          className="p-5 rounded-lg bg-white border border-highlight/50 shadow-sm relative overflow-hidden group transition-all"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Briefcase size={64} className="text-primary" />
           </div>
@@ -108,8 +144,12 @@ export function StudentDashboard() {
           <p className="text-4xl font-bold text-primary mt-3">
             {activeApplications.length}
           </p>
-        </div>
-        <div className="p-5 rounded-lg bg-white border border-gray-100 shadow-sm relative overflow-hidden group">
+        </motion.div>
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+          className="p-5 rounded-lg bg-white border border-gray-100 shadow-sm relative overflow-hidden group transition-all"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <FileText size={64} className="text-secondary" />
           </div>
@@ -119,8 +159,12 @@ export function StudentDashboard() {
           <p className="text-4xl font-bold text-primary mt-3">
             {myApplications.length}
           </p>
-        </div>
-        <div className="p-5 rounded-lg bg-white border border-gray-100 shadow-sm relative overflow-hidden group">
+        </motion.div>
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+          className="p-5 rounded-lg bg-white border border-gray-100 shadow-sm relative overflow-hidden group transition-all"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <CheckCircle size={64} className="text-emerald-600" />
           </div>
@@ -133,14 +177,14 @@ export function StudentDashboard() {
               Almost there
             </span>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-8">
           {/* Recent Activity */}
-          <div className="space-y-4">
+          <motion.div variants={itemVariants} className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-primary flex items-center gap-2">
                 <Clock size={18} /> Recent Activity
@@ -154,12 +198,16 @@ export function StudentDashboard() {
             </div>
 
             <div className="space-y-3">
-              {myApplications.slice(0, 3).map((app) => {
+              {myApplications.slice(0, 3).map((app, index) => {
                 const job = app.opportunity;
                 return (
-                  <div
+                  <motion.div
                     key={app.id}
-                    className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-primary/30 transition-colors shadow-sm"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.01 }}
+                    className="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-primary/30 transition-all shadow-sm"
                   >
                     <div>
                       <h3 className="font-medium text-primary">{job?.title}</h3>
@@ -181,7 +229,7 @@ export function StudentDashboard() {
                     >
                       {app.status}
                     </Badge>
-                  </div>
+                  </motion.div>
                 );
               })}
               {myApplications.length === 0 && (
@@ -190,10 +238,10 @@ export function StudentDashboard() {
                 </p>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* My Externships Section */}
-          <div className="space-y-4">
+          <motion.div variants={itemVariants} className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-primary flex items-center gap-2">
                 <Briefcase size={18} /> My Externships / Projects
@@ -207,10 +255,14 @@ export function StudentDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {externships.map((ext) => (
-                <div
+              {externships.map((ext, index) => (
+                <motion.div
                   key={ext.id}
-                  className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.03 }}
+                  className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm transition-all"
                 >
                   <h3 className="font-semibold text-primary">{ext.title}</h3>
                   <p className="text-sm text-secondary flex items-center gap-1 mt-1">
@@ -224,16 +276,21 @@ export function StudentDashboard() {
                       {ext.status}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Right Column */}
-        <div className="space-y-6">
+        <motion.div variants={itemVariants} className="space-y-6">
+          <CalendarWidget />
+
           <h2 className="text-lg font-semibold text-primary">My Notes</h2>
-          <div className="bg-yellow-50/50 border border-yellow-100 p-4 rounded-lg min-h-[200px] relative shadow-sm">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className="bg-yellow-50/50 border border-yellow-100 p-4 rounded-lg min-h-[200px] relative shadow-sm transition-all"
+          >
             <p className="text-sm text-yellow-800/60 font-medium mb-3 flex items-center gap-2">
               <FileText size={14} /> Quick Scratchpad
             </p>
@@ -245,118 +302,104 @@ export function StudentDashboard() {
             <div className="absolute bottom-4 right-4 text-xs text-secondary/50">
               Editable (Mock)
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Custom Externship Modal */}
-      {showExternshipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowExternshipModal(false)}
-          />
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative z-10 animate-fade-in-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-primary">Add Experience</h3>
-              <button
-                onClick={() => setShowExternshipModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddExternship} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  Role / Title
-                </label>
-                <Input
-                  required
-                  placeholder="e.g. Freelance Designer"
-                  value={newExternship.title}
-                  onChange={(e) =>
-                    setNewExternship({
-                      ...newExternship,
-                      title: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  Company / Client
-                </label>
-                <Input
-                  required
-                  placeholder="e.g. Upwork"
-                  value={newExternship.company}
-                  onChange={(e) =>
-                    setNewExternship({
-                      ...newExternship,
-                      company: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">
-                    Duration
-                  </label>
-                  <Input
-                    placeholder="e.g. 3 Months"
-                    value={newExternship.duration}
-                    onChange={(e) =>
-                      setNewExternship({
-                        ...newExternship,
-                        duration: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">
-                    Status
-                  </label>
-                  <select
-                    className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-gray-900"
-                    value={newExternship.status}
-                    onChange={(e) =>
-                      setNewExternship({
-                        ...newExternship,
-                        status: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Ongoing">Ongoing</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 justify-center"
-                  onClick={() => setShowExternshipModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="flex-1 justify-center"
-                >
-                  Add Entry
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showExternshipModal}
+        onClose={() => setShowExternshipModal(false)}
+        title="Add Experience"
+      >
+        <form onSubmit={handleAddExternship} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">
+              Role / Title
+            </label>
+            <Input
+              required
+              placeholder="e.g. Freelance Designer"
+              value={newExternship.title}
+              onChange={(e) =>
+                setNewExternship({
+                  ...newExternship,
+                  title: e.target.value,
+                })
+              }
+            />
           </div>
-        </div>
-      )}
-    </div>
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">
+              Company / Client
+            </label>
+            <Input
+              required
+              placeholder="e.g. Upwork"
+              value={newExternship.company}
+              onChange={(e) =>
+                setNewExternship({
+                  ...newExternship,
+                  company: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">
+                Duration
+              </label>
+              <Input
+                placeholder="e.g. 3 Months"
+                value={newExternship.duration}
+                onChange={(e) =>
+                  setNewExternship({
+                    ...newExternship,
+                    duration: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">
+                Status
+              </label>
+              <select
+                className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-gray-900"
+                value={newExternship.status}
+                onChange={(e) =>
+                  setNewExternship({
+                    ...newExternship,
+                    status: e.target.value,
+                  })
+                }
+              >
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-4 flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 justify-center"
+              onClick={() => setShowExternshipModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1 justify-center"
+            >
+              Add Entry
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </motion.div>
   );
 }

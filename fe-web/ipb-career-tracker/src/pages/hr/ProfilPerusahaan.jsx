@@ -5,8 +5,11 @@ import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { companiesApi } from '../../api/companies';
 
+import { motion } from 'framer-motion';
+
 export function ProfilPerusahaanHR() {
   const { user } = useAuth();
+  // ... (keep state)
   const companyId = user?.company_id;
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -77,14 +80,20 @@ export function ProfilPerusahaanHR() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(company?.name || 'C')}&background=0f2854&color=fff&size=128`;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-6"
+    >
       <h1 className="text-2xl font-bold text-gray-900">Profil Perusahaan</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-6">
           <Card>
             <CardBody className="flex flex-col items-center text-center">
-              <img
+              <motion.img
+                whileHover={{ scale: 1.05 }}
                 src={logoUrl}
                 alt={company?.name}
                 className="w-32 h-32 rounded-lg mb-4 bg-gray-100 object-contain p-2"
@@ -150,6 +159,6 @@ export function ProfilPerusahaanHR() {
           </Card>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

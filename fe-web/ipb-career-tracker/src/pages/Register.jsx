@@ -18,21 +18,45 @@ export function Register() {
     password: '',
     confirm: '',
   });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [shake, setShake] = useState(false);
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const set = (key) => (e) => {
+    setForm({ ...form, [key]: e.target.value });
+    // Clear error for this field when user types
+    if (errors[key]) {
+      setErrors({ ...errors, [key]: '' });
+    }
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!form.first_name) newErrors.first_name = 'Nama depan wajib diisi';
+    if (!form.last_name) newErrors.last_name = 'Nama belakang wajib diisi';
+
+    if (!form.email) newErrors.email = 'Email wajib diisi';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Format email tidak valid';
+    else if (!form.email.endsWith('ipb.ac.id')) newErrors.email = 'Gunakan email institusi IPB';
+
+    if (!form.password) newErrors.password = 'Password wajib diisi';
+    else if (form.password.length < 8) newErrors.password = 'Password minimal 8 karakter';
+
+    if (form.password !== form.confirm) {
+      newErrors.confirm = 'Password tidak cocok';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setErrors({});
 
-    if (form.password !== form.confirm) {
-      setError('Password dan konfirmasi password tidak cocok.');
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('Password minimal 8 karakter.');
+    if (!validate()) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       return;
     }
 
@@ -47,7 +71,9 @@ export function Register() {
       });
       navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
     } catch (err) {
-      setError(err.message || 'Pendaftaran gagal. Silakan coba lagi.');
+      setErrors({ global: err.message || 'Pendaftaran gagal. Silakan coba lagi.' });
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
     } finally {
       setLoading(false);
     }
@@ -78,10 +104,15 @@ export function Register() {
 
         <Card>
           <CardBody>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
+            <motion.form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              animate={shake ? { x: [-10, 10, -10, 10, 0] } : {}}
+              transition={{ duration: 0.4 }}
+            >
+              {errors.global && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                  {error}
+                  {errors.global}
                 </div>
               )}
 
@@ -91,23 +122,23 @@ export function Register() {
                   placeholder="Budi"
                   value={form.first_name}
                   onChange={set('first_name')}
-                  required
+                  error={errors.first_name}
                 />
                 <Input
                   label="Nama Belakang"
                   placeholder="Santoso"
                   value={form.last_name}
                   onChange={set('last_name')}
-                  required
+                  error={errors.last_name}
                 />
               </div>
               <Input
                 label="Email Institusi (IPB)"
-                type="email"
+                type="text"
                 placeholder="budi@apps.ipb.ac.id"
                 value={form.email}
                 onChange={set('email')}
-                required
+                error={errors.email}
               />
               <Select
                 label="Peran"
@@ -124,7 +155,7 @@ export function Register() {
                 placeholder="********"
                 value={form.password}
                 onChange={set('password')}
-                required
+                error={errors.password}
               />
               <Input
                 label="Konfirmasi Password"
@@ -132,7 +163,7 @@ export function Register() {
                 placeholder="********"
                 value={form.confirm}
                 onChange={set('confirm')}
-                required
+                error={errors.confirm}
               />
 
               <div className="block text-sm text-gray-900 pt-2">
@@ -146,7 +177,7 @@ export function Register() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Memproses...' : 'Daftar'}
               </Button>
-            </form>
+            </motion.form>
 
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-500">

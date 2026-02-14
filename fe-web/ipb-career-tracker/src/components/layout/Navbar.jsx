@@ -33,7 +33,7 @@ export function Navbar() {
 
   const isTransparent = transparentPaths.some(path =>
     matchPath({ path: path, end: true }, location.pathname)
-  ) && !scrolled;
+  ) && !scrolled && !openNav;
 
 
   const handleLogout = () => {
@@ -57,6 +57,7 @@ export function Navbar() {
   ];
 
   const currentLinks = user?.role === 'hr' ? hrLinks : studentLinks;
+  const dashboardPath = user?.role === 'hr' ? '/hr/dashboard' : '/student/dashboard';
 
   return (
     <motion.header
@@ -64,7 +65,7 @@ export function Navbar() {
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${!isTransparent
-        ? 'bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm'
+        ? 'bg-white backdrop-blur border-b border-gray-200 shadow-sm'
         : 'bg-transparent'
         }`}
     >
@@ -159,6 +160,7 @@ export function Navbar() {
                         onClick={() => setDropdownOpen(false)}
                       />
                       <motion.div
+                        whileHover={{ scale: 1.05 }}
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -196,7 +198,7 @@ export function Navbar() {
                         <div className="border-t border-gray-100 py-1 mt-1">
                           <button
                             onClick={handleLogout}
-                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            className="bg-red flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                           >
                             <LogOut size={16} />
                             Keluar

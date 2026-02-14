@@ -4,12 +4,15 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { applicationsApi } from '../../api/applications';
 
+import { motion } from 'framer-motion';
+
 export function LamaranSaya() {
   const [myApplications, setMyApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchApplications() {
+      // ... (keep logic)
       try {
         const data = await applicationsApi.mine();
         setMyApplications(data.items || []);
@@ -30,9 +33,31 @@ export function LamaranSaya() {
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 }
+    }
+  };
+
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex justify-between items-center border-b border-gray-100 pb-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-5xl space-y-6"
+    >
+      <motion.div variants={itemVariants} className="flex justify-between items-center border-b border-gray-100 pb-6">
         <div>
           <h1 className="text-2xl font-semibold text-primary tracking-tight">
             Application Tracker
@@ -44,7 +69,7 @@ export function LamaranSaya() {
         <Button variant="outline" size="sm" className="hidden sm:flex" disabled>
           + Track externship (Coming soon)
         </Button>
-      </div>
+      </motion.div>
 
       <div className="space-y-4">
         {myApplications.map((app) => {
@@ -52,62 +77,63 @@ export function LamaranSaya() {
           const company = job?.company;
 
           return (
-            <Card
-              key={app.id}
-              className="border border-gray-100 shadow-sm hover:border-primary/20 transition-colors"
-            >
-              <CardBody className="p-5">
-                <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-10 h-10 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400 border border-gray-100">
-                      {company?.name?.[0]}
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-primary text-base">
-                        {job?.title}
-                      </h3>
-                      <p className="text-sm text-secondary">{company?.name}</p>
+            <motion.div key={app.id} variants={itemVariants}>
+              <Card
+                className="border border-gray-100 shadow-sm hover:border-primary/20 transition-colors"
+              >
+                <CardBody className="p-5">
+                  <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="w-10 h-10 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400 border border-gray-100">
+                        {company?.name?.[0]}
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-primary text-base">
+                          {job?.title}
+                        </h3>
+                        <p className="text-sm text-secondary">{company?.name}</p>
 
-                      {app.history && app.history.length > 0 && (
-                        <div className="mt-4 flex items-center gap-2">
-                          {app.history.slice(-1).map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="text-xs text-secondary bg-gray-50 px-2 py-1 rounded"
-                            >
-                              Latest update: {h.status} on{' '}
-                              {new Date(h.date).toLocaleDateString('id-ID')}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                        {app.history && app.history.length > 0 && (
+                          <div className="mt-4 flex items-center gap-2">
+                            {app.history.slice(-1).map((h, idx) => (
+                              <span
+                                key={idx}
+                                className="text-xs text-secondary bg-gray-50 px-2 py-1 rounded"
+                              >
+                                Latest update: {h.status} on{' '}
+                                {new Date(h.date).toLocaleDateString('id-ID')}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge
+                        variant={
+                          app.status === 'Rejected'
+                            ? 'error'
+                            : app.status === 'Accepted'
+                              ? 'success'
+                              : 'info'
+                        }
+                      >
+                        {app.status}
+                      </Badge>
+                      <span className="text-xs text-secondary mt-1">
+                        Applied{' '}
+                        {new Date(app.applied_at).toLocaleDateString('id-ID')}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge
-                      variant={
-                        app.status === 'Rejected'
-                          ? 'error'
-                          : app.status === 'Accepted'
-                            ? 'success'
-                            : 'info'
-                      }
-                    >
-                      {app.status}
-                    </Badge>
-                    <span className="text-xs text-secondary mt-1">
-                      Applied{' '}
-                      {new Date(app.applied_at).toLocaleDateString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+            </motion.div>
           );
         })}
         {myApplications.length === 0 && (
-          <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+          <motion.div variants={itemVariants} className="text-center py-20 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
             <p className="text-secondary font-medium">
               No applications tracked yet.
             </p>
@@ -115,16 +141,16 @@ export function LamaranSaya() {
               Start by applying to opportunities or tracking one manually.
             </p>
             <div className="mt-6 flex justify-center gap-3">
-              <Button to="/lowongan" variant="primary">
+              <Button to="/lowongan" variant="primary" className="text-white">
                 Find Opportunities
               </Button>
               <Button variant="outline" disabled>
                 Track Manually
               </Button>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

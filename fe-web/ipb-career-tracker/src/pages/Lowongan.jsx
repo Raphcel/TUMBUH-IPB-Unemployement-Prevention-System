@@ -144,13 +144,13 @@ export function Lowongan() {
                     placeholder="Search position or company..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white border-gray-200 focus:border-primary focus:ring-primary/20"
+                    className="pl-10 bg-white border-none shadow-sm focus:ring-accent focus:ring-opacity-50"
                   />
                 </div>
                 <Button
                   variant={showFilters ? 'secondary' : 'outline'}
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2"
+                  className="!border-none flex items-center gap-2"
                 >
                   <Filter size={18} /> Filters
                 </Button>

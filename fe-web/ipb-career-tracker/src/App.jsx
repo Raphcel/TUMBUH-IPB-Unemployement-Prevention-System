@@ -16,12 +16,15 @@ import { Register } from './pages/Register';
 
 import { StudentDashboard } from './pages/student/Dashboard';
 import { LamaranSaya } from './pages/student/LamaranSaya';
+import { Bookmarks } from './pages/student/Bookmarks';
 import { ProfilStudent } from './pages/student/Profil';
 
 import { HRDashboard } from './pages/hr/Dashboard';
+import { Calendar } from './pages/Calendar';
 import { KelolaLowongan } from './pages/hr/KelolaLowongan';
 import { Pelamar } from './pages/hr/Pelamar';
 import { ProfilPerusahaanHR } from './pages/hr/ProfilPerusahaan';
+import { Notifications } from './pages/Notifications';
 
 /**
  * ProtectedRoute — redirects to /login if unauthenticated, or to a
@@ -65,6 +68,18 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
+      {/* Shared Protected Routes */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/notifications" element={<Notifications />} />
+      </Route>
+
       {/* Student Routes */}
       <Route
         path="/student"
@@ -76,6 +91,7 @@ function AppRoutes() {
       >
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="applications" element={<LamaranSaya />} />
+        <Route path="bookmarks" element={<Bookmarks />} />
         <Route path="profile" element={<ProfilStudent />} />
       </Route>
 
@@ -92,6 +108,7 @@ function AppRoutes() {
         <Route path="opportunities" element={<KelolaLowongan />} />
         <Route path="applicants" element={<Pelamar />} />
         <Route path="company" element={<ProfilPerusahaanHR />} />
+        <Route path="calendar" element={<Calendar />} />
       </Route>
     </Routes>
   );

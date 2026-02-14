@@ -1,10 +1,13 @@
-import React from 'react';
+import { motion } from 'framer-motion';
 
 export function Card({ className = '', children, ...props }) {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className}`} {...props}>
+    <motion.div
+      className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className}`}
+      {...props}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 

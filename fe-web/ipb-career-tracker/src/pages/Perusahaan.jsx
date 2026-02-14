@@ -3,24 +3,48 @@ import { Link } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
+import { Input, Select } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
+import { Filter } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Search, Star, Award, MapPin } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Perusahaan() {
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [filterLocation, setFilterLocation] = useState('All');
+  const [filterIndustry, setFilterIndustry] = useState('All');
+
+  const [allLocations, setAllLocations] = useState([]);
+  const [allIndustries, setAllIndustries] = useState([]);
 
   useEffect(() => {
     companiesApi
       .list(0, 100)
-      .then((data) =>
-        setCompanies(Array.isArray(data) ? data : data.items || [])
-      )
+      .then((data) => {
+        const comps = Array.isArray(data) ? data : data.items || [];
+        setCompanies(comps);
+
+        setAllLocations([...new Set(comps.map(c => c.location).filter(Boolean))]);
+        setAllIndustries([...new Set(comps.map(c => c.industry).filter(Boolean))]);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const locations = React.useMemo(() => [
+    'All',
+    ...[...new Set((allLocations || []).filter(Boolean))]
+  ], [allLocations]);
+
+  const industries = React.useMemo(() => [
+    'All',
+    ...[...new Set((allIndustries || []).filter(Boolean))]
+  ], [allIndustries]);
 
   const filteredCompanies = companies.filter(
     (company) =>
@@ -65,18 +89,96 @@ export function Perusahaan() {
             transition={{ duration: 0.5 }}
             className="relative w-full md:w-96"
           >
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <Input
-              className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary/20"
-              placeholder="Search by name or industry..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <Input
+                  className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary/20"
+                  placeholder="Search by name or industry..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button
+                variant={showFilters ? 'secondary' : 'outline'}
+                onClick={() => setShowFilters(!showFilters)}
+                className="!border-none flex items-center gap-2"
+              >
+                <Filter size={18} /> Filters
+              </Button>
+            </div>
           </motion.div>
         </div>
+
+        {/* Expandable Filter Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden mb-8"
+            >
+              <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-primary">Refine Search</h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="text-secondary hover:text-primary"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
+                      Location
+                    </label>
+                    <Select
+                      value={filterLocation}
+                      onChange={(e) => setFilterLocation(e.target.value)}
+                      options={locations.map((loc) => ({
+                        value: loc,
+                        label: loc,
+                      }))}
+                      className="bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
+                      Industry
+                    </label>
+                    <Select
+                      value={filterIndustry}
+                      onChange={(e) => setFilterIndustry(e.target.value)}
+                      options={industries.map((ind) => ({
+                        value: ind,
+                        label: ind,
+                      }))}
+                      className="bg-white"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    className="text-sm text-secondary hover:text-red-500"
+                    onClick={() => {
+                      setFilterLocation('All');
+                      setFilterIndustry('All');
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {loading ? (
           <div className="col-span-full flex justify-center py-20">

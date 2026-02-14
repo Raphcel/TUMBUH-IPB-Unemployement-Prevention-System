@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
+import { Modal } from '../components/ui/Modal';
 
 export function DetailLowongan() {
   const { id } = useParams();
@@ -100,55 +101,33 @@ export function DetailLowongan() {
       className="bg-white min-h-screen pb-20 relative"
     >
       {/* Auth Modal Overlay */}
-      <AnimatePresence>
-        {showAuthModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      <Modal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Authentication Required"
+        size="sm"
+      >
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="text-primary" size={24} />
+          </div>
+          <p className="text-secondary mt-2">
+            You need to sign in to apply for this position.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <Button to="/login" variant="primary" className="text-white w-full justify-center">
+            Log In
+          </Button>
+          <Button
+            to="/register"
+            variant="outline"
+            className="w-full justify-center"
           >
-            <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={() => setShowAuthModal(false)}
-            ></div>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative z-10"
-            >
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Lock className="text-primary" size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-primary">Login Required</h3>
-                <p className="text-secondary mt-2">
-                  You need to sign in to apply for this position.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <Button to="/login" className="w-full justify-center">
-                  Log In
-                </Button>
-                <Button
-                  to="/register"
-                  variant="outline"
-                  className="w-full justify-center"
-                >
-                  Create Account
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Create Account
+          </Button>
+        </div>
+      </Modal>
 
       <div className="bg-gradient-to-r from-[#0f2854] to-[#1a3a70] pt-24 pb-12 px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">

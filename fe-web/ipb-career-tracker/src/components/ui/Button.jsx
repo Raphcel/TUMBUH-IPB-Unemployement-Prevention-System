@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const variants = {
-  primary: "bg-primary hover:opacity-90 shadow-sm",
+  primary: "bg-primary text-white hover:opacity-90 shadow-sm",
   secondary: "bg-gray-100 text-primary hover:bg-gray-200",
   outline: "border border-gray-300 text-primary hover:bg-highlight/50",
   ghost: "text-secondary hover:bg-highlight/30 hover:text-primary",

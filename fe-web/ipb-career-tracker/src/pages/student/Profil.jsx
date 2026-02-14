@@ -5,8 +5,11 @@ import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/users';
 
+import { motion } from 'framer-motion';
+
 export function ProfilStudent() {
   const { user, login: refreshUser } = useAuth();
+  // ... (keep state)
   const [form, setForm] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -45,17 +48,23 @@ export function ProfilStudent() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0f2854&color=fff`;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-6"
+    >
       <h1 className="text-2xl font-bold text-gray-900">Profil Saya</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-6">
           <Card>
             <CardBody className="flex flex-col items-center text-center">
-              <img
+              <motion.img
+                whileHover={{ scale: 1.05 }}
                 src={avatarUrl}
                 alt={fullName}
-                className="w-24 h-24 rounded-full mb-4 bg-gray-200"
+                className="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-md"
               />
               <h2 className="text-xl font-bold text-gray-900">{fullName}</h2>
               <p className="text-gray-500">{user?.major || '-'}</p>
@@ -144,6 +153,6 @@ export function ProfilStudent() {
           </Card>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
