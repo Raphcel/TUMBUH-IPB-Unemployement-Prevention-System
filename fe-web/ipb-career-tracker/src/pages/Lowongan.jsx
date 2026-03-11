@@ -27,9 +27,15 @@ export function Lowongan() {
   const [showFilters, setShowFilters] = useState(false);
   const [savedJobs, setSavedJobs] = useState([]);
 
-  const [filterType, setFilterType] = useState(searchParams.get('type') || 'All');
-  const [filterLocation, setFilterLocation] = useState(searchParams.get('location') || 'All');
-  const [filterCompany, setFilterCompany] = useState(searchParams.get('company') || 'All');
+  const [filterType, setFilterType] = useState(
+    searchParams.get('type') || 'All'
+  );
+  const [filterLocation, setFilterLocation] = useState(
+    searchParams.get('location') || 'All'
+  );
+  const [filterCompany, setFilterCompany] = useState(
+    searchParams.get('company') || 'All'
+  );
 
   useEffect(() => {
     const params = {};
@@ -67,7 +73,7 @@ export function Lowongan() {
         );
         setSavedJobs(ids);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [user]);
 
   const locations = [
@@ -113,13 +119,13 @@ export function Lowongan() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0 }
-    }
+      transition: { staggerChildren: 0 },
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
   return (
@@ -131,42 +137,48 @@ export function Lowongan() {
           </div>
         ) : (
           <>
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4"
-            >
-              <div>
+            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 <h1 className="text-3xl font-semibold tracking-tight text-primary">
                   Explore Opportunities
                 </h1>
                 <p className="mt-2 text-secondary text-lg">
                   Browse roles that match your ambition.
                 </p>
-              </div>
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
-                  <Input
-                    placeholder="Search position or company..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white border-none shadow-sm focus:ring-accent focus:ring-opacity-50"
-                  />
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="relative w-full md:w-96"
+              >
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-64">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
+                    <Input
+                      className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary/20"
+                      placeholder="Search position or company..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    variant={showFilters ? 'secondary' : 'outline'}
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="!border-none flex items-center gap-2"
+                  >
+                    <Filter size={18} /> Filters
+                  </Button>
                 </div>
-                <Button
-                  variant={showFilters ? 'secondary' : 'outline'}
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="!border-none flex items-center gap-2"
-                >
-                  <Filter size={18} /> Filters
-                </Button>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
 
             {/* Expandable Filter Panel */}
             <AnimatePresence>
@@ -175,12 +187,14 @@ export function Lowongan() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                   className="overflow-hidden mb-8"
                 >
                   <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-semibold text-primary">Refine Search</h3>
+                      <h3 className="font-semibold text-primary">
+                        Refine Search
+                      </h3>
                       <button
                         onClick={() => setShowFilters(false)}
                         className="text-secondary hover:text-primary"
@@ -265,13 +279,10 @@ export function Lowongan() {
                     initial="hidden"
                     animate="visible"
                     variants={itemVariants}
-                    layout
                     whileHover={{ y: -5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
                   >
-                    <Card
-                      className="hover:border-primary/20 transition-all duration-300 group relative flex flex-col h-full border-gray-200"
-                    >
+                    <Card className="hover:border-primary/20 transition-all duration-300 group relative flex flex-col h-full border-gray-200">
                       <CardBody className="p-6 flex flex-col h-full">
                         <div className="absolute top-6 right-6 z-10">
                           <button
@@ -280,7 +291,9 @@ export function Lowongan() {
                               toggleSave(job.id);
                             }}
                             className={`transition-all duration-200 ${savedJobs.includes(job.id) ? 'text-accent fill-accent' : 'text-gray-300 hover:text-accent'}`}
-                            title={savedJobs.includes(job.id) ? 'Unsave' : 'Save'}
+                            title={
+                              savedJobs.includes(job.id) ? 'Unsave' : 'Save'
+                            }
                           >
                             <Bookmark
                               size={20}
@@ -293,7 +306,10 @@ export function Lowongan() {
                           </button>
                         </div>
 
-                        <Link to={`/lowongan/${job.id}`} className="block flex-1">
+                        <Link
+                          to={`/lowongan/${job.id}`}
+                          className="block flex-1"
+                        >
                           <div className="mb-4 pr-8">
                             <h3 className="font-semibold text-lg text-primary line-clamp-1 group-hover:text-accent transition-colors">
                               {job.title}

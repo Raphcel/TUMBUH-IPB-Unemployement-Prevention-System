@@ -29,22 +29,26 @@ export function Perusahaan() {
         const comps = Array.isArray(data) ? data : data.items || [];
         setCompanies(comps);
 
-        setAllLocations([...new Set(comps.map(c => c.location).filter(Boolean))]);
-        setAllIndustries([...new Set(comps.map(c => c.industry).filter(Boolean))]);
+        setAllLocations([
+          ...new Set(comps.map((c) => c.location).filter(Boolean)),
+        ]);
+        setAllIndustries([
+          ...new Set(comps.map((c) => c.industry).filter(Boolean)),
+        ]);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const locations = React.useMemo(() => [
-    'All',
-    ...[...new Set((allLocations || []).filter(Boolean))]
-  ], [allLocations]);
+  const locations = React.useMemo(
+    () => ['All', ...[...new Set((allLocations || []).filter(Boolean))]],
+    [allLocations]
+  );
 
-  const industries = React.useMemo(() => [
-    'All',
-    ...[...new Set((allIndustries || []).filter(Boolean))]
-  ], [allIndustries]);
+  const industries = React.useMemo(
+    () => ['All', ...[...new Set((allIndustries || []).filter(Boolean))]],
+    [allIndustries]
+  );
 
   const filteredCompanies = companies.filter(
     (company) =>
@@ -52,19 +56,18 @@ export function Perusahaan() {
       company.industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0
-      }
-    }
+      transition: { staggerChildren: 0 },
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   };
 
   return (
@@ -120,7 +123,7 @@ export function Perusahaan() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="overflow-hidden mb-8"
             >
               <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
@@ -199,7 +202,7 @@ export function Perusahaan() {
                   animate="visible"
                   variants={itemVariants}
                   whileHover={{ y: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
                 >
                   <Link
                     to={`/perusahaan/${company.id}`}
