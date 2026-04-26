@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from app.domain.models.user import User
 from app.services.application_service import ApplicationService
 from app.schemas.application import (
-    ApplicationCreate, ApplicationStatusUpdate,
+    ApplicationCreate, ApplicationStatusUpdate, BulkApplicationStatusUpdate,
     ApplicationResponse, ApplicationListResponse,
 )
 from app.api.dependencies import (
@@ -43,19 +43,32 @@ def list_applicants(
     opportunity_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    _=Depends(require_role("hr")),
+    current_user: User = Depends(require_role("hr")),
     application_service: ApplicationService = Depends(get_application_service),
 ):
-    """List all applicants for a specific opportunity (HR only)."""
+    """List all applicants for a specific opportunity (HR only, own company)."""
+    application_service.verify_opportunity_ownership(opportunity_id, current_user.company_id)
     return application_service.get_opportunity_applications(opportunity_id, skip, limit)
+
+
+@router.patch("/bulk-status", response_model=list[ApplicationResponse])
+def bulk_update_status(
+    data: BulkApplicationStatusUpdate,
+    current_user: User = Depends(require_role("hr")),
+    application_service: ApplicationService = Depends(get_application_service),
+):
+    """Bulk update application statuses (HR only, own company)."""
+    return application_service.bulk_update_status(
+        data.application_ids, data.status, current_user.company_id
+    )
 
 
 @router.patch("/{application_id}/status", response_model=ApplicationResponse)
 def update_application_status(
     application_id: int,
     data: ApplicationStatusUpdate,
-    _=Depends(require_role("hr")),
+    current_user: User = Depends(require_role("hr")),
     application_service: ApplicationService = Depends(get_application_service),
 ):
-    """Update an application's status (HR only)."""
-    return application_service.update_status(application_id, data)
+    """Update an application's status (HR only, own company)."""
+    return application_service.update_status(application_id, data, current_user.company_id)

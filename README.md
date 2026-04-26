@@ -146,23 +146,22 @@ Project/
 │   └── DATABASE.md                   # Full schema docs, ER diagram, field reference
 │
 └── fe-web/                           # Frontend — React SPA
-    └── ipb-career-tracker/
-        ├── src/
-        │   ├── main.jsx              # React DOM root mount
-        │   ├── App.jsx               # Router setup, AuthProvider, ProtectedRoute
-        │   ├── index.css             # Tailwind imports & global styles
-        │   ├── api/                  # Fetch-based API client layer (8 modules)
-        │   ├── context/              # AuthContext — global JWT & user state
-        │   ├── layouts/              # PublicLayout (Navbar+Footer), DashboardLayout (Sidebar)
-        │   ├── components/           # Reusable UI: Navbar, Sidebar, Footer, Button, Card, Badge, Input
-        │   └── pages/               # Page components
-        │       ├── *.jsx             # Public pages (Beranda, Lowongan, Perusahaan, Panduan, …)
-        │       ├── student/          # Student dashboard, applications tracker, profile
-        │       └── hr/               # HR dashboard, job management, applicant review, company profile
-        ├── package.json
-        ├── vite.config.js
-        ├── tailwind.config.js
-        └── README.md                 # Detailed frontend documentation
+    ├── src/
+    │   ├── main.jsx              # React DOM root mount
+    │   ├── App.jsx               # Router setup, AuthProvider, ProtectedRoute
+    │   ├── index.css             # Tailwind imports & global styles
+    │   ├── api/                  # Fetch-based API client layer (8 modules)
+    │   ├── context/              # AuthContext — global JWT & user state
+    │   ├── layouts/              # PublicLayout (Navbar+Footer), DashboardLayout (Sidebar)
+    │   ├── components/           # Reusable UI: Navbar, Sidebar, Footer, Button, Card, Badge, Input
+    │   └── pages/               # Page components
+    │       ├── *.jsx             # Public pages (Beranda, Lowongan, Perusahaan, Panduan, …)
+    │       ├── student/          # Student dashboard, applications tracker, profile
+    │       └── hr/               # HR dashboard, job management, applicant review, company profile
+    ├── package.json
+    ├── vite.config.js
+    ├── tailwind.config.js
+    └── README.md                 # Detailed frontend documentation
 ```
 
 ---
@@ -226,7 +225,7 @@ The API will be available at **http://127.0.0.1:8000** with interactive docs at 
 ### 4. Set Up the Frontend
 
 ```bash
-cd fe-web/ipb-career-tracker
+cd fe-web
 
 # Install dependencies
 npm install
@@ -263,7 +262,7 @@ After running the seed script, you can log in with these accounts:
 
 ### Frontend
 
-The API base URL is configured in `fe-web/ipb-career-tracker/src/api/client.js`:
+The API base URL is configured in `fe-web/src/api/client.js`:
 
 ```js
 const API_BASE = "http://127.0.0.1:8000/api/v1";

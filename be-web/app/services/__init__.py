@@ -5,6 +5,7 @@ from app.services.opportunity_service import OpportunityService
 from app.services.application_service import ApplicationService
 from app.services.bookmark_service import BookmarkService
 from app.services.externship_service import ExternshipService
+from app.services.notification_service import NotificationService
 
 __all__ = [
     "AuthService",
@@ -14,4 +15,5 @@ __all__ = [
     "ApplicationService",
     "BookmarkService",
     "ExternshipService",
+    "NotificationService",
 ]

@@ -27,3 +27,15 @@ class CompanyRepository(BaseRepository[Company]):
             .limit(limit)
             .all()
         )
+
+    def count_search(self, query: str) -> int:
+        """Count companies matching a search query."""
+        search_term = f"%{query}%"
+        return (
+            self._db.query(Company)
+            .filter(
+                (Company.name.ilike(search_term)) |
+                (Company.industry.ilike(search_term))
+            )
+            .count()
+        )

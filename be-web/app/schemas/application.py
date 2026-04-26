@@ -20,10 +20,17 @@ class StatusHistoryItem(BaseModel):
 class ApplicationCreate(BaseModel):
     """Schema for submitting a new application."""
     opportunity_id: int
+    cover_letter: str | None = None
 
 
 class ApplicationStatusUpdate(BaseModel):
     """Schema for updating an application's status (by HR)."""
+    status: ApplicationStatus
+
+
+class BulkApplicationStatusUpdate(BaseModel):
+    """Schema for bulk-updating application statuses (by HR)."""
+    application_ids: list[int]
     status: ApplicationStatus
 
 
@@ -36,6 +43,7 @@ class ApplicationResponse(BaseModel):
     opportunity_id: int
     status: ApplicationStatus
     applied_at: datetime
+    cover_letter: str | None = None
     history: list[StatusHistoryItem] | None = None
     opportunity: OpportunityResponse | None = None
     student: UserResponse | None = None

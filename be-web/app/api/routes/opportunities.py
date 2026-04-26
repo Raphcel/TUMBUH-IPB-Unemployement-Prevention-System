@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.domain.models.user import User
 from app.domain.models.opportunity import OpportunityType
 from app.services.opportunity_service import OpportunityService
 from app.schemas.opportunity import (
@@ -46,10 +47,13 @@ def get_company_opportunities(
 @router.post("/", response_model=OpportunityResponse, status_code=201)
 def create_opportunity(
     data: OpportunityCreate,
-    _=Depends(require_role("hr")),
+    current_user: User = Depends(require_role("hr")),
     opportunity_service: OpportunityService = Depends(get_opportunity_service),
 ):
-    """Create a new opportunity (HR only)."""
+    """Create a new opportunity (HR only, forced to own company)."""
+    if not current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You must be associated with a company")
+    data.company_id = current_user.company_id
     return opportunity_service.create_opportunity(data)
 
 
@@ -57,18 +61,20 @@ def create_opportunity(
 def update_opportunity(
     opportunity_id: int,
     data: OpportunityUpdate,
-    _=Depends(require_role("hr")),
+    current_user: User = Depends(require_role("hr")),
     opportunity_service: OpportunityService = Depends(get_opportunity_service),
 ):
-    """Update an opportunity (HR only)."""
+    """Update an opportunity (HR only, own company)."""
+    opportunity_service.verify_ownership(opportunity_id, current_user.company_id)
     return opportunity_service.update_opportunity(opportunity_id, data)
 
 
 @router.delete("/{opportunity_id}")
 def delete_opportunity(
     opportunity_id: int,
-    _=Depends(require_role("hr")),
+    current_user: User = Depends(require_role("hr")),
     opportunity_service: OpportunityService = Depends(get_opportunity_service),
 ):
-    """Delete an opportunity (HR only)."""
+    """Delete an opportunity (HR only, own company)."""
+    opportunity_service.verify_ownership(opportunity_id, current_user.company_id)
     return opportunity_service.delete_opportunity(opportunity_id)

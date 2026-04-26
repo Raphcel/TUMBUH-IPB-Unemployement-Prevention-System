@@ -1,5 +1,5 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Integer, String, Float, Text, Boolean, Enum, DateTime, ForeignKey
@@ -7,6 +7,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.config.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, enum.Enum):
@@ -40,8 +44,8 @@ class User(Base):
     company_id: int = Column(Integer, ForeignKey("companies.id"), nullable=True)
 
     is_active: bool = Column(Boolean, default=True, nullable=False)
-    created_at: datetime = Column(DateTime, default=datetime.utcnow)
-    updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = Column(DateTime, default=_utcnow)
+    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     # Relationships
     company = relationship("Company", back_populates="staff")

@@ -29,9 +29,10 @@ class CompanyService:
     def search_companies(self, query: str, skip: int = 0, limit: int = 100) -> CompanyListResponse:
         """Search companies by name or industry."""
         companies = self._company_repo.search(query, skip, limit)
+        total = self._company_repo.count_search(query)
         return CompanyListResponse(
             items=[CompanyResponse.model_validate(c) for c in companies],
-            total=len(companies),
+            total=total,
         )
 
     def create_company(self, data: CompanyCreate) -> CompanyResponse:

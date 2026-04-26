@@ -1,5 +1,5 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, Enum, DateTime, ForeignKey
@@ -7,6 +7,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.config.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class OpportunityType(str, enum.Enum):
@@ -29,11 +33,11 @@ class Opportunity(Base):
     description: str = Column(Text, nullable=True)
     requirements: str = Column(Text, nullable=True)  # Stored as JSON string
     is_active: bool = Column(Boolean, default=True, nullable=False, index=True)
-    posted_at: datetime = Column(DateTime, default=datetime.utcnow)
+    posted_at: datetime = Column(DateTime, default=_utcnow)
     deadline: datetime = Column(DateTime, nullable=True)
 
-    created_at: datetime = Column(DateTime, default=datetime.utcnow)
-    updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = Column(DateTime, default=_utcnow)
+    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     # Relationships
     company = relationship("Company", back_populates="opportunities")

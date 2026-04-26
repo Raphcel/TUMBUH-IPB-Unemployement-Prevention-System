@@ -11,7 +11,7 @@ from app.schemas.company import CompanyResponse
 class OpportunityCreate(BaseModel):
     """Schema for creating a new opportunity."""
     title: str = Field(..., max_length=300)
-    company_id: int
+    company_id: int | None = None
     type: OpportunityType
     location: str = Field(..., max_length=200)
     salary: str | None = None

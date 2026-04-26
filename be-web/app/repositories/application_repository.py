@@ -70,3 +70,23 @@ class ApplicationRepository(BaseRepository[Application]):
             )
             .count()
         )
+
+    def count_by_student(self, student_id: int) -> int:
+        """Count all applications by a student."""
+        return (
+            self._db.query(Application)
+            .filter(Application.student_id == student_id)
+            .count()
+        )
+
+    def get_by_ids(self, ids: list[int]) -> list[Application]:
+        """Retrieve multiple applications by their IDs."""
+        return (
+            self._db.query(Application)
+            .options(
+                joinedload(Application.student),
+                joinedload(Application.opportunity),
+            )
+            .filter(Application.id.in_(ids))
+            .all()
+        )

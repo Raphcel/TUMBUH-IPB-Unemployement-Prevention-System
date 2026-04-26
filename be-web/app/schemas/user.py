@@ -1,5 +1,6 @@
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timedelta, timezone
+
+from pydantic import BaseModel, Field, EmailStr
 
 from app.domain.models.user import UserRole
 
@@ -8,7 +9,7 @@ from app.domain.models.user import UserRole
 
 class UserCreate(BaseModel):
     """Schema for creating a new user (registration)."""
-    email: str = Field(..., example="budi@apps.ipb.ac.id")
+    email: EmailStr = Field(..., examples=["budi@apps.ipb.ac.id"])
     password: str = Field(..., min_length=8)
     first_name: str = Field(..., max_length=100)
     last_name: str = Field(..., max_length=100)
@@ -39,8 +40,13 @@ class UserUpdate(BaseModel):
 
 class UserLogin(BaseModel):
     """Schema for login request."""
-    email: str
+    email: EmailStr
     password: str
+
+
+class RefreshRequest(BaseModel):
+    """Schema for token refresh request."""
+    refresh_token: str
 
 
 # ── Response Schemas ─────────────────────────────────────────
@@ -71,5 +77,6 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     """Schema for authentication token response."""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserResponse

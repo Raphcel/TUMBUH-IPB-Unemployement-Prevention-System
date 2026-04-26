@@ -10,11 +10,11 @@ from app.config.database import get_db
 from app.domain.models.user import User
 from app.repositories import (
     UserRepository, CompanyRepository, OpportunityRepository, ApplicationRepository,
-    BookmarkRepository, ExternshipRepository,
+    BookmarkRepository, ExternshipRepository, NotificationRepository,
 )
 from app.services import (
     AuthService, UserService, CompanyService, OpportunityService, ApplicationService,
-    BookmarkService, ExternshipService,
+    BookmarkService, ExternshipService, NotificationService,
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -46,6 +46,10 @@ def get_externship_repo(db: Session = Depends(get_db)) -> ExternshipRepository:
     return ExternshipRepository(db)
 
 
+def get_notification_repo(db: Session = Depends(get_db)) -> NotificationRepository:
+    return NotificationRepository(db)
+
+
 # ── Service Factories ────────────────────────────────────────
 
 def get_auth_service(user_repo: UserRepository = Depends(get_user_repo)) -> AuthService:
@@ -69,8 +73,9 @@ def get_opportunity_service(
 
 def get_application_service(
     application_repo: ApplicationRepository = Depends(get_application_repo),
+    opportunity_repo: OpportunityRepository = Depends(get_opportunity_repo),
 ) -> ApplicationService:
-    return ApplicationService(application_repo)
+    return ApplicationService(application_repo, opportunity_repo)
 
 
 def get_bookmark_service(
@@ -83,6 +88,12 @@ def get_externship_service(
     externship_repo: ExternshipRepository = Depends(get_externship_repo),
 ) -> ExternshipService:
     return ExternshipService(externship_repo)
+
+
+def get_notification_service(
+    notification_repo: NotificationRepository = Depends(get_notification_repo),
+) -> NotificationService:
+    return NotificationService(notification_repo)
 
 
 # ── Auth Dependencies ────────────────────────────────────────

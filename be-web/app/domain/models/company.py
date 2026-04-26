@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime
 from sqlalchemy.orm import relationship
 
 from app.config.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class Company(Base):
@@ -27,8 +31,8 @@ class Company(Base):
     instagram_url: str = Column(String(500), nullable=True)
     tagline: str = Column(String(300), nullable=True)
 
-    created_at: datetime = Column(DateTime, default=datetime.utcnow)
-    updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = Column(DateTime, default=_utcnow)
+    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     # Relationships
     staff = relationship("User", back_populates="company")

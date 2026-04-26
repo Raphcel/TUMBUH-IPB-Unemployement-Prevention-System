@@ -5,6 +5,7 @@ from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.application_repository import ApplicationRepository
 from app.repositories.bookmark_repository import BookmarkRepository
 from app.repositories.externship_repository import ExternshipRepository
+from app.repositories.notification_repository import NotificationRepository
 
 __all__ = [
     "BaseRepository",
@@ -14,4 +15,5 @@ __all__ = [
     "ApplicationRepository",
     "BookmarkRepository",
     "ExternshipRepository",
+    "NotificationRepository",
 ]

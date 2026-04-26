@@ -21,6 +21,14 @@ class OpportunityService:
         self._opportunity_repo = opportunity_repo
         self._application_repo = application_repo
 
+    def verify_ownership(self, opportunity_id: int, company_id: int | None) -> None:
+        """Verify the opportunity belongs to the HR user's company."""
+        opp = self._opportunity_repo.get_by_id(opportunity_id)
+        if not opp:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
+        if opp.company_id != company_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only manage your own company's opportunities")
+
     def get_opportunity(self, opportunity_id: int) -> OpportunityResponse:
         """Get a single opportunity by ID (with company)."""
         opp = self._opportunity_repo.get_by_id_with_company(opportunity_id)
@@ -38,7 +46,7 @@ class OpportunityService:
     ) -> OpportunityListResponse:
         """List and search opportunities with filters."""
         results = self._opportunity_repo.search(query, type_filter, location, skip, limit)
-        total = self._opportunity_repo.count()
+        total = self._opportunity_repo.count_search(query, type_filter, location)
         return OpportunityListResponse(
             items=[self._to_response(o) for o in results],
             total=total,
@@ -56,10 +64,11 @@ class OpportunityService:
     def create_opportunity(self, data: OpportunityCreate) -> OpportunityResponse:
         """Create a new opportunity."""
         opp_dict = data.model_dump()
-        # Serialize requirements list to JSON string for storage
         if opp_dict.get("requirements"):
             opp_dict["requirements"] = json.dumps(opp_dict["requirements"])
         opp = self._opportunity_repo.create(opp_dict)
+        # Re-fetch with eager-loaded relationships to avoid lazy-load errors
+        opp = self._opportunity_repo.get_by_id_with_company(opp.id)
         return self._to_response(opp)
 
     def update_opportunity(self, opportunity_id: int, data: OpportunityUpdate) -> OpportunityResponse:
@@ -73,6 +82,8 @@ class OpportunityService:
             update_data["requirements"] = json.dumps(update_data["requirements"])
 
         updated = self._opportunity_repo.update(opp, update_data)
+        # Re-fetch with eager-loaded relationships
+        updated = self._opportunity_repo.get_by_id_with_company(updated.id)
         return self._to_response(updated)
 
     def delete_opportunity(self, opportunity_id: int) -> dict:
@@ -88,7 +99,6 @@ class OpportunityService:
     def _to_response(opp) -> OpportunityResponse:
         """Convert ORM model to response schema."""
         data = OpportunityResponse.model_validate(opp)
-        # Compute applicants_count from loaded relationship
         if hasattr(opp, "applications") and opp.applications is not None:
             data.applicants_count = len(opp.applications)
         return data

@@ -63,3 +63,19 @@ class OpportunityRepository(BaseRepository[Opportunity]):
             .filter(Opportunity.company_id == company_id)
             .count()
         )
+
+    def count_search(
+        self,
+        query: str | None = None,
+        type_filter: OpportunityType | None = None,
+        location: str | None = None,
+    ) -> int:
+        """Count opportunities matching the given filters."""
+        q = self._db.query(Opportunity)
+        if query:
+            q = q.filter(Opportunity.title.ilike(f"%{query}%"))
+        if type_filter:
+            q = q.filter(Opportunity.type == type_filter)
+        if location:
+            q = q.filter(Opportunity.location.ilike(f"%{location}%"))
+        return q.count()
