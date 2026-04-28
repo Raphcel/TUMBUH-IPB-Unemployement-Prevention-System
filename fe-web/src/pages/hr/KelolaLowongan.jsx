@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -55,13 +55,6 @@ export function KelolaLowongan() {
   const [applicantsByJob, setApplicantsByJob] = useState({});
   const [loadingApplicants, setLoadingApplicants] = useState({});
 
-  // Bulk selection
-  const [selectedApps, setSelectedApps] = useState(new Set());
-  const [bulkStatus, setBulkStatus] = useState('');
-  const [exceptNames, setExceptNames] = useState('');
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const exceptInputRef = useRef(null);
-
   // Modals
   const [selectedApp, setSelectedApp] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -97,16 +90,12 @@ export function KelolaLowongan() {
 
   // ── Toggle expand ───────────────────────────────────────
   const toggleExpand = (jobId) => {
+    // Collapsing the panel unmounts <ApplicantPanel>, which resets
+    // its own internal state automatically — no manual reset needed.
     if (expandedJobId === jobId) {
       setExpandedJobId(null);
-      setSelectedApps(new Set());
-      setExceptNames('');
-      setBulkStatus('');
     } else {
       setExpandedJobId(jobId);
-      setSelectedApps(new Set());
-      setExceptNames('');
-      setBulkStatus('');
       fetchApplicants(jobId);
     }
   };
@@ -150,62 +139,18 @@ export function KelolaLowongan() {
     }
   };
 
-  // ── Bulk selection helpers ─────────────────────────────
-  const currentApplicants = applicantsByJob[expandedJobId] || [];
-
-  const handleSelectAll = () => {
-    const exceptionList = exceptNames
-      .split(',')
-      .map((n) => n.trim().toLowerCase())
-      .filter(Boolean);
-    const ids = currentApplicants
-      .filter((a) => !exceptionList.includes(a.applicantName.toLowerCase()))
-      .map((a) => a.id);
-    setSelectedApps(new Set(ids));
-  };
-
-  const toggleAppSelection = (appId) => {
-    setSelectedApps((prev) => {
-      const next = new Set(prev);
-      if (next.has(appId)) next.delete(appId);
-      else next.add(appId);
-      return next;
-    });
-  };
-
-  const handleBulkUpdate = async () => {
-    if (selectedApps.size === 0 || !bulkStatus) return;
-    try {
-      await applicationsApi.bulkUpdateStatus([...selectedApps], bulkStatus);
+  // ── Bulk status update (called by ApplicantPanel) ──────
+  const handleBulkStatusChange = useCallback(
+    (ids, status) => {
       setApplicantsByJob((prev) => ({
         ...prev,
-        [expandedJobId]: prev[expandedJobId].map((a) =>
-          selectedApps.has(a.id) ? { ...a, status: bulkStatus } : a
-        ),
+        [expandedJobId]: prev[expandedJobId]?.map((a) =>
+          ids.has(a.id) ? { ...a, status } : a
+        ) ?? [],
       }));
-      addToast({ type: 'success', title: 'Berhasil', message: `${selectedApps.size} pelamar diperbarui.` });
-      setSelectedApps(new Set());
-      setBulkStatus('');
-    } catch {
-      addToast({ type: 'error', title: 'Gagal', message: 'Bulk update gagal.' });
-    }
-  };
-
-  // ── Autocomplete for exception names ───────────────────
-  const currentFragment = exceptNames.split(',').pop().trim().toLowerCase();
-  const autocompleteSuggestions = currentFragment
-    ? currentApplicants
-        .filter((a) => a.applicantName.toLowerCase().includes(currentFragment))
-        .slice(0, 5)
-    : [];
-
-  const selectSuggestion = (name) => {
-    const parts = exceptNames.split(',');
-    parts[parts.length - 1] = ` ${name}`;
-    setExceptNames(parts.join(','));
-    setShowAutocomplete(false);
-    exceptInputRef.current?.focus();
-  };
+    },
+    [expandedJobId]
+  );
 
   // ── Loading state ──────────────────────────────────────
   if (loading) {
@@ -300,22 +245,10 @@ export function KelolaLowongan() {
                       >
                         <td colSpan={7} className="p-0 bg-gray-50/60">
                           <ApplicantPanel
-                            applicants={currentApplicants}
+                            applicants={applicantsByJob[job.id] || []}
                             loading={loadingApplicants[job.id]}
-                            selectedApps={selectedApps}
-                            toggleAppSelection={toggleAppSelection}
-                            handleSelectAll={handleSelectAll}
-                            exceptNames={exceptNames}
-                            setExceptNames={setExceptNames}
-                            showAutocomplete={showAutocomplete}
-                            setShowAutocomplete={setShowAutocomplete}
-                            autocompleteSuggestions={autocompleteSuggestions}
-                            selectSuggestion={selectSuggestion}
-                            exceptInputRef={exceptInputRef}
-                            bulkStatus={bulkStatus}
-                            setBulkStatus={setBulkStatus}
-                            handleBulkUpdate={handleBulkUpdate}
-                            handleStatusChange={handleStatusChange}
+                            onStatusChange={handleStatusChange}
+                            onBulkStatusChange={handleBulkStatusChange}
                             onViewDetail={setSelectedApp}
                           />
                         </td>
@@ -358,46 +291,68 @@ export function KelolaLowongan() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
 // Applicant Panel (shown in expanded row)
-// ═══════════════════════════════════════════════════════════
-function ApplicantPanel({
-  applicants,
-  loading,
-  selectedApps,
-  toggleAppSelection,
-  handleSelectAll,
-  exceptNames,
-  setExceptNames,
-  showAutocomplete,
-  setShowAutocomplete,
-  autocompleteSuggestions,
-  selectSuggestion,
-  exceptInputRef,
-  bulkStatus,
-  setBulkStatus,
-  handleBulkUpdate,
-  handleStatusChange,
-  onViewDetail,
-}) {
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-      </div>
-    );
-  }
+// Props: applicants, loading, onStatusChange, onBulkStatusChange, onViewDetail
+// All bulk-selection state lives here — parent only gets a callback on commit.
+// ─────────────────────────────────────────────────────────────────────────────
+function ApplicantPanel({ applicants, loading, onStatusChange, onBulkStatusChange, onViewDetail }) {
+  const { addToast } = useToast();
 
-  if (applicants.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-400">
-        <Users size={32} className="mx-auto mb-2 opacity-30" />
-        <p>Belum ada pelamar untuk lowongan ini.</p>
-      </div>
-    );
-  }
+  // ── Internal bulk-action state ─────────────────────────────────────────────
+  const [selectedApps, setSelectedApps]         = useState(new Set());
+  const [bulkStatus, setBulkStatus]             = useState('');
+  const [exceptNames, setExceptNames]           = useState('');
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const exceptInputRef = useRef(null);
 
-  const allSelected = applicants.length > 0 && applicants.every((a) => selectedApps.has(a.id));
+  const toggleAppSelection = useCallback((appId) => {
+    setSelectedApps((prev) => {
+      const next = new Set(prev);
+      if (next.has(appId)) next.delete(appId);
+      else next.add(appId);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const exceptions = exceptNames
+      .split(',')
+      .map((n) => n.trim().toLowerCase())
+      .filter(Boolean);
+    const ids = applicants
+      .filter((a) => !exceptions.includes(a.applicantName.toLowerCase()))
+      .map((a) => a.id);
+    setSelectedApps(new Set(ids));
+  }, [applicants, exceptNames]);
+
+  const handleBulkUpdate = useCallback(async () => {
+    if (selectedApps.size === 0 || !bulkStatus) return;
+    try {
+      await applicationsApi.bulkUpdateStatus([...selectedApps], bulkStatus);
+      onBulkStatusChange(selectedApps, bulkStatus);
+      addToast({ type: 'success', title: 'Berhasil', message: `${selectedApps.size} pelamar diperbarui.` });
+      setSelectedApps(new Set());
+      setBulkStatus('');
+    } catch {
+      addToast({ type: 'error', title: 'Gagal', message: 'Bulk update gagal.' });
+    }
+  }, [selectedApps, bulkStatus, onBulkStatusChange, addToast]);
+
+  // ── Autocomplete ───────────────────────────────────────────────────────────
+  const currentFragment = exceptNames.split(',').pop().trim().toLowerCase();
+  const autocompleteSuggestions = currentFragment
+    ? applicants.filter((a) => a.applicantName.toLowerCase().includes(currentFragment)).slice(0, 5)
+    : [];
+
+  const selectSuggestion = (name) => {
+    const parts = exceptNames.split(',');
+    parts[parts.length - 1] = ` ${name}`;
+    setExceptNames(parts.join(','));
+    setShowAutocomplete(false);
+    exceptInputRef.current?.focus();
+  };
+
 
   return (
     <div className="p-4 space-y-3">
@@ -511,7 +466,7 @@ function ApplicantPanel({
                 <td className="px-4 py-3 text-right">
                   <Select
                     value={app.status}
-                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                    onChange={(e) => onStatusChange(app.id, e.target.value)}
                     options={STATUS_OPTIONS}
                     className="text-xs w-32"
                   />

@@ -370,7 +370,7 @@ export function StudentDashboard() {
 
         {/* Right Column - Secondary Context */}
         <motion.div variants={itemVariants} className="space-y-8">
-          <CalendarWidget />
+          <CalendarWidget applications={myApplications} />
         </motion.div>
       </div>
 

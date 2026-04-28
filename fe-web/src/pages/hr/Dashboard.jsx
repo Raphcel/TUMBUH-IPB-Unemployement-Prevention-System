@@ -191,7 +191,7 @@ export function HRDashboard() {
         </div>
 
         <motion.div variants={itemVariants} className="space-y-6">
-          <CalendarWidget />
+          <CalendarWidget opportunities={myJobs} />
         </motion.div>
       </div>
     </motion.div>

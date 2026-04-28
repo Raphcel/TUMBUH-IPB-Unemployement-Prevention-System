@@ -1,31 +1,47 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
-import { Beranda } from './pages/Beranda';
-import { Lowongan } from './pages/Lowongan';
-import { DetailLowongan } from './pages/DetailLowongan';
-import { Perusahaan } from './pages/Perusahaan';
-import { DetailPerusahaan } from './pages/DetailPerusahaan';
-import { Panduan } from './pages/Panduan';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
+// ── Helper: lazy-load a named export ──────────────────────────────────────
+const lazyNamed = (factory, name) =>
+  lazy(() => factory().then((m) => ({ default: m[name] })));
 
-import { StudentDashboard } from './pages/student/Dashboard';
-import { LamaranSaya } from './pages/student/LamaranSaya';
-import { Bookmarks } from './pages/student/Bookmarks';
-import { ProfilStudent } from './pages/student/Profil';
+// ── Public pages ───────────────────────────────────────────────────────────
+const Beranda         = lazyNamed(() => import('./pages/Beranda'),           'Beranda');
+const Lowongan        = lazyNamed(() => import('./pages/Lowongan'),          'Lowongan');
+const DetailLowongan  = lazyNamed(() => import('./pages/DetailLowongan'),    'DetailLowongan');
+const Perusahaan      = lazyNamed(() => import('./pages/Perusahaan'),        'Perusahaan');
+const DetailPerusahaan = lazyNamed(() => import('./pages/DetailPerusahaan'), 'DetailPerusahaan');
+const Panduan         = lazyNamed(() => import('./pages/Panduan'),           'Panduan');
+const Login           = lazyNamed(() => import('./pages/Login'),             'Login');
+const Register        = lazyNamed(() => import('./pages/Register'),          'Register');
+const Notifications   = lazyNamed(() => import('./pages/Notifications'),     'Notifications');
+const Calendar        = lazyNamed(() => import('./pages/Calendar'),          'Calendar');
 
-import { HRDashboard } from './pages/hr/Dashboard';
-import { Calendar } from './pages/Calendar';
-import { KelolaLowongan } from './pages/hr/KelolaLowongan';
-import { Pelamar } from './pages/hr/Pelamar';
-import { ProfilPerusahaanHR } from './pages/hr/ProfilPerusahaan';
-import { FormLowongan } from './pages/hr/FormLowongan';
-import { Notifications } from './pages/Notifications';
+// ── Student pages ──────────────────────────────────────────────────────────
+const StudentDashboard = lazyNamed(() => import('./pages/student/Dashboard'), 'StudentDashboard');
+const LamaranSaya      = lazyNamed(() => import('./pages/student/LamaranSaya'), 'LamaranSaya');
+const Bookmarks        = lazyNamed(() => import('./pages/student/Bookmarks'),   'Bookmarks');
+const ProfilStudent    = lazyNamed(() => import('./pages/student/Profil'),       'ProfilStudent');
+
+// ── HR pages ───────────────────────────────────────────────────────────────
+const HRDashboard        = lazyNamed(() => import('./pages/hr/Dashboard'),         'HRDashboard');
+const KelolaLowongan     = lazyNamed(() => import('./pages/hr/KelolaLowongan'),    'KelolaLowongan');
+const Pelamar            = lazyNamed(() => import('./pages/hr/Pelamar'),            'Pelamar');
+const ProfilPerusahaanHR = lazyNamed(() => import('./pages/hr/ProfilPerusahaan'),  'ProfilPerusahaanHR');
+const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),      'FormLowongan');
+
+// ── Suspense fallback ──────────────────────────────────────────────────────
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
+    </div>
+  );
+}
 
 /**
  * ErrorBoundary — catches render errors and shows a fallback UI.
@@ -184,7 +200,9 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <Suspense fallback={<PageSpinner />}>
+            <AppRoutes />
+          </Suspense>
         </ToastProvider>
       </AuthProvider>
     </ErrorBoundary>
