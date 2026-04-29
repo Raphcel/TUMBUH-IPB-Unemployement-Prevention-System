@@ -7,12 +7,15 @@ import { useToast } from '../../context/ToastContext';
 import { opportunitiesApi } from '../../api/opportunities';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function FormLowongan() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { lang } = useTranslation();
   const isEdit = Boolean(id);
+  const isId = lang === 'id';
 
   const [form, setForm] = useState({
     title: '',
@@ -47,7 +50,7 @@ export function FormLowongan() {
         });
       })
       .catch(() => {
-        addToast({ type: 'error', title: 'Error', message: 'Gagal memuat data lowongan.' });
+        addToast({ type: 'error', title: 'Error', message: isId ? 'Gagal memuat data lowongan.' : 'Failed to load opportunity data.' });
         navigate('/hr/opportunities');
       })
       .finally(() => setLoading(false));
@@ -76,7 +79,7 @@ export function FormLowongan() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title || !form.type || !form.location) {
-      addToast({ type: 'error', title: 'Validasi', message: 'Judul, tipe, dan lokasi wajib diisi.' });
+      addToast({ type: 'error', title: isId ? 'Validasi' : 'Validation', message: isId ? 'Judul, tipe, dan lokasi wajib diisi.' : 'Title, type, and location are required.' });
       return;
     }
 
@@ -92,14 +95,14 @@ export function FormLowongan() {
     try {
       if (isEdit) {
         await opportunitiesApi.update(id, payload);
-        addToast({ type: 'success', title: 'Berhasil', message: 'Lowongan berhasil diperbarui.' });
+        addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'Lowongan berhasil diperbarui.' : 'Opportunity updated successfully.' });
       } else {
         await opportunitiesApi.create(payload);
-        addToast({ type: 'success', title: 'Berhasil', message: 'Lowongan baru berhasil dibuat.' });
+        addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'Lowongan baru berhasil dibuat.' : 'New opportunity created successfully.' });
       }
       navigate('/hr/opportunities');
     } catch (err) {
-      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Terjadi kesalahan.' });
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Terjadi kesalahan.' : 'Something went wrong.') });
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +131,7 @@ export function FormLowongan() {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-2xl font-bold text-gray-900">
-          {isEdit ? 'Edit Lowongan' : 'Buat Lowongan Baru'}
+          {isEdit ? (isId ? 'Edit Lowongan' : 'Edit Opportunity') : (isId ? 'Buat Lowongan Baru' : 'Create New Opportunity')}
         </h1>
       </div>
 
@@ -136,7 +139,7 @@ export function FormLowongan() {
         <CardBody>
           <form className="space-y-5" onSubmit={handleSubmit}>
             <Input
-              label="Judul Posisi"
+              label={isId ? 'Judul Posisi' : 'Position Title'}
               value={form.title}
               onChange={handleChange('title')}
               placeholder="Contoh: Frontend Developer Intern"
@@ -145,7 +148,7 @@ export function FormLowongan() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipe</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{isId ? 'Tipe' : 'Type'}</label>
                 <Select
                   value={form.type}
                   onChange={handleChange('type')}
@@ -157,7 +160,7 @@ export function FormLowongan() {
                 />
               </div>
               <Input
-                label="Lokasi"
+                label={isId ? 'Lokasi' : 'Location'}
                 value={form.location}
                 onChange={handleChange('location')}
                 placeholder="Contoh: Jakarta, Indonesia"
@@ -167,13 +170,13 @@ export function FormLowongan() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Gaji (opsional)"
+                label={isId ? 'Gaji (opsional)' : 'Salary (optional)'}
                 value={form.salary}
                 onChange={handleChange('salary')}
                 placeholder="Contoh: Rp 3.000.000 - Rp 5.000.000"
               />
               <Input
-                label="Deadline (opsional)"
+                label={isId ? 'Deadline (opsional)' : 'Deadline (optional)'}
                 type="date"
                 value={form.deadline}
                 onChange={handleChange('deadline')}
@@ -181,17 +184,17 @@ export function FormLowongan() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{isId ? 'Deskripsi' : 'Description'}</label>
               <textarea
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[120px] resize-y"
                 value={form.description}
                 onChange={handleChange('description')}
-                placeholder="Deskripsikan lowongan ini..."
+                placeholder={isId ? 'Deskripsikan lowongan ini...' : 'Describe this opportunity...'}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Persyaratan</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{isId ? 'Persyaratan' : 'Requirements'}</label>
               <div className="space-y-2">
                 {form.requirements.map((req, index) => (
                   <div key={index} className="flex items-center gap-2">
@@ -218,7 +221,7 @@ export function FormLowongan() {
                 onClick={addRequirement}
                 className="mt-2 text-sm text-primary hover:text-accent flex items-center gap-1 font-medium"
               >
-                <Plus size={14} /> Tambah Persyaratan
+                <Plus size={14} /> {isId ? 'Tambah Persyaratan' : 'Add Requirement'}
               </button>
             </div>
 
@@ -231,7 +234,7 @@ export function FormLowongan() {
                 className="rounded border-gray-300"
               />
               <label htmlFor="is_active" className="text-sm text-gray-700">
-                Lowongan aktif
+                {isId ? 'Lowongan aktif' : 'Active opportunity'}
               </label>
             </div>
 
@@ -241,10 +244,10 @@ export function FormLowongan() {
                 variant="outline"
                 onClick={() => navigate('/hr/opportunities')}
               >
-                Batal
+                {isId ? 'Batal' : 'Cancel'}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Buat Lowongan'}
+                {submitting ? (isId ? 'Menyimpan...' : 'Saving...') : isEdit ? (isId ? 'Simpan Perubahan' : 'Save Changes') : (isId ? 'Buat Lowongan' : 'Create Opportunity')}
               </Button>
             </div>
           </form>

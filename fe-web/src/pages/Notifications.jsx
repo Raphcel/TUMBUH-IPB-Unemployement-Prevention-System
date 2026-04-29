@@ -4,13 +4,28 @@ import { Button } from '../components/ui/Button';
 import { Bell, CheckCircle, Info, AlertTriangle, Check } from 'lucide-react';
 import { notificationsApi } from '../api/notifications';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../context/LanguageContext';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Notifications() {
     const { user } = useAuth();
+    const { lang } = useTranslation();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const copy = lang === 'id'
+        ? {
+            title: 'Notifikasi',
+            subtitle: 'Tetap update dengan aktivitas terbaru Anda.',
+            markAll: 'Tandai semua dibaca',
+            empty: 'Belum ada notifikasi.',
+          }
+        : {
+            title: 'Notifications',
+            subtitle: 'Stay up to date with your latest activity.',
+            markAll: 'Mark all as read',
+            empty: 'No notifications yet.',
+          };
 
     useEffect(() => {
         if (!user) {
@@ -71,10 +86,10 @@ export function Notifications() {
             <div className="flex justify-between items-center border-b border-gray-200 pb-6">
                 <div>
                     <h1 className="text-2xl font-semibold text-primary tracking-tight flex items-center gap-2">
-                        <Bell className="text-accent fill-current" size={24} /> Notifikasi
+                        <Bell className="text-accent fill-current" size={24} /> {copy.title}
                     </h1>
                     <p className="text-secondary mt-1">
-                        Tetap update dengan aktivitas terbaru Anda.
+                        {copy.subtitle}
                     </p>
                 </div>
                 {notifications.some(n => !n.is_read) && (
@@ -84,7 +99,7 @@ export function Notifications() {
                         onClick={handleMarkAllRead}
                         className="flex items-center gap-2"
                     >
-                        <Check size={16} /> Tandai semua dibaca
+                        <Check size={16} /> {copy.markAll}
                     </Button>
                 )}
             </div>
@@ -153,7 +168,7 @@ export function Notifications() {
                             className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200"
                         >
                             <Bell size={32} className="mx-auto text-gray-300 mb-3" />
-                            <p className="text-secondary">Belum ada notifikasi.</p>
+                            <p className="text-secondary">{copy.empty}</p>
                         </motion.div>
                     )}
                 </AnimatePresence>

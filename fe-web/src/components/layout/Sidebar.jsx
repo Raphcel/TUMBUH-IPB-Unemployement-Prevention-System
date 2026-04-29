@@ -15,24 +15,26 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSidebar, closeMobile }) {
   const location = useLocation();
+  const { t } = useTranslation();
 
   const studentLinks = [
-    { name: 'Dashboard', path: '/student/dashboard', icon: Home },
-    { name: 'Calendar', path: '/calendar', icon: Calendar },
-    { name: 'Applications', path: '/student/applications', icon: FileText },
-    { name: 'Bookmarks', path: '/student/bookmarks', icon: Bookmark },
-    { name: 'Profile', path: '/student/profile', icon: User },
+    { name: t('nav_dashboard'), path: '/student/dashboard', icon: Home },
+    { name: t('nav_calendar'), path: '/calendar', icon: Calendar },
+    { name: t('nav_my_applications'), path: '/student/applications', icon: FileText },
+    { name: t('nav_bookmarks'), path: '/student/bookmarks', icon: Bookmark },
+    { name: t('nav_profile'), path: '/student/profile', icon: User },
   ];
 
   const hrLinks = [
-    { name: 'Dashboard', path: '/hr/dashboard', icon: Home },
-    { name: 'Calendar', path: '/calendar', icon: Calendar },
-    { name: 'Opportunities', path: '/hr/opportunities', icon: Briefcase },
-    { name: 'Applicants', path: '/hr/applicants', icon: Users },
-    { name: 'Company', path: '/hr/company', icon: Building },
+    { name: t('nav_dashboard'), path: '/hr/dashboard', icon: Home },
+    { name: t('nav_calendar'), path: '/calendar', icon: Calendar },
+    { name: t('nav_opportunities'), path: '/hr/opportunities', icon: Briefcase },
+    { name: t('nav_applicants'), path: '/hr/applicants', icon: Users },
+    { name: t('nav_company_profile'), path: '/hr/company', icon: Building },
   ];
 
   const links = role === 'hr' ? hrLinks : studentLinks;

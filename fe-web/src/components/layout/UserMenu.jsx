@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../context/LanguageContext';
 import { resolveUploadUrl } from '../../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,15 +11,18 @@ import {
     FileText,
     User,
     Briefcase,
-    Users,
     Building,
-    Settings
+    Settings,
+    Languages,
+    Check,
 } from 'lucide-react';
 
 export function UserMenu({ isTransparent = false, isMobile = false }) {
     const { user, logout } = useAuth();
+    const { t, lang, setLang } = useTranslation();
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [showLangMenu, setShowLangMenu] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -27,27 +31,33 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
     };
 
     const studentLinks = [
-        { name: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={16} /> },
-        { name: 'My Applications', path: '/student/applications', icon: <FileText size={16} /> },
-        { name: 'Profile', path: '/student/profile', icon: <User size={16} /> },
+        { name: t('nav_dashboard'),        path: '/student/dashboard',    icon: <LayoutDashboard size={16} /> },
+        { name: t('nav_my_applications'),  path: '/student/applications', icon: <FileText size={16} /> },
+        { name: t('nav_profile'),          path: '/student/profile',      icon: <User size={16} /> },
     ];
 
     const hrLinks = [
-        { name: 'Dashboard', path: '/hr/dashboard', icon: <LayoutDashboard size={16} /> },
-        { name: 'Opportunities', path: '/hr/opportunities', icon: <Briefcase size={16} /> },
-        { name: 'Company Profile', path: '/hr/company', icon: <Building size={16} /> },
+        { name: t('nav_dashboard'),        path: '/hr/dashboard',    icon: <LayoutDashboard size={16} /> },
+        { name: t('nav_opportunities'),    path: '/hr/opportunities', icon: <Briefcase size={16} /> },
+        { name: t('nav_company_profile'),  path: '/hr/company',      icon: <Building size={16} /> },
     ];
 
     const currentLinks = user?.role === 'hr' ? hrLinks : studentLinks;
 
+    const LANGS = [
+        { code: 'en', label: t('lang_en') },
+        { code: 'id', label: t('lang_id') },
+    ];
+
     return (
         <div className="relative">
             <motion.button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                onClick={() => { setDropdownOpen(!dropdownOpen); setShowLangMenu(false); }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-2 text-sm font-medium transition-colors focus:outline-none p-1.5 rounded-lg ${isTransparent ? 'text-text-inverse hover:bg-white/10' : 'text-text hover:bg-surface-muted'
-                    } ${isMobile ? 'w-full justify-center mt-4 border border-surface-border' : ''}`}
+                className={`flex items-center gap-2 text-sm font-medium transition-colors focus:outline-none p-1.5 rounded-lg ${
+                    isTransparent ? 'text-text-inverse hover:bg-white/10' : 'text-text hover:bg-surface-muted'
+                } ${isMobile ? 'w-full justify-center mt-4 border border-surface-border' : ''}`}
             >
                 <img
                     src={
@@ -68,8 +78,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                 {!isMobile && (
                     <ChevronDown
                         size={16}
-                        className={`transition-transform duration-300 ease-[0.22,1,0.36,1] ${dropdownOpen ? 'rotate-180' : ''
-                            }`}
+                        className={`transition-transform duration-300 ease-[0.22,1,0.36,1] ${dropdownOpen ? 'rotate-180' : ''}`}
                     />
                 )}
             </motion.button>
@@ -77,18 +86,17 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
             <AnimatePresence>
                 {dropdownOpen && (
                     <>
-                        <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setDropdownOpen(false)}
-                        />
+                        <div className="fixed inset-0 z-40" onClick={() => { setDropdownOpen(false); setShowLangMenu(false); }} />
                         <motion.div
                             initial={{ opacity: 0, y: 4, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 4, scale: 0.98 }}
                             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className={`absolute mt-2 w-64 bg-surface rounded-xl shadow-lg border border-surface-border py-2 z-50 origin-top overflow-hidden ring-1 ring-black/5 ${isMobile ? 'bottom-full mb-2 left-1/2 -translate-x-1/2 origin-bottom' : 'right-0 top-full'
-                                }`}
+                            className={`absolute mt-2 w-64 bg-surface rounded-xl shadow-lg border border-surface-border py-2 z-50 origin-top overflow-hidden ring-1 ring-black/5 ${
+                                isMobile ? 'bottom-full mb-2 left-1/2 -translate-x-1/2 origin-bottom' : 'right-0 top-full'
+                            }`}
                         >
+                            {/* ── User header ── */}
                             <div className="px-4 py-3 border-b border-surface-border bg-surface-muted/50">
                                 <p className="text-sm font-bold text-text">
                                     {user?.first_name} {user?.last_name}
@@ -101,6 +109,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                                 </span>
                             </div>
 
+                            {/* ── Nav links ── */}
                             <div className="py-1">
                                 {currentLinks.map((link) => (
                                     <Link
@@ -109,28 +118,67 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                                         onClick={() => setDropdownOpen(false)}
                                         className="flex items-center gap-3 px-4 py-2 text-sm text-text-muted hover:bg-surface-muted hover:text-brand transition-colors"
                                     >
-                                        <span className="text-text-light group-hover:text-brand transition-colors">
-                                            {link.icon}
-                                        </span>
+                                        <span className="text-text-light">{link.icon}</span>
                                         {link.name}
                                     </Link>
                                 ))}
                             </div>
 
+                            {/* ── Language toggle ── */}
+                            <div className="border-t border-surface-border pt-1">
+                                <button
+                                    onClick={() => setShowLangMenu(!showLangMenu)}
+                                    className="w-full flex items-center justify-between gap-3 px-4 py-2 text-sm text-text-muted hover:bg-surface-muted hover:text-text transition-colors text-left"
+                                >
+                                    <span className="flex items-center gap-3">
+                                        <Languages size={16} className="text-text-light" />
+                                        {t('language')}
+                                    </span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-surface-muted rounded text-text-light">
+                                        {lang.toUpperCase()}
+                                    </span>
+                                </button>
+
+                                <AnimatePresence>
+                                    {showLangMenu && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.18 }}
+                                            className="overflow-hidden bg-surface-muted/50"
+                                        >
+                                            {LANGS.map(({ code, label }) => (
+                                                <button
+                                                    key={code}
+                                                    onClick={() => { setLang(code); setShowLangMenu(false); setDropdownOpen(false); }}
+                                                    className="w-full flex items-center justify-between gap-3 pl-10 pr-4 py-2 text-sm text-text-muted hover:bg-surface-muted hover:text-brand transition-colors"
+                                                >
+                                                    {label}
+                                                    {lang === code && <Check size={14} className="text-brand" />}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* ── Settings & Logout ── */}
                             <div className="border-t border-surface-border py-1 mt-1">
                                 <Link
                                     to={user?.role === 'hr' ? '/hr/company' : '/student/profile'}
                                     onClick={() => setDropdownOpen(false)}
                                     className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-muted hover:bg-surface-muted hover:text-text transition-colors text-left"
                                 >
-                                    <Settings size={16} className="text-text-light" /> Settings
+                                    <Settings size={16} className="text-text-light" />
+                                    {t('nav_settings')}
                                 </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
                                 >
                                     <LogOut size={16} />
-                                    Logout
+                                    {t('nav_logout')}
                                 </button>
                             </div>
                         </motion.div>

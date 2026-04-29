@@ -6,10 +6,53 @@ import { Card, CardBody } from '../components/ui/Card';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from '../context/LanguageContext';
 
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { lang } = useTranslation();
+  const copy = lang === 'id'
+    ? {
+        emailRequired: 'Email wajib diisi',
+        emailInvalid: 'Format email tidak valid',
+        passwordRequired: 'Password wajib diisi',
+        successTitle: 'Login Berhasil',
+        successMessage: 'Selamat datang kembali',
+        failedTitle: 'Login Gagal',
+        failedMessage: 'Login gagal. Periksa email dan password Anda.',
+        title: 'Masuk ke Akun Anda',
+        subtitle: 'Selamat datang kembali! Silakan masukkan detail Anda',
+        remember: 'Ingat saya',
+        forgot: 'Lupa password?',
+        forgotTitle: 'Reset Password',
+        forgotMessage: 'Hubungi admin di support@tumbuh.me untuk reset password.',
+        processing: 'Memproses...',
+        submit: 'Masuk',
+        noAccount: 'Belum punya akun?',
+        register: 'Daftar sekarang',
+        demoFailed: 'Login demo gagal',
+      }
+    : {
+        emailRequired: 'Email is required',
+        emailInvalid: 'Invalid email format',
+        passwordRequired: 'Password is required',
+        successTitle: 'Login Successful',
+        successMessage: 'Welcome back',
+        failedTitle: 'Login Failed',
+        failedMessage: 'Login failed. Please check your email and password.',
+        title: 'Sign In to Your Account',
+        subtitle: 'Welcome back. Please enter your details.',
+        remember: 'Remember me',
+        forgot: 'Forgot password?',
+        forgotTitle: 'Password Reset',
+        forgotMessage: 'Contact support@tumbuh.me to reset your password.',
+        processing: 'Processing...',
+        submit: 'Sign In',
+        noAccount: "Don't have an account?",
+        register: 'Register now',
+        demoFailed: 'Demo login failed',
+      };
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,10 +66,10 @@ export function Login() {
 
   const validate = () => {
     const newErrors = {};
-    if (!email) newErrors.email = 'Email wajib diisi';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Format email tidak valid';
+    if (!email) newErrors.email = copy.emailRequired;
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = copy.emailInvalid;
 
-    if (!password) newErrors.password = 'Password wajib diisi';
+    if (!password) newErrors.password = copy.passwordRequired;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -48,17 +91,17 @@ export function Login() {
       navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
       addToast({
         title: 'Login Berhasil',
-        message: `Selamat datang kembali, ${user.first_name}!`,
+        message: `${copy.successMessage}, ${user.first_name}!`,
         type: 'success',
       });
     } catch (err) {
-      const msg = err.message || 'Login gagal. Periksa email dan password Anda.';
+      const msg = err.message || copy.failedMessage;
       // specific error mapping could go here if API returns field errors
       setErrors({ global: msg });
       setShake(true);
       setTimeout(() => setShake(false), 500);
       addToast({
-        title: 'Login Gagal',
+        title: copy.failedTitle,
         message: msg,
         type: 'error',
       });
@@ -75,7 +118,7 @@ export function Login() {
       const user = await login(demoEmail, 'password123');
       navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
     } catch (err) {
-      setErrors({ global: err.message || 'Demo login failed' });
+      setErrors({ global: err.message || copy.demoFailed });
     } finally {
       setLoading(false);
     }
@@ -104,7 +147,7 @@ export function Login() {
             transition={{ delay: 0.2 }}
             className="text-2xl font-bold text-gray-900"
           >
-            Masuk ke Akun Anda
+            {copy.title}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -112,7 +155,7 @@ export function Login() {
             transition={{ delay: 0.3 }}
             className="mt-2 text-gray-600"
           >
-            Selamat datang kembali! Silakan masukkan detail Anda
+            {copy.subtitle}
           </motion.p>
         </div>
 
@@ -165,33 +208,33 @@ export function Login() {
                     htmlFor="remember-me"
                     className="ml-2 block text-sm text-gray-900"
                   >
-                    Ingat saya
+                    {copy.remember}
                   </label>
                 </div>
                 <div className="text-sm">
                   <button
                     type="button"
-                    onClick={() => addToast({ type: 'info', title: 'Reset Password', message: 'Hubungi admin di support@tumbuh.me untuk reset password.' })}
+                    onClick={() => addToast({ type: 'info', title: copy.forgotTitle, message: copy.forgotMessage })}
                     className="font-medium text-[#0f2854] hover:text-[#183a6d]"
                   >
-                    Lupa password?
+                    {copy.forgot}
                   </button>
                 </div>
               </div>
 
               <Button type="submit" variant="primary" className="text-white w-full" disabled={loading}>
-                {loading ? 'Memproses...' : 'Masuk'}
+                {loading ? copy.processing : copy.submit}
               </Button>
             </motion.form>
 
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-500">
-                Belum punya akun?{' '}
+                {copy.noAccount}{' '}
                 <Link
                   to="/register"
                   className="font-semibold text-[#0f2854] hover:text-[#183a6d]"
                 >
-                  Daftar sekarang
+                  {copy.register}
                 </Link>
               </p>
             </div>

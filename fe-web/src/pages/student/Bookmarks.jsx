@@ -14,12 +14,15 @@ import {
     Loader2,
 } from 'lucide-react';
 import { bookmarksApi } from '../../api/bookmarks';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function Bookmarks() {
+    const { lang } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('deadline');
     const [bookmarks, setBookmarks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const isId = lang === 'id';
 
     useEffect(() => {
         let cancelled = false;
@@ -87,14 +90,14 @@ export function Bookmarks() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-200 pb-6">
                 <div>
                     <h1 className="text-3xl font-semibold text-primary tracking-tight flex items-center gap-2">
-                        <Bookmark className="text-accent fill-current" size={28} /> Saved Opportunities
+                        <Bookmark className="text-accent fill-current" size={28} /> {isId ? 'Lowongan Tersimpan' : 'Saved Opportunities'}
                     </h1>
                     <p className="text-secondary mt-1 text-lg">
-                        Manage your bookmarked jobs and internships.
+                        {isId ? 'Kelola lowongan dan magang yang kamu simpan.' : 'Manage your bookmarked jobs and internships.'}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 bg-blue-50 text-blue-800 px-4 py-2 rounded-full text-sm font-medium">
-                    {loading ? '...' : bookmarks.length} Saved Items
+                    {loading ? '...' : bookmarks.length} {isId ? 'Item Tersimpan' : 'Saved Items'}
                 </div>
             </div>
 
@@ -112,7 +115,7 @@ export function Bookmarks() {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                     <input
                                         type="text"
-                                        placeholder="Search saved jobs..."
+                                        placeholder={isId ? 'Cari lowongan tersimpan...' : 'Search saved jobs...'}
                                         className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -125,9 +128,9 @@ export function Bookmarks() {
                                         value={sortBy}
                                         onChange={(e) => setSortBy(e.target.value)}
                                     >
-                                        <option value="deadline">Sort by Deadline</option>
-                                        <option value="title">Sort by Title</option>
-                                        <option value="company">Sort by Company</option>
+                                        <option value="deadline">{isId ? 'Urutkan menurut deadline' : 'Sort by Deadline'}</option>
+                                        <option value="title">{isId ? 'Urutkan menurut judul' : 'Sort by Title'}</option>
+                                        <option value="company">{isId ? 'Urutkan menurut perusahaan' : 'Sort by Company'}</option>
                                     </select>
                                 </div>
                             </CardBody>
@@ -177,7 +180,7 @@ export function Bookmarks() {
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Clock size={14} />
-                                                        Deadline: {new Date(job.deadline).toLocaleDateString('id-ID')}
+                                                        {isId ? 'Deadline' : 'Deadline'}: {new Date(job.deadline).toLocaleDateString('id-ID')}
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
                                                         <Briefcase size={14} />
@@ -193,14 +196,14 @@ export function Bookmarks() {
                                                     variant="primary"
                                                     className="whitespace-nowrap w-full md:w-auto text-white justify-center"
                                                 >
-                                                    Apply Now
+                                                    {isId ? 'Lamar Sekarang' : 'Apply Now'}
                                                 </Button>
                                                 <Button
                                                     onClick={() => handleRemoveBookmark(job.id)}
                                                     variant="ghost"
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full md:w-auto justify-center"
                                                 >
-                                                    Remove
+                                                    {isId ? 'Hapus' : 'Remove'}
                                                 </Button>
                                             </div>
                                         </div>
@@ -210,13 +213,15 @@ export function Bookmarks() {
                         ) : (
                             <div className="text-center py-20 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
                                 <Bookmark className="mx-auto text-gray-300 mb-4" size={48} />
-                                <h3 className="text-lg font-medium text-primary">No bookmarks found</h3>
+                                <h3 className="text-lg font-medium text-primary">{isId ? 'Tidak ada bookmark' : 'No bookmarks found'}</h3>
                                 <p className="text-secondary mt-1">
-                                    {searchTerm ? "Try adjusting your search terms." : "You haven't saved any opportunities yet."}
+                                    {searchTerm
+                                        ? (isId ? 'Coba ubah kata kunci pencarianmu.' : 'Try adjusting your search terms.')
+                                        : (isId ? 'Kamu belum menyimpan lowongan apa pun.' : "You haven't saved any opportunities yet.")}
                                 </p>
                                 {!searchTerm && (
                                     <Button to="/lowongan" variant="outline" className="mt-6">
-                                        Browse Opportunities
+                                        {isId ? 'Lihat Lowongan' : 'Browse Opportunities'}
                                     </Button>
                                 )}
                             </div>

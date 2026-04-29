@@ -5,10 +5,12 @@ import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { opportunitiesApi } from '../api/opportunities';
 import { companiesApi } from '../api/companies';
+import { useTranslation } from '../context/LanguageContext';
 import { MapPin, DollarSign, ArrowRight, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function Beranda() {
+  const { lang } = useTranslation();
   const [jobs, setJobs] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,35 @@ export function Beranda() {
   }, []);
 
   const allCompanies = [...companies, ...companies]; // duplicate for scroll effect
+  const copy = lang === 'id'
+    ? {
+        heroTitle: 'Tumbuhkan Talenta,\nBentuk Masa Depan.',
+        heroText: 'Transisi yang lebih terarah dari kampus ke dunia profesional. Temukan magang, pekerjaan, dan beasiswa, lalu kelola semua lamaranmu dalam satu ruang kerja pribadi.',
+        searchPlaceholder: 'Cari lowongan, magang, atau apa pun...',
+        searchButton: 'Cari',
+        seeAllJobs: 'Lihat Semua Lowongan',
+        latestTitle: 'Lowongan Terbaru',
+        latestText: 'Pilihan lowongan untuk mahasiswa dan fresh graduate.',
+        viewAll: 'Lihat semua',
+        loading: 'Memuat...',
+        details: 'Detail',
+        partners: 'Partner Perusahaan Kami',
+        logoAlt: 'Logo',
+      }
+    : {
+        heroTitle: 'Growing Talent,\nShaping Futures.',
+        heroText: 'A thoughtful transition from university to professional life. Find internships, jobs, and scholarships, and organize your applications in one personal workspace.',
+        searchPlaceholder: 'Search for jobs, internships, or anything...',
+        searchButton: 'Search',
+        seeAllJobs: 'View All Opportunities',
+        latestTitle: 'Latest Opportunities',
+        latestText: 'Curated openings for students and fresh graduates.',
+        viewAll: 'View all',
+        loading: 'Loading...',
+        details: 'Details',
+        partners: 'Our Partner Companies',
+        logoAlt: 'Logo',
+      };
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -63,9 +94,12 @@ export function Beranda() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="text-5xl sm:text-7xl font-bold tracking-tight text-white font-sans text-balance drop-shadow-md"
             >
-              Growing Talent,
-              <br />
-              Shaping Futures.
+              {copy.heroTitle.split('\n').map((line) => (
+                <React.Fragment key={line}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -73,9 +107,7 @@ export function Beranda() {
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="mt-6 text-lg leading-8 text-white/90 drop-shadow-sm max-w-2xl"
             >
-              A thoughtful transition from university to professional life. Find
-              internships, jobs, and scholarships, and organize your
-              applications in one personal workspace.
+              {copy.heroText}
             </motion.p>
 
             {/* Search Bar */}
@@ -93,11 +125,11 @@ export function Beranda() {
                   type="text"
                   name="q"
                   className="w-full border-transparent pl-4 py-4 rounded-xl placeholder:text-gray-400 sm:text-lg sm:leading-6 shadow-2xl bg-white backdrop-blur-md text-primary transition-all focus:outline-none focus:ring-0 focus:border-transparent"
-                  placeholder="Search for jobs, internships, or anything..."
+                  placeholder={copy.searchPlaceholder}
                 />
                 <div className="absolute inset-y-2 right-2">
                   <button type="submit" className="h-full px-6 bg-[#0f2854] hover:bg-[#1a3a70] text-white font-semibold rounded-lg shadow-md transition-colors">
-                    Search
+                    {copy.searchButton}
                   </button>
                 </div>
               </form>
@@ -105,7 +137,7 @@ export function Beranda() {
                 to="/lowongan"
                 className="text-sm font-semibold leading-6 text-white hover:text-white/80 transition-colors items-center gap-1 border-b border-transparent hover:border-white pb-0.5 mt-4 inline-block"
               >
-                Lihat Semua Lowongan
+                {copy.seeAllJobs}
               </Link>
             </motion.div>
           </div>
@@ -123,23 +155,23 @@ export function Beranda() {
           >
             <div>
               <h2 className="text-2xl font-semibold tracking-tight text-primary">
-                Latest Opportunities
+                {copy.latestTitle}
               </h2>
               <p className="mt-2 text-secondary">
-                Curated openings for students and fresh graduates.
+                {copy.latestText}
               </p>
             </div>
             <Link
               to="/lowongan"
               className="text-sm font-medium text-primary hover:text-accent mb-1 flex items-center gap-1"
             >
-              View all <ArrowRight size={16} />
+              {copy.viewAll} <ArrowRight size={16} />
             </Link>
           </motion.div>
 
           {loading ? (
             <div className="col-span-full text-center py-12 text-secondary">
-              Loading...
+              {copy.loading}
             </div>
           ) : (
             <motion.div
@@ -195,7 +227,7 @@ export function Beranda() {
                         to={`/lowongan/${job.id}`}
                         className="w-full text-xs py-2 bg-[#0f2854] hover:bg-[#183a6d] text-white font-semibold rounded border-none shadow-sm transition-colors focus:ring-2 focus:ring-accent/30 mt-auto"
                       >
-                        Details
+                        {copy.details}
                       </Button>
                     </CardBody>
                   </Card>
@@ -214,7 +246,7 @@ export function Beranda() {
             viewport={{ once: true }}
             className="text-2xl font-semibold tracking-tight text-white/90 text-center mb-12"
           >
-            Partner Perusahaan Kami
+            {copy.partners}
           </motion.h2>
 
           {/* Scrolling Banner Implementation */}
@@ -233,7 +265,7 @@ export function Beranda() {
                     <div className="h-16 w-16 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center text-white/50 text-xs font-bold mb-2">
                       {company.logo ? (
                         <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-2" />
-                      ) : "Logo"}
+                      ) : copy.logoAlt}
                     </div>
                     <span className="text-white font-medium text-sm">
                       {company.name}

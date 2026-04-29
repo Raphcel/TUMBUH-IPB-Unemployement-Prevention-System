@@ -6,11 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usersApi } from '../../api/users';
 import { resolveUploadUrl } from '../../api/client';
+import { useTranslation } from '../../context/LanguageContext';
 
 import { motion } from 'framer-motion';
 
 export function ProfilStudent() {
   const { user, refreshUser } = useAuth();
+  const { lang } = useTranslation();
   const { addToast } = useToast();
   const avatarInputRef = useRef(null);
   const cvInputRef = useRef(null);
@@ -30,6 +32,7 @@ export function ProfilStudent() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCV, setUploadingCV] = useState(false);
+  const isId = lang === 'id';
 
   const handleChange = (field) => (e) => {
     setForm({ ...form, [field]: e.target.value });
@@ -42,9 +45,9 @@ export function ProfilStudent() {
     try {
       await usersApi.update(form);
       await refreshUser();
-      setSaveMsg('Profil berhasil disimpan!');
+      setSaveMsg(isId ? 'Profil berhasil disimpan!' : 'Profile saved successfully.');
     } catch (err) {
-      setSaveMsg('Gagal menyimpan profil.');
+      setSaveMsg(isId ? 'Gagal menyimpan profil.' : 'Failed to save profile.');
       console.error(err);
     } finally {
       setSaving(false);
@@ -56,7 +59,7 @@ export function ProfilStudent() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      addToast({ type: 'error', title: 'Error', message: 'Ukuran gambar maksimal 2MB.' });
+      addToast({ type: 'error', title: 'Error', message: isId ? 'Ukuran gambar maksimal 2MB.' : 'Maximum image size is 2MB.' });
       return;
     }
 
@@ -65,9 +68,9 @@ export function ProfilStudent() {
     try {
       await usersApi.uploadAvatar(file);
       await refreshUser();
-      addToast({ type: 'success', title: 'Berhasil', message: 'Foto profil berhasil diperbarui.' });
+      addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'Foto profil berhasil diperbarui.' : 'Profile photo updated successfully.' });
     } catch (err) {
-      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal mengunggah foto.' });
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunggah foto.' : 'Failed to upload photo.') });
       setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
@@ -79,7 +82,7 @@ export function ProfilStudent() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      addToast({ type: 'error', title: 'Error', message: 'Ukuran CV maksimal 5MB.' });
+      addToast({ type: 'error', title: 'Error', message: isId ? 'Ukuran CV maksimal 5MB.' : 'Maximum CV size is 5MB.' });
       return;
     }
 
@@ -87,9 +90,9 @@ export function ProfilStudent() {
     try {
       await usersApi.uploadCV(file);
       await refreshUser();
-      addToast({ type: 'success', title: 'Berhasil', message: 'CV berhasil diunggah.' });
+      addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'CV berhasil diunggah.' : 'CV uploaded successfully.' });
     } catch (err) {
-      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal mengunggah CV.' });
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunggah CV.' : 'Failed to upload CV.') });
     } finally {
       setUploadingCV(false);
     }
@@ -108,7 +111,7 @@ export function ProfilStudent() {
       transition={{ duration: 0.4 }}
       className="space-y-6"
     >
-      <h1 className="text-2xl font-bold text-gray-900">Profil Saya</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{isId ? 'Profil Saya' : 'My Profile'}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-6">
@@ -139,7 +142,7 @@ export function ProfilStudent() {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
               >
-                {uploadingAvatar ? 'Mengunggah...' : 'Ganti Foto'}
+                {uploadingAvatar ? (isId ? 'Mengunggah...' : 'Uploading...') : (isId ? 'Ganti Foto' : 'Change Photo')}
               </Button>
             </CardBody>
           </Card>
@@ -149,7 +152,7 @@ export function ProfilStudent() {
               <h3 className="font-semibold text-gray-900 mb-4">CV & Resume</h3>
               <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
                 <p className="text-sm text-gray-500 mb-2">
-                  {user?.cv_url ? 'CV sudah diunggah' : 'Belum ada CV'}
+                  {user?.cv_url ? (isId ? 'CV sudah diunggah' : 'CV uploaded') : (isId ? 'Belum ada CV' : 'No CV uploaded')}
                 </p>
                 {user?.cv_url && (
                   <a
@@ -158,7 +161,7 @@ export function ProfilStudent() {
                     rel="noreferrer"
                     className="text-sm text-primary hover:text-accent font-medium inline-block mb-2"
                   >
-                    Lihat CV
+                    {isId ? 'Lihat CV' : 'View CV'}
                   </a>
                 )}
                 <input
@@ -174,7 +177,7 @@ export function ProfilStudent() {
                   onClick={() => cvInputRef.current?.click()}
                   disabled={uploadingCV}
                 >
-                  {uploadingCV ? 'Mengunggah...' : 'Update CV'}
+                  {uploadingCV ? (isId ? 'Mengunggah...' : 'Uploading...') : 'Update CV'}
                 </Button>
               </div>
             </CardBody>
@@ -185,17 +188,17 @@ export function ProfilStudent() {
           <Card>
             <CardBody>
               <h3 className="font-semibold text-gray-900 mb-6 pb-2 border-b border-gray-100">
-                Informasi Pribadi
+                {isId ? 'Informasi Pribadi' : 'Personal Information'}
               </h3>
               <form className="space-y-4" onSubmit={handleSave}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Nama Depan"
+                    label={isId ? 'Nama Depan' : 'First Name'}
                     value={form.first_name}
                     onChange={handleChange('first_name')}
                   />
                   <Input
-                    label="Nama Belakang"
+                    label={isId ? 'Nama Belakang' : 'Last Name'}
                     value={form.last_name}
                     onChange={handleChange('last_name')}
                   />
@@ -215,25 +218,25 @@ export function ProfilStudent() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Nomor Telepon"
+                    label={isId ? 'Nomor Telepon' : 'Phone Number'}
                     value={form.phone}
                     onChange={handleChange('phone')}
                   />
-                  <Input label="Jurusan" value={form.major} disabled />
+                  <Input label={isId ? 'Jurusan' : 'Major'} value={form.major} disabled />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="IPK Terakhir" value={form.gpa} disabled />
+                  <Input label={isId ? 'IPK Terakhir' : 'Latest GPA'} value={form.gpa} disabled />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tentang Saya
+                    {isId ? 'Tentang Saya' : 'About Me'}
                   </label>
                   <textarea
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px] resize-y"
                     value={form.bio}
                     onChange={handleChange('bio')}
-                    placeholder="Ceritakan tentang diri Anda..."
+                    placeholder={isId ? 'Ceritakan tentang diri Anda...' : 'Tell us about yourself...'}
                   />
                 </div>
 
@@ -246,7 +249,7 @@ export function ProfilStudent() {
                 )}
                 <div className="pt-4 flex justify-end">
                   <Button type="submit" disabled={saving}>
-                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                    {saving ? (isId ? 'Menyimpan...' : 'Saving...') : (isId ? 'Simpan Perubahan' : 'Save Changes')}
                   </Button>
                 </div>
               </form>

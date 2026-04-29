@@ -5,6 +5,7 @@ import { Menu, X, LogOut, ChevronDown, LayoutDashboard, FileText, User, Briefcas
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserMenu } from './UserMenu';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function Navbar() {
   const [openNav, setOpenNav] = useState(false);
@@ -20,12 +21,32 @@ export function Navbar() {
 
   const location = useLocation();
   const { user } = useAuth();
+  const { lang } = useTranslation();
+  const copy = lang === 'id'
+    ? {
+        home: 'Beranda',
+        opportunities: 'Lowongan',
+        companies: 'Perusahaan',
+        guide: 'Panduan',
+        login: 'Masuk',
+        register: 'Daftar Sekarang',
+        openMenu: 'Buka menu utama',
+      }
+    : {
+        home: 'Home',
+        opportunities: 'Opportunities',
+        companies: 'Companies',
+        guide: 'Guide',
+        login: 'Log In',
+        register: 'Register Now',
+        openMenu: 'Open main menu',
+      };
 
   const navLinks = [
-    { name: 'Beranda', path: '/' },
-    { name: 'Lowongan', path: '/lowongan' },
-    { name: 'Perusahaan', path: '/perusahaan' },
-    { name: 'Panduan', path: '/panduan' },
+    { name: copy.home, path: '/' },
+    { name: copy.opportunities, path: '/lowongan' },
+    { name: copy.companies, path: '/perusahaan' },
+    { name: copy.guide, path: '/panduan' },
   ];
 
   const transparentPaths = ['/', '/perusahaan/:id', '/lowongan/:id'];
@@ -70,7 +91,7 @@ export function Navbar() {
               }`}
             onClick={() => setOpenNav(!openNav)}
           >
-            <span className="sr-only">Open main menu</span>
+            <span className="sr-only">{copy.openMenu}</span>
             {openNav ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -111,7 +132,7 @@ export function Navbar() {
                 className={`text-sm font-semibold leading-6 py-2 transition-colors ${isTransparent ? 'text-white hover:text-white/80' : 'text-[#0f2854]/80 hover:text-[#0f2854]'
                   }`}
               >
-                <motion.span whileHover={{ scale: 1.05 }} className="inline-block">Masuk</motion.span>
+                <motion.span whileHover={{ scale: 1.05 }} className="inline-block">{copy.login}</motion.span>
               </Link>
               <Button
                 to="/register"
@@ -121,7 +142,7 @@ export function Navbar() {
                   }`}
                 size="sm"
               >
-                Daftar Sekarang
+                {copy.register}
               </Button>
             </>
           )}
@@ -162,14 +183,14 @@ export function Navbar() {
                       className="text-center font-medium text-[#0f2854] hover:text-[#2e4f7f]"
                       onClick={() => setOpenNav(false)}
                     >
-                      Masuk
+                      {copy.login}
                     </Link>
                     <Button
                       to="/register"
                       className="w-full justify-center bg-[#0f2854] hover:bg-[#2e4f7f] text-white"
                       onClick={() => setOpenNav(false)}
                     >
-                      Daftar Sekarang
+                      {copy.register}
                     </Button>
                   </>
                 )}

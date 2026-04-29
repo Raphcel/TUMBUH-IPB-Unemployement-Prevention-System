@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 
@@ -36,9 +37,44 @@ const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),   
 
 // ── Suspense fallback ──────────────────────────────────────────────────────
 function PageSpinner() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
+      <div
+        className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]"
+        aria-label={t('loading')}
+      />
+    </div>
+  );
+}
+
+function ErrorBoundaryFallback() {
+  const { lang } = useTranslation();
+  const copy = lang === 'id'
+    ? {
+        title: 'Terjadi Kesalahan',
+        description: 'Maaf, terjadi kesalahan yang tidak terduga. Silakan muat ulang halaman.',
+        action: 'Muat Ulang',
+      }
+    : {
+        title: 'Something Went Wrong',
+        description: 'An unexpected error occurred. Please reload the page.',
+        action: 'Reload',
+      };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+      <h1 className="text-4xl font-bold text-gray-800 mb-4">{copy.title}</h1>
+      <p className="text-gray-600 mb-8 text-center max-w-md">
+        {copy.description}
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-3 bg-[#0f2854] text-white rounded-lg hover:bg-[#0f2854]/90 transition-colors"
+      >
+        {copy.action}
+      </button>
     </div>
   );
 }
@@ -62,20 +98,7 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Terjadi Kesalahan</h1>
-          <p className="text-gray-600 mb-8 text-center max-w-md">
-            Maaf, terjadi kesalahan yang tidak terduga. Silakan muat ulang halaman.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-[#0f2854] text-white rounded-lg hover:bg-[#0f2854]/90 transition-colors"
-          >
-            Muat Ulang
-          </button>
-        </div>
-      );
+      return <ErrorBoundaryFallback />;
     }
     return this.props.children;
   }
@@ -85,18 +108,31 @@ class ErrorBoundary extends React.Component {
  * NotFound — 404 page for unmatched routes.
  */
 function NotFound() {
+  const { lang } = useTranslation();
+  const copy = lang === 'id'
+    ? {
+        title: 'Halaman Tidak Ditemukan',
+        description: 'Halaman yang Anda cari tidak ada atau telah dipindahkan.',
+        action: 'Kembali ke Beranda',
+      }
+    : {
+        title: 'Page Not Found',
+        description: 'The page you are looking for does not exist or has been moved.',
+        action: 'Back to Home',
+      };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
       <h1 className="text-7xl font-bold text-[#0f2854] mb-4">404</h1>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-2">Halaman Tidak Ditemukan</h2>
+      <h2 className="text-2xl font-semibold text-gray-800 mb-2">{copy.title}</h2>
       <p className="text-gray-600 mb-8 text-center max-w-md">
-        Halaman yang Anda cari tidak ada atau telah dipindahkan.
+        {copy.description}
       </p>
       <Link
         to="/"
         className="px-6 py-3 bg-[#0f2854] text-white rounded-lg hover:bg-[#0f2854]/90 transition-colors"
       >
-        Kembali ke Beranda
+        {copy.action}
       </Link>
     </div>
   );
@@ -197,15 +233,17 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <ToastProvider>
-          <Suspense fallback={<PageSpinner />}>
-            <AppRoutes />
-          </Suspense>
-        </ToastProvider>
-      </AuthProvider>
-    </ErrorBoundary>
+    <LanguageProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <ToastProvider>
+            <Suspense fallback={<PageSpinner />}>
+              <AppRoutes />
+            </Suspense>
+          </ToastProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </LanguageProvider>
   );
 }
 

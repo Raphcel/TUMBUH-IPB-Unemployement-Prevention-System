@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../context/LanguageContext';
 import {
     Bell,
     User,
@@ -19,6 +20,7 @@ import { Menu } from 'lucide-react';
 
 export function TopLayout({ onMenuClick }) {
     const { user, logout } = useAuth();
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -96,9 +98,9 @@ export function TopLayout({ onMenuClick }) {
                                         className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden origin-top-right"
                                     >
                                         <div className="px-4 py-2 border-b border-gray-50 flex justify-between items-center">
-                                            <h3 className="font-semibold text-primary text-sm">Notifications</h3>
+                                            <h3 className="font-semibold text-primary text-sm">{t('nav_notifications')}</h3>
                                             <Link to="/notifications" className="text-xs text-accent hover:underline">
-                                                See all
+                                                {t('nav_see_all')}
                                             </Link>
                                         </div>
                                         <div className="max-h-[300px] overflow-y-auto">
@@ -129,7 +131,7 @@ export function TopLayout({ onMenuClick }) {
                                                 ))
                                             ) : (
                                                 <div className="px-4 py-8 text-center text-sm text-text-muted">
-                                                    No notifications
+                                                    {t('no_notifications')}
                                                 </div>
                                             )}
                                         </div>

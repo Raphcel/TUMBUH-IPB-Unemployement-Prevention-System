@@ -1,7 +1,35 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function Footer() {
+  const { lang } = useTranslation();
+  const copy = lang === 'id'
+    ? {
+        description: 'Platform karir mahasiswa untuk mempersiapkan masa depan yang lebih cerah.',
+        student: 'Mahasiswa',
+        findJobs: 'Cari Lowongan',
+        careerGuide: 'Panduan Karir',
+        companyProfile: 'Profil Perusahaan',
+        company: 'Perusahaan',
+        partner: 'Daftar Partner',
+        recruitment: 'Solusi Rekrutmen',
+        contact: 'Hubungi Kami',
+        rights: 'Hak cipta dilindungi.',
+      }
+    : {
+        description: 'A student career platform built to help prepare for a stronger professional future.',
+        student: 'Students',
+        findJobs: 'Find Opportunities',
+        careerGuide: 'Career Guide',
+        companyProfile: 'Company Profiles',
+        company: 'Companies',
+        partner: 'Become a Partner',
+        recruitment: 'Recruitment Solutions',
+        contact: 'Contact Us',
+        rights: 'All rights reserved.',
+      };
+
   return (
     <footer className="bg-white border-t border-gray-200">
       <div className="mx-auto max-w-7xl overflow-hidden px-6 py-12 lg:px-8">
@@ -16,14 +44,13 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-gray-600 text-sm leading-6 max-w-xs">
-              Platform karir mahasiswa untuk mempersiapkan masa depan yang lebih
-              cerah.
+              {copy.description}
             </p>
           </div>
 
           <div>
             <h3 className="text-sm font-semibold leading-6 text-primary">
-              Mahasiswa
+              {copy.student}
             </h3>
             <ul role="list" className="mt-6 space-y-4">
               <li>
@@ -31,7 +58,7 @@ export function Footer() {
                   to="/lowongan"
                   className="text-sm leading-6 text-gray-600 hover:text-primary"
                 >
-                  Cari Lowongan
+                  {copy.findJobs}
                 </Link>
               </li>
               <li>
@@ -39,7 +66,7 @@ export function Footer() {
                   to="/panduan"
                   className="text-sm leading-6 text-gray-600 hover:text-primary"
                 >
-                  Panduan Karir
+                  {copy.careerGuide}
                 </Link>
               </li>
               <li>
@@ -47,7 +74,7 @@ export function Footer() {
                   to="/perusahaan"
                   className="text-sm leading-6 text-gray-600 hover:text-primary"
                 >
-                  Profil Perusahaan
+                  {copy.companyProfile}
                 </Link>
               </li>
             </ul>
@@ -55,7 +82,7 @@ export function Footer() {
 
           <div>
             <h3 className="text-sm font-semibold leading-6 text-primary">
-              Perusahaan
+              {copy.company}
             </h3>
             <ul role="list" className="mt-6 space-y-4">
               <li>
@@ -63,7 +90,7 @@ export function Footer() {
                   to="/register"
                   className="text-sm leading-6 text-gray-600 hover:text-primary"
                 >
-                  Daftar Partner
+                  {copy.partner}
                 </Link>
               </li>
               <li>
@@ -71,7 +98,7 @@ export function Footer() {
                   to="/panduan"
                   className="text-sm leading-6 text-gray-600 hover:text-primary"
                 >
-                  Solusi Rekrutmen
+                  {copy.recruitment}
                 </Link>
               </li>
             </ul>
@@ -79,7 +106,7 @@ export function Footer() {
 
           <div>
             <h3 className="text-sm font-semibold leading-6 text-primary">
-              Hubungi Kami
+              {copy.contact}
             </h3>
             <ul role="list" className="mt-6 space-y-4">
               <li className="text-sm leading-6 text-gray-600">
@@ -93,7 +120,7 @@ export function Footer() {
         </div>
         <div className="mt-12 border-t border-gray-200 pt-8">
           <p className="text-center text-xs leading-5 text-gray-400">
-            &copy; 2026 Tumbuh IPB. All rights reserved.
+            &copy; 2026 Tumbuh IPB. {copy.rights}
           </p>
         </div>
       </div>

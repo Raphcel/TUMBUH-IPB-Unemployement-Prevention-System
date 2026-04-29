@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
@@ -60,8 +60,20 @@ def create_app() -> FastAPI:
             headers=_cors_headers(request),
         )
 
+    @application.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """Pass FastAPI HTTPExceptions through with correct status codes."""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers={**_cors_headers(request), **(exc.headers or {})},
+        )
+
     @application.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        # Guard: let HTTPException be handled by its dedicated handler above.
+        if isinstance(exc, HTTPException):
+            return await http_exception_handler(request, exc)
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,

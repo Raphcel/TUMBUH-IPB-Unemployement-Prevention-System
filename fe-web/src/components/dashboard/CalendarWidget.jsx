@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../ui/Modal';
 import { useCalendarGrid } from '../../hooks/useCalendarGrid';
+import { useTranslation } from '../../context/LanguageContext';
 
 /**
  * CalendarWidget
@@ -26,9 +27,35 @@ import { useCalendarGrid } from '../../hooks/useCalendarGrid';
  * The parent is responsible for fetching — this component does zero API calls.
  */
 export function CalendarWidget({ applications = [], opportunities = [] }) {
+  const { lang } = useTranslation();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate]  = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const copy = lang === 'id'
+    ? {
+        appliedTitle: 'Melamar',
+        deadlineTitle: 'Batas akhir',
+        status: 'Status',
+        deadlineDesc: 'Batas akhir pendaftaran',
+        scheduleFor: 'Jadwal untuk',
+        noSchedule: 'Tidak ada jadwal',
+        eventDetails: 'Detail Acara',
+        at: 'pukul',
+        deadline: 'Batas akhir',
+        application: 'Lamaran',
+      }
+    : {
+        appliedTitle: 'Applied',
+        deadlineTitle: 'Deadline',
+        status: 'Status',
+        deadlineDesc: 'Application deadline for',
+        scheduleFor: 'Schedule for',
+        noSchedule: 'No schedule',
+        eventDetails: 'Event Details',
+        at: 'at',
+        deadline: 'Deadline',
+        application: 'Application',
+      };
 
   // ── Build calendar events from whichever data source was passed ──────────
   const events = useMemo(() => {
@@ -42,22 +69,22 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
       calendarEvents.push({
         id:          `app-${app.id}`,
         date:        new Date(app.applied_at),
-        title:       `Melamar: ${opp.title}`,
+        title:       `${copy.appliedTitle}: ${opp.title}`,
         type:        'Application',
         time:        format(new Date(app.applied_at), 'HH:mm'),
         location:    opp.company?.name || '-',
-        description: `Status: ${app.status}`,
+        description: `${copy.status}: ${app.status}`,
       });
 
       if (opp.deadline) {
         calendarEvents.push({
           id:          `deadline-${opp.id}`,
           date:        new Date(opp.deadline),
-          title:       `Deadline: ${opp.title}`,
+          title:       `${copy.deadlineTitle}: ${opp.title}`,
           type:        'Deadline',
           time:        '23:59',
           location:    opp.company?.name || '-',
-          description: `Batas akhir pendaftaran ${opp.title}`,
+          description: `${copy.deadlineDesc} ${opp.title}`,
         });
       }
     });
@@ -68,17 +95,17 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
         calendarEvents.push({
           id:          `deadline-${opp.id}`,
           date:        new Date(opp.deadline),
-          title:       `Deadline: ${opp.title}`,
+          title:       `${copy.deadlineTitle}: ${opp.title}`,
           type:        'Deadline',
           time:        '23:59',
           location:    opp.location || '-',
-          description: `Batas akhir pendaftaran ${opp.title}`,
+          description: `${copy.deadlineDesc} ${opp.title}`,
         });
       }
     });
 
     return calendarEvents;
-  }, [applications, opportunities]);
+  }, [applications, opportunities, copy.appliedTitle, copy.deadlineDesc, copy.deadlineTitle, copy.status]);
 
   // ── Calendar grid data ────────────────────────────────────────────────────
   const { weeks, monthStart } = useCalendarGrid(currentMonth);
@@ -180,7 +207,7 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
           <div className="mt-auto pt-5 border-t border-gray-100">
             <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
               <Clock size={12} />
-              Schedule for {format(selectedDate, 'MMM d, yyyy')}
+              {copy.scheduleFor} {format(selectedDate, 'MMM d, yyyy')}
             </h4>
 
             <div className="space-y-2 min-h-[100px]">
@@ -234,7 +261,7 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
                     className="flex flex-col items-center justify-center py-6 text-gray-400 border-2 border-dashed border-gray-100 rounded-lg bg-gray-50/50"
                   >
                     <CalendarIcon size={24} className="mb-2 opacity-20" />
-                    <p className="text-xs">Tidak ada jadwal</p>
+                    <p className="text-xs">{copy.noSchedule}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -248,7 +275,7 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
       <Modal
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        title={selectedEvent?.title || 'Event Details'}
+        title={selectedEvent?.title || copy.eventDetails}
         size="sm"
       >
         {selectedEvent && (
@@ -256,7 +283,7 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
             <div className="flex items-center gap-2 text-sm text-secondary">
               <Clock size={16} />
               <span>
-                {format(selectedEvent.date, 'EEEE, MMMM d, yyyy')} at {selectedEvent.time}
+                {format(selectedEvent.date, 'EEEE, MMMM d, yyyy')} {copy.at} {selectedEvent.time}
               </span>
             </div>
 
@@ -275,7 +302,7 @@ export function CalendarWidget({ applications = [], opportunities = [] }) {
                     : 'bg-blue-50 text-blue-700'
                 }`}
               >
-                {selectedEvent.type}
+                {selectedEvent.type === 'Deadline' ? copy.deadline : copy.application}
               </span>
             </div>
 
