@@ -14,7 +14,7 @@ from app.repositories import (
 )
 from app.services import (
     AuthService, UserService, CompanyService, OpportunityService, ApplicationService,
-    BookmarkService, ExternshipService, NotificationService,
+    BookmarkService, ExternshipService, NotificationService, AdminService,
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -94,6 +94,15 @@ def get_notification_service(
     notification_repo: NotificationRepository = Depends(get_notification_repo),
 ) -> NotificationService:
     return NotificationService(notification_repo)
+
+
+def get_admin_service(
+    user_repo: UserRepository = Depends(get_user_repo),
+    company_repo: CompanyRepository = Depends(get_company_repo),
+    opportunity_repo: OpportunityRepository = Depends(get_opportunity_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+) -> AdminService:
+    return AdminService(user_repo, company_repo, opportunity_repo, application_repo)
 
 
 # ── Auth Dependencies ────────────────────────────────────────

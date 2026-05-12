@@ -32,7 +32,7 @@ python -m venv myenv
 pip install -r requirements.txt
 copy .env.example .env                     # then edit DATABASE_URL & SECRET_KEY
 psql -U postgres -c "CREATE DATABASE career_tracker;"  # create PostgreSQL database
-alembic upgrade head                       # run migrations to create all tables
+alembic upgrade head                        # run migrations to create all tables
 python -m scripts.seed                     # (optional) populate with sample data
 uvicorn app.main:app --reload
 # → Open http://localhost:8000/docs

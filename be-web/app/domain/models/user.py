@@ -16,6 +16,7 @@ def _utcnow():
 class UserRole(str, enum.Enum):
     STUDENT = "student"
     HR = "hr"
+    ADMIN = "admin"
 
 
 class User(Base):

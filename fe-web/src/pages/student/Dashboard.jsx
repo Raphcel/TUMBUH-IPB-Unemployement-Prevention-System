@@ -22,10 +22,12 @@ import { opportunitiesApi } from '../../api/opportunities';
 import { CalendarWidget } from '../../components/dashboard/CalendarWidget';
 
 import { motion } from 'framer-motion';
+import { useTranslation } from '../../context/LanguageContext';
 
 export function StudentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t, lang } = useTranslation();
   const [myApplications, setMyApplications] = useState([]);
   const [latestOpportunities, setLatestOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export function StudentDashboard() {
   ];
   const filledCount = profileFields.filter((f) => f != null && f !== '' && f !== 0).length;
   const completeness = Math.round((filledCount / 10) * 100);
-  const completenessLabel = completeness === 100 ? 'Lengkap' : completeness >= 80 ? 'Baik' : completeness >= 50 ? 'Cukup' : 'Kurang';
+  const completenessLabel = completeness === 100 ? t('sdash_complete') : completeness >= 80 ? t('sdash_good') : completeness >= 50 ? t('sdash_fair') : t('sdash_poor');
   const completenessColor = completeness === 100 ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : completeness >= 80 ? 'text-blue-700 bg-blue-50 border-blue-100' : completeness >= 50 ? 'text-yellow-700 bg-yellow-50 border-yellow-100' : 'text-red-700 bg-red-50 border-red-100';
 
   const activeApplications = myApplications.filter((app) =>
@@ -133,10 +135,10 @@ export function StudentDashboard() {
     >
       <motion.div variants={itemVariants} className="pb-0 mb-8 border-b border-surface-border pb-6">
         <h1 className="text-3xl font-bold text-text tracking-tight">
-          Hello, {user?.first_name || 'Student'}.
+          {t('sdash_hello')} {user?.first_name || 'Student'}.
         </h1>
         <p className="text-text-muted mt-2 text-base">
-          Here is your career overview for today.
+          {t('sdash_overview')}
         </p>
       </motion.div>
 
@@ -153,13 +155,13 @@ export function StudentDashboard() {
               <Briefcase size={80} className="text-brand -mt-4 -mr-4" />
             </div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-widest">
-              Active Applications
+              {t('sdash_active_apps')}
             </p>
             <p className="text-5xl font-bold text-brand mt-4">
               {activeApplications.length}
             </p>
             <p className="text-xs text-text-muted mt-2 pt-2 border-t border-surface-border">
-              Require your attention
+              {t('sdash_require_attn')}
             </p>
           </motion.div>
 
@@ -171,7 +173,7 @@ export function StudentDashboard() {
               <FileText size={80} className="text-text-muted -mt-4 -mr-4" />
             </div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-widest">
-              Total Applications
+              {t('sdash_total_apps')}
             </p>
             <p className="text-4xl font-bold text-text tracking-tight mt-5">
               {myApplications.length}
@@ -186,13 +188,13 @@ export function StudentDashboard() {
               <CheckCircle size={80} className="text-emerald-600 -mt-4 -mr-4" />
             </div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-widest">
-              Profile Status
+              {t('sdash_profile_status')}
             </p>
             <div className="flex items-center gap-3 mt-5">
               <span className="text-4xl font-bold text-text tracking-tight">{completeness}%</span>
             </div>
             <p className="text-xs text-text-muted mt-2 pt-2 border-t border-surface-border flex items-center justify-between">
-              <span>Completion</span>
+              <span>{t('sdash_completion')}</span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${completenessColor}`}>
                 {completenessLabel}
               </span>
@@ -205,7 +207,7 @@ export function StudentDashboard() {
           <div className="bg-brand border border-brand-light p-5 rounded-xl min-h-full relative shadow-md flex flex-col overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mt-10 -mr-10 blur-2xl"></div>
             <p className="text-sm text-brand-muted font-medium mb-3 flex items-center gap-2">
-              <Briefcase size={16} /> Lowongan Terbaru
+              <Briefcase size={16} /> {t('sdash_latest_jobs')}
             </p>
             <div className="space-y-3 mt-2 flex-1">
               {latestOpportunities.map((opp) => (
@@ -221,7 +223,7 @@ export function StudentDashboard() {
                 </Link>
               ))}
               {latestOpportunities.length === 0 && (
-                <p className="text-sm text-white/60">Belum ada lowongan.</p>
+                <p className="text-sm text-white/60">{t('sdash_no_jobs')}</p>
               )}
             </div>
             <Button
@@ -229,7 +231,7 @@ export function StudentDashboard() {
               variant="outline"
               className="mt-4 w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
             >
-              Lihat Semua
+              {t('sdash_see_all')}
             </Button>
           </div>
         </motion.div>
@@ -242,13 +244,13 @@ export function StudentDashboard() {
           <motion.div variants={itemVariants} className="space-y-4">
             <div className="flex justify-between items-center px-1">
               <h2 className="text-lg font-bold text-text flex items-center gap-2">
-                Active Tracker
+                {t('sdash_active_tracker')}
               </h2>
               <Link
                 to="/student/applications"
                 className="text-sm font-medium text-brand hover:text-brand-light transition-colors"
               >
-                View all
+                {t('sdash_view_all')}
               </Link>
             </div>
 
@@ -274,7 +276,7 @@ export function StudentDashboard() {
                           <p className="text-sm text-text-muted mt-0.5 flex items-center gap-1.5">
                             <span>{job?.company?.name}</span>
                             <span className="w-1 h-1 rounded-full bg-surface-border"></span>
-                            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(app.applied_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</span>
+                            <span className="flex items-center gap-1"><Clock size={12} /> {new Date(app.applied_at).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric' })}</span>
                           </p>
                         </div>
                       </div>
@@ -296,7 +298,7 @@ export function StudentDashboard() {
                           className="opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => navigate(`/lowongan/${app.opportunity_id}`)}
                         >
-                          Details
+                          {t('sdash_details')}
                         </Button>
                       </div>
                     </motion.div>
@@ -304,10 +306,10 @@ export function StudentDashboard() {
                 })}
                 {activeApplications.length === 0 && (
                   <div className="p-8 text-center bg-surface-muted/30">
-                    <p className="text-text-muted font-medium">No active applications.</p>
-                    <p className="text-sm text-text-light mt-1 mb-4">Time to find your next opportunity!</p>
+                    <p className="text-text-muted font-medium">{t('sdash_no_active')}</p>
+                    <p className="text-sm text-text-light mt-1 mb-4">{t('sdash_no_active_sub')}</p>
                     <Link to="/lowongan">
-                      <Button size="sm" variant="primary">Explore Jobs</Button>
+                      <Button size="sm" variant="primary">{t('sdash_explore_jobs')}</Button>
                     </Link>
                   </div>
                 )}
@@ -319,13 +321,13 @@ export function StudentDashboard() {
           <motion.div variants={itemVariants} className="space-y-4">
             <div className="flex justify-between items-center px-1">
               <h2 className="text-lg font-bold text-text">
-                Projects & Externships
+                {t('sdash_projects')}
               </h2>
               <button
                 onClick={() => setShowExternshipModal(true)}
                 className="text-sm flex items-center gap-1.5 text-brand bg-brand-muted/50 hover:bg-brand-muted px-3 py-1.5 rounded-lg font-medium transition-colors border border-brand/5"
               >
-                <Plus size={16} /> Add Entry
+                <Plus size={16} /> {t('sdash_add_entry')}
               </button>
             </div>
 
@@ -352,7 +354,7 @@ export function StudentDashboard() {
 
                   <div className="mt-4 pt-3 border-t border-surface-border">
                     <span className="text-xs text-text-muted font-medium flex items-center gap-1.5 bg-surface-muted inline-flex px-2 py-1 rounded-md">
-                      <Calendar size={12} /> Duration: {ext.duration}
+                      <Calendar size={12} /> {t('sdash_duration')}: {ext.duration}
                     </span>
                   </div>
                 </motion.div>
@@ -360,8 +362,8 @@ export function StudentDashboard() {
               {externships.length === 0 && (
                 <div className="col-span-1 md:col-span-2 p-8 text-center bg-surface border border-surface-border border-dashed rounded-xl">
                   <Briefcase size={32} className="mx-auto text-surface-border mb-3" />
-                  <p className="text-sm font-medium text-text-muted">No custom experiences added.</p>
-                  <p className="text-xs text-text-light mt-1">Track freelance work, research, or side projects here.</p>
+                  <p className="text-sm font-medium text-text-muted">{t('sdash_no_custom')}</p>
+                  <p className="text-xs text-text-light mt-1">{t('sdash_no_custom_sub')}</p>
                 </div>
               )}
             </div>
@@ -378,12 +380,12 @@ export function StudentDashboard() {
       <Modal
         isOpen={showExternshipModal}
         onClose={() => setShowExternshipModal(false)}
-        title="Add Experience"
+        title={t('sdash_add_exp')}
       >
         <form onSubmit={handleAddExternship} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">
-              Role / Title
+              {t('sdash_role_title')}
             </label>
             <Input
               required
@@ -399,7 +401,7 @@ export function StudentDashboard() {
           </div>
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">
-              Company / Client
+              {t('sdash_company_client')}
             </label>
             <Input
               required
@@ -416,7 +418,7 @@ export function StudentDashboard() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Duration
+                {t('sdash_duration')}
               </label>
               <Input
                 placeholder="e.g. 3 Months"
@@ -431,7 +433,7 @@ export function StudentDashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Status
+                {t('sdash_status')}
               </label>
               <select
                 className="w-full h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-gray-900"
@@ -443,8 +445,8 @@ export function StudentDashboard() {
                   })
                 }
               >
-                <option value="Ongoing">Ongoing</option>
-                <option value="Completed">Completed</option>
+                <option value="Ongoing">{t('sdash_ongoing')}</option>
+                <option value="Completed">{t('sdash_completed')}</option>
               </select>
             </div>
           </div>
@@ -456,14 +458,14 @@ export function StudentDashboard() {
               className="flex-1 justify-center"
               onClick={() => setShowExternshipModal(false)}
             >
-              Cancel
+              {t('sdash_cancel')}
             </Button>
             <Button
               type="submit"
               variant="primary"
               className="flex-1 justify-center"
             >
-              Add Entry
+              {t('sdash_add_entry')}
             </Button>
           </div>
         </form>

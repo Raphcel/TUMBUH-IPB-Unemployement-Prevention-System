@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opportunity Detail Page - Tumbuh</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Phosphor Icons for UI Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Manrope', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#2D8A56', // Emerald green from prompt
+              hover: '#246b43',
+              light: '#eaf4ef',
+            },
+            gray: {
+              50: '#F9FAFB',
+              100: '#F3F4F6',
+              200: '#E5E7EB',
+              300: '#D1D5DB',
+              400: '#9CA3AF',
+              500: '#6B7280',
+              600: '#4B5563',
+              700: '#374151',
+              800: '#1F2937',
+              900: '#111827',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-utilities">
+    /* Hide scrollbar for clean tab navigation */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-white text-gray-800 font-sans antialiased">
+<!-- BEGIN: NavigationBar -->
+<header class="border-b border-gray-200 sticky top-0 bg-white z-50" data-purpose="main-header">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center h-16">
+<!-- Logo -->
+<div class="flex items-center gap-2">
+<i class="ph-fill ph-plant text-primary text-2xl"></i>
+<span class="font-bold text-xl tracking-tight text-gray-900">Tumbuh</span>
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex space-x-8" data-purpose="desktop-nav">
+<a class="text-gray-500 hover:text-gray-900 px-3 py-2 text-sm font-medium" href="#">Cari Lowongan</a>
+<a class="text-gray-500 hover:text-gray-900 px-3 py-2 text-sm font-medium" href="#">Eksplorasi <i class="ph ph-caret-down inline-block align-middle ml-1"></i></a>
+</nav>
+<!-- Auth Buttons -->
+<div class="flex items-center space-x-4">
+<button class="text-gray-600 hover:text-gray-900 text-sm font-medium px-4 py-2 border border-gray-300 rounded-lg hidden sm:block">Masuk</button>
+<button class="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">Daftar</button>
+</div>
+</div>
+</div>
+</header>
+<!-- END: NavigationBar -->
+<main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-purpose="main-content">
+<!-- BEGIN: BackNavigation -->
+<a class="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors mb-6 group" href="#">
+<i class="ph ph-arrow-left mr-2 text-lg group-hover:-translate-x-1 transition-transform"></i>
+      Kembali ke hasil pencarian
+    </a>
+<!-- END: BackNavigation -->
+<!-- BEGIN: JobHeaderSection -->
+<section class="bg-white rounded-xl mb-8 relative" data-purpose="job-header">
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+<!-- Company Logo -->
+<div class="w-20 h-20 rounded-xl border border-gray-200 flex items-center justify-center p-2 bg-white shrink-0 shadow-sm">
+<img alt="GoTo Logo" class="w-full h-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATaxlv5JQkA2UQfICWXsg0bRVmDbBe_TymQ7Zf4hDpF8LPnllo5vvCdXCzEIwAfsSJHLjRVHzvCr0glju5CrAxpjy6WWxN-laf7vXed0VsZ3HcOtXbKaty6z42d3o68CMl6mbbCHZBfkFP03jY3vNwEk9czUUpsMSdKazKDQOD89CP6qazeOln5jaFWPy8_f78wrZkGDq4gcjUDaPakDjVkXmrHyFCFis6Jl7olmY5kiy4gIP34Pg-pzEiOsfNcX_lIUqYfJ6W62BD"/>
+</div>
+<!-- Job Info -->
+<div class="flex-1 w-full">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="text-2xl font-bold text-gray-900 mb-1">Data Analyst Intern</h1>
+<p class="text-lg text-gray-600 mb-3">GoTo</p>
+</div>
+<!-- Top Right Bookmark (Mobile mostly, hiding on desktop as bottom one exists) -->
+<button class="text-gray-400 hover:text-primary sm:hidden">
+<i class="ph ph-bookmark-simple text-2xl"></i>
+</button>
+</div>
+<!-- Tags -->
+<div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-5">
+<div class="flex items-center gap-1.5">
+<i class="ph ph-map-pin text-gray-400 text-lg"></i>
+<span>Jakarta, Indonesia</span>
+</div>
+<div class="w-1 h-1 rounded-full bg-gray-300"></div>
+<span>Hybrid</span>
+<div class="w-1 h-1 rounded-full bg-gray-300"></div>
+<span>Internship</span>
+</div>
+<!-- Bottom Row: Stats & Actions -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
+<div class="flex items-center gap-4 text-sm text-gray-500">
+<span>Diposting 2 hari yang lalu</span>
+<div class="w-1 h-1 rounded-full bg-gray-300"></div>
+<span>Dilamar 320 kali</span>
+</div>
+<div class="flex items-center gap-3">
+<button aria-label="Simpan lowongan" class="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg border border-gray-300 text-gray-500 hover:text-primary hover:border-primary transition-colors">
+<i class="ph ph-bookmark-simple text-xl"></i>
+</button>
+<button class="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-medium px-6 py-2.5 rounded-lg transition-colors">
+                Lamar Sekarang
+              </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: JobHeaderSection -->
+<!-- BEGIN: TabsNavigation -->
+<nav class="border-b border-gray-200 mb-8 overflow-x-auto no-scrollbar" data-purpose="job-tabs">
+<ul class="flex whitespace-nowrap min-w-full">
+<li class="mr-8">
+<a class="inline-block py-4 text-sm font-semibold text-primary border-b-2 border-primary" href="#">Deskripsi</a>
+</li>
+<li class="mr-8">
+<a class="inline-block py-4 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors" href="#">Kualifikasi</a>
+</li>
+<li class="mr-8">
+<a class="inline-block py-4 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors" href="#">Keuntungan</a>
+</li>
+<li>
+<a class="inline-block py-4 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors" href="#">Tentang Perusahaan</a>
+</li>
+</ul>
+</nav>
+<!-- END: TabsNavigation -->
+<!-- BEGIN: ContentArea -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12" data-purpose="main-grid">
+<!-- Left Column: Job Details -->
+<div class="lg:col-span-2 space-y-10" data-purpose="job-details-content">
+<!-- Deskripsi Pekerjaan -->
+<section>
+<h2 class="text-xl font-bold text-gray-900 mb-4">Deskripsi Pekerjaan</h2>
+<div class="prose prose-sm sm:prose-base text-gray-600 max-w-none">
+<p class="mb-4">Sebagai Data Analyst Intern, kamu akan berkesempatan untuk bekerja dengan tim data dalam mengolah, menganalisis, dan menyajikan data untuk mendukung pengambilan keputusan bisnis.</p>
+<ul class="list-disc pl-5 space-y-2">
+<li>Mengumpulkan, membersihkan, dan menganalisis data</li>
+<li>Membuat visualisasi data dan dashboard</li>
+<li>Mendukung tim dalam penyusunan laporan dan insight</li>
+<li>Berkolaborasi dengan berbagai tim untuk memahami kebutuhan data</li>
+</ul>
+</div>
+</section>
+<hr class="border-gray-200"/>
+<!-- Kualifikasi -->
+<section>
+<h2 class="text-xl font-bold text-gray-900 mb-4">Kualifikasi</h2>
+<div class="prose prose-sm sm:prose-base text-gray-600 max-w-none">
+<ul class="list-disc pl-5 space-y-2">
+<li>Mahasiswa aktif D3/S1 semua jurusan (diutamakan Statistika, Matematika, Sistem Informasi, atau terkait)</li>
+<li>Menguasai Excel, SQL, dan tools analisis data (Python/R/Tableau menjadi nilai tambah)</li>
+<li>Memiliki ketertarikan pada data dan pemecahan masalah</li>
+<li>Teliti, komunikatif, dan mampu bekerja dalam tim</li>
+</ul>
+</div>
+</section>
+<hr class="border-gray-200"/>
+<!-- Keuntungan -->
+<section>
+<h2 class="text-xl font-bold text-gray-900 mb-4">Keuntungan</h2>
+<div class="flex flex-wrap gap-2.5">
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Uang Saku Kompetitif</span>
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Pengalaman Kerja Nyata</span>
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Mentoring</span>
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Sertifikat</span>
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Fleksibel</span>
+<span class="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">Kesempatan Full-time</span>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar -->
+<div class="space-y-6" data-purpose="sidebar-content">
+<!-- Informasi Pekerjaan Card -->
+<div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+<h3 class="text-base font-bold text-gray-900 mb-5">Informasi Pekerjaan</h3>
+<ul class="space-y-4">
+<li class="flex gap-3">
+<i class="ph ph-briefcase text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Tipe Pekerjaan</p>
+<p class="text-sm font-medium text-gray-900">Internship</p>
+</div>
+</li>
+<li class="flex gap-3">
+<i class="ph ph-map-pin text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Lokasi</p>
+<p class="text-sm font-medium text-gray-900">Jakarta, Indonesia</p>
+</div>
+</li>
+<li class="flex gap-3">
+<i class="ph ph-buildings text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Model Kerja</p>
+<p class="text-sm font-medium text-gray-900">Hybrid</p>
+</div>
+</li>
+<li class="flex gap-3">
+<i class="ph ph-tag text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Bidang</p>
+<p class="text-sm font-medium text-gray-900">Data</p>
+</div>
+</li>
+<li class="flex gap-3">
+<i class="ph ph-clock-counter-clockwise text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Pengalaman</p>
+<p class="text-sm font-medium text-gray-900">Tidak diperlukan</p>
+</div>
+</li>
+<li class="flex gap-3">
+<i class="ph ph-hourglass-high text-gray-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-xs text-gray-500 mb-0.5">Durasi</p>
+<p class="text-sm font-medium text-gray-900">3 - 6 bulan</p>
+</div>
+</li>
+</ul>
+</div>
+<!-- Company Profile Card -->
+<div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg border border-gray-100 flex items-center justify-center p-1 bg-white shrink-0">
+<img alt="GoTo Logo" class="w-full h-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwZ9GRSwhq7USslYxI236jVfJfFZuCVfmeVECR7kJfQ7TV2rpO_Q71RCS13HmmTZNKoezJQI_eMzN-daULiiUzAEGY7jPrxb3azef-HLUe6_PbkE563Qsy8KBpyyMVbchzmCD6WdbBcyXCbYHjtX7JFVwpSSCqHWo-Sy2Z0kqL3DQ9kJwGK3SzT18J4ZdBCMQvO_AirGUfFZzcyJuUunS4Ur_cVOmAE5BBbbFXxi-Y09fQ_z5uH944Abx3saPPhPp7j3370oI20iyc"/>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900">GoTo</h3>
+</div>
+</div>
+<p class="text-sm text-gray-600 mb-4 line-clamp-4">
+            GoTo adalah ekosistem digital terbesar di Indonesia yang berdampak positif bagi jutaan orang setiap hari.
+          </p>
+<a class="inline-flex items-center text-sm font-semibold text-primary hover:text-primary-hover group transition-colors" href="#">
+            Lihat Profil Perusahaan 
+            <i class="ph ph-arrow-right ml-1 group-hover:translate-x-1 transition-transform"></i>
+</a>
+</div>
+</div>
+</div>
+<!-- END: ContentArea -->
+</main>
+</body></html>

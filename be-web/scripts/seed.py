@@ -53,7 +53,7 @@ def seed():
                 name="Tokopedia",
                 industry="E-Commerce",
                 location="Jakarta Selatan",
-                logo="https://ui-avatars.com/api/?name=Tokopedia&background=42B549&color=fff&length=1",
+                logo="https://upload.wikimedia.org/wikipedia/commons/a/a7/Tokopedia.svg",
                 description="Tokopedia is an Indonesian technology company specializing in e-commerce. "
                             "Founded in 2009, Tokopedia has transformed the way Indonesians shop online.",
                 website="https://www.tokopedia.com",
@@ -69,7 +69,7 @@ def seed():
                 name="Gojek",
                 industry="Technology",
                 location="Jakarta Selatan",
-                logo="https://ui-avatars.com/api/?name=Gojek&background=00AA13&color=fff&length=1",
+                logo="https://upload.wikimedia.org/wikipedia/commons/8/86/Gojek_logo_2019.svg",
                 description="Gojek is a Super App. It's one app for ordering food, commuting, "
                             "digital payments, shopping, hyper-local delivery, and dozen other products.",
                 website="https://www.gojek.com",
@@ -85,7 +85,7 @@ def seed():
                 name="Bank Indonesia",
                 industry="Finance",
                 location="Jakarta Pusat",
-                logo="https://ui-avatars.com/api/?name=Bank+Indonesia&background=003D79&color=fff&length=2",
+                logo="https://upload.wikimedia.org/wikipedia/commons/c/c4/Bank_Indonesia_logo.svg",
                 description="Bank Indonesia is the central bank of the Republic of Indonesia. "
                             "It is an independent state institution responsible for monetary policy.",
                 website="https://www.bi.go.id",
@@ -101,7 +101,7 @@ def seed():
                 name="Bukalapak",
                 industry="E-Commerce",
                 location="Jakarta Selatan",
-                logo="https://ui-avatars.com/api/?name=Bukalapak&background=E31E52&color=fff&length=1",
+                logo="https://upload.wikimedia.org/wikipedia/commons/9/9d/Logo_Bukalapak.svg",
                 description="Bukalapak is one of the largest e-commerce platforms in Indonesia, "
                             "empowering MSMEs across the country.",
                 website="https://www.bukalapak.com",
@@ -117,7 +117,7 @@ def seed():
                 name="Telkom Indonesia",
                 industry="Telecommunications",
                 location="Bandung",
-                logo="https://ui-avatars.com/api/?name=Telkom&background=E4002B&color=fff&length=1",
+                logo="https://upload.wikimedia.org/wikipedia/commons/b/b1/Telkom_Indonesia_2013.svg",
                 description="Telkom Indonesia is the largest telecommunications and network provider in Indonesia.",
                 website="https://www.telkom.co.id",
                 rating=4.6,
@@ -218,6 +218,17 @@ def seed():
                 role=UserRole.HR,
                 avatar="https://ui-avatars.com/api/?name=Ahmad+Fauzi&background=003D79&color=fff",
                 company_id=103,
+                is_active=True,
+            ),
+            # Admin User
+            User(
+                id=100,
+                email="admin@tumbuh.id",
+                hashed_password=default_pw,
+                first_name="Admin",
+                last_name="Tumbuh",
+                role=UserRole.ADMIN,
+                avatar="https://ui-avatars.com/api/?name=Admin+Tumbuh&background=DC2626&color=fff",
                 is_active=True,
             ),
         ]

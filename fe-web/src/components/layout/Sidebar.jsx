@@ -36,8 +36,14 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_applicants'), path: '/hr/applicants', icon: Users },
     { name: t('nav_company_profile'), path: '/hr/company', icon: Building },
   ];
+  const adminLinks = [
+    { name: t('nav_dashboard'), path: '/admin/dashboard', icon: Home },
+    { name: t('nav_users'), path: '/admin/users', icon: Users },
+    { name: t('nav_companies'), path: '/admin/companies', icon: Building },
+    { name: t('nav_opportunities'), path: '/admin/opportunities', icon: Briefcase },
+  ];
 
-  const links = role === 'hr' ? hrLinks : studentLinks;
+  const links = role === 'admin' ? adminLinks : role === 'hr' ? hrLinks : studentLinks;
 
   return (
     <>
