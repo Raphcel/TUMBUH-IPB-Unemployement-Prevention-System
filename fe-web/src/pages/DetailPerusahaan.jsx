@@ -3,15 +3,17 @@ import { useParams, Link } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
 import { opportunitiesApi } from '../api/opportunities';
 import { MapPin, Globe, Users, Star, Bookmark, ChevronRight, Building2 } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
-const TABS = ['Tentang', 'Lowongan', 'Ulasan'];
+const TAB_KEYS = ['about', 'positions', 'reviews'];
 
 export function DetailPerusahaan() {
   const { id } = useParams();
+  const { t } = useTranslation();
   const [company, setCompany] = useState(null);
   const [companyJobs, setCompanyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Tentang');
+  const [activeTab, setActiveTab] = useState('about');
 
   useEffect(() => {
     Promise.all([companiesApi.get(id), opportunitiesApi.listByCompany(id)])
@@ -32,7 +34,7 @@ export function DetailPerusahaan() {
   }
 
   if (!company) {
-    return <div className="py-20 text-center text-gray-500">Perusahaan tidak ditemukan.</div>;
+    return <div className="py-20 text-center text-gray-500">{t('dcomp_not_found')}</div>;
   }
 
   return (
@@ -41,7 +43,7 @@ export function DetailPerusahaan() {
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <nav className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to="/perusahaan" className="hover:text-brand transition-colors">Perusahaan</Link>
+            <Link to="/perusahaan" className="hover:text-brand transition-colors">{t('navbar_companies')}</Link>
             <ChevronRight size={14} />
             <span className="text-gray-900 font-medium">{company.name}</span>
           </nav>
@@ -119,19 +121,22 @@ export function DetailPerusahaan() {
           {/* Tabs */}
           <div className="mt-6 border-t border-gray-100 pt-2">
             <nav className="flex overflow-x-auto">
-              {TABS.map((tab) => (
+              {TAB_KEYS.map((tabKey) => {
+                const tabLabels = { about: t('dcomp_about'), positions: `${t('dcomp_open_positions')} (${companyJobs.length})`, reviews: t('dcomp_reviews') };
+                return (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tabKey}
+                  onClick={() => setActiveTab(tabKey)}
                   className={`mr-8 pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                    activeTab === tab
+                    activeTab === tabKey
                       ? 'text-brand border-brand'
                       : 'text-gray-500 border-transparent hover:text-gray-800'
                   }`}
                 >
-                  {tab}{tab === 'Lowongan' ? ` (${companyJobs.length})` : ''}
+                  {tabLabels[tabKey]}
                 </button>
-              ))}
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -140,11 +145,11 @@ export function DetailPerusahaan() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left main content */}
           <div className="lg:col-span-2 space-y-6">
-            {activeTab === 'Tentang' && (
+            {activeTab === 'about' && (
               <>
                 {/* About company */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Tentang Perusahaan</h2>
+                  <h2 className="text-lg font-bold text-gray-900 mb-4">{t('dcomp_overview')}</h2>
                   <p className="text-gray-600 leading-relaxed">{company.description}</p>
 
                   {/* Info grid */}
@@ -152,21 +157,21 @@ export function DetailPerusahaan() {
                     {company.industry && (
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <Building2 size={12} /> INDUSTRI
+                          <Building2 size={12} /> {t('dcomp_industry').toUpperCase()}
                         </p>
                         <p className="text-sm font-medium text-gray-900">{company.industry}</p>
                       </div>
                     )}
                     {company.founded && (
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">DIDIRIKAN</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{t('dcomp_founded').toUpperCase()}</p>
                         <p className="text-sm font-medium text-gray-900">{company.founded}</p>
                       </div>
                     )}
                     {company.employee_count && (
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <Users size={12} /> UKURAN PERUSAHAAN
+                          <Users size={12} /> {t('comp_company_size').toUpperCase()}
                         </p>
                         <p className="text-sm font-medium text-gray-900">{company.employee_count}</p>
                       </div>
@@ -174,7 +179,7 @@ export function DetailPerusahaan() {
                     {company.location && (
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <MapPin size={12} /> LOKASI
+                          <MapPin size={12} /> {t('dcomp_location').toUpperCase()}
                         </p>
                         <p className="text-sm font-medium text-gray-900">{company.location}</p>
                       </div>
@@ -198,7 +203,7 @@ export function DetailPerusahaan() {
               </>
             )}
 
-            {activeTab === 'Lowongan' && (
+            {activeTab === 'positions' && (
               <div className="space-y-4">
                 {companyJobs.length > 0 ? (
                   companyJobs.map((job) => (
@@ -224,13 +229,13 @@ export function DetailPerusahaan() {
                   ))
                 ) : (
                   <div className="bg-white rounded-xl border border-dashed border-gray-200 py-12 text-center">
-                    <p className="text-gray-400 italic text-sm">Tidak ada lowongan aktif saat ini.</p>
+                    <p className="text-gray-400 italic text-sm">{t('dcomp_no_positions')}</p>
                   </div>
                 )}
               </div>
             )}
 
-            {activeTab === 'Ulasan' && (
+            {activeTab === 'reviews' && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold text-gray-900">Ulasan Karyawan</h2>
@@ -257,7 +262,7 @@ export function DetailPerusahaan() {
           <div>
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900">Lowongan Aktif</h3>
+                <h3 className="font-bold text-gray-900">{t('dcomp_open_positions')}</h3>
                 <span className="text-brand font-semibold text-sm">{companyJobs.length}</span>
               </div>
               <div className="space-y-4">
@@ -278,7 +283,7 @@ export function DetailPerusahaan() {
               </div>
               {companyJobs.length > 3 && (
                 <button
-                  onClick={() => setActiveTab('Lowongan')}
+                  onClick={() => setActiveTab('positions')}
                   className="mt-4 w-full text-center text-sm text-brand font-medium hover:underline"
                 >
                   Lihat semua {companyJobs.length} lowongan →

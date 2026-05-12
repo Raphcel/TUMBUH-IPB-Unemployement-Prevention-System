@@ -8,16 +8,18 @@ import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { resolveUploadUrl } from '../api/client';
+import { useTranslation } from '../context/LanguageContext';
 
-const TABS = ['Deskripsi', 'Kualifikasi', 'Keuntungan', 'Tentang Perusahaan'];
+const TAB_KEYS = ['desc', 'qualif', 'benefits', 'company'];
 
 export function DetailLowongan({ jobId, isEmbedded }) {
   const { id: paramId } = useParams();
   const id = jobId || paramId;
   const { user } = useAuth();
   const { addToast } = useToast();
+  const { t, lang } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState('Deskripsi');
+  const [activeTab, setActiveTab] = useState('desc');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
@@ -47,9 +49,9 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       await applicationsApi.apply(job.id, { cover_letter: coverLetter || null });
       setApplied(true);
       setShowApplyModal(false);
-      addToast({ title: 'Lamaran Terkirim!', message: `Berhasil melamar di ${job.title}.`, type: 'success' });
+      addToast({ title: t('det_applied'), message: `${job.title}`, type: 'success' });
     } catch (err) {
-      addToast({ title: 'Lamaran Gagal', message: err.message || 'Terjadi kesalahan.', type: 'error' });
+      addToast({ title: 'Error', message: err.message, type: 'error' });
     } finally {
       setApplying(false);
     }
@@ -64,20 +66,20 @@ export function DetailLowongan({ jobId, isEmbedded }) {
   }
 
   if (!job) {
-    return <div className="py-20 text-center text-gray-500">Lowongan tidak ditemukan.</div>;
+    return <div className="py-20 text-center text-gray-500">{t('det_not_found')}</div>;
   }
 
   const company = job.company || {};
   const requirements = Array.isArray(job.requirements) ? job.requirements : [];
   const benefits = Array.isArray(job.benefits) ? job.benefits : [];
   const deadlineStr = job.deadline
-    ? new Date(job.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(job.deadline).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
     : '-';
 
   return (
     <div className={isEmbedded ? "bg-white h-full" : "bg-white min-h-screen pb-20"}>
       {/* ── Auth Modal ── */}
-      <Modal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} title="Login Diperlukan" size="sm">
+      <Modal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} title={t('det_login_to_apply')} size="sm">
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="text-brand" size={24} />
@@ -94,7 +96,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       <Modal
         isOpen={showApplyModal}
         onClose={() => { setShowApplyModal(false); setApplyStep(1); }}
-        title="Lamar Pekerjaan"
+        title={t('det_apply')}
         size="md"
       >
         {/* Stepper */}
@@ -201,7 +203,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
           className="inline-flex items-center text-sm text-gray-500 hover:text-brand transition-colors mb-6 group"
         >
           <ArrowLeft className="mr-2 text-lg group-hover:-translate-x-1 transition-transform" size={16} />
-          Kembali ke hasil pencarian
+          {t('det_back')}
         </Link>
         )}
 
@@ -239,7 +241,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   {job.created_at && (
-                    <span>Diposting {Math.round((Date.now() - new Date(job.created_at)) / 86400000)} hari yang lalu</span>
+                    <span>{t('det_posted')} {Math.round((Date.now() - new Date(job.created_at)) / 86400000)}d</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -252,7 +254,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                   {user?.role !== 'hr' && (
                     applied ? (
                       <div className="flex items-center gap-2 text-white bg-brand px-4 py-2 rounded-lg font-semibold text-sm">
-                        <CheckCircle size={16} /> Sudah Dilamar
+                        <CheckCircle size={16} /> {t('det_applied')}
                       </div>
                     ) : (
                       <button
@@ -260,7 +262,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                         disabled={applying}
                         className="bg-brand hover:bg-brand-dark text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
                       >
-                        Lamar Sekarang
+                        {t('det_apply')}
                       </button>
                     )
                   )}
@@ -273,20 +275,23 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         {/* Tabs */}
         <nav className="border-b border-gray-200 mb-8 overflow-x-auto">
           <ul className="flex whitespace-nowrap min-w-full">
-            {TABS.map((tab) => (
-              <li key={tab} className="mr-8">
+            {TAB_KEYS.map((tabKey) => {
+              const tabLabel = t(`det_tab_${tabKey}`);
+              return (
+              <li key={tabKey} className="mr-8">
                 <button
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => setActiveTab(tabKey)}
                   className={`inline-block py-4 text-sm font-medium transition-colors border-b-2 ${
-                    activeTab === tab
+                    activeTab === tabKey
                       ? 'text-brand border-brand font-semibold'
                       : 'text-gray-500 border-transparent hover:text-gray-800'
                   }`}
                 >
-                  {tab}
+                  {tabLabel}
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </nav>
 
@@ -294,31 +299,31 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         <div className={`grid grid-cols-1 ${isEmbedded ? '' : 'lg:grid-cols-3'} gap-8 pb-12`}>
           {/* Left: main content */}
           <div className={`${isEmbedded ? '' : 'lg:col-span-2'} space-y-10`}>
-            {(activeTab === 'Deskripsi' || activeTab === 'Kualifikasi' || activeTab === 'Keuntungan') && (
+            {(activeTab === 'desc' || activeTab === 'qualif' || activeTab === 'benefits') && (
               <>
-                {activeTab === 'Deskripsi' && (
+                {activeTab === 'desc' && (
                   <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Deskripsi Pekerjaan</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_desc')}</h2>
                     <div className="text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</div>
                   </section>
                 )}
 
-                {activeTab === 'Kualifikasi' && (
+                {activeTab === 'qualif' && (
                   <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Kualifikasi</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_qualifications')}</h2>
                     {requirements.length > 0 ? (
                       <ul className="list-disc pl-5 space-y-2 text-gray-600">
                         {requirements.map((req, idx) => <li key={idx}>{req}</li>)}
                       </ul>
                     ) : (
-                      <p className="text-gray-500 italic text-sm">Tidak ada kualifikasi yang dicantumkan.</p>
+                      <p className="text-gray-500 italic text-sm">{t('det_no_qualifications')}</p>
                     )}
                   </section>
                 )}
 
-                {activeTab === 'Keuntungan' && (
+                {activeTab === 'benefits' && (
                   <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Keuntungan</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_benefits')}</h2>
                     {benefits.length > 0 ? (
                       <div className="flex flex-wrap gap-2.5">
                         {benefits.map((b, idx) => (
@@ -328,22 +333,22 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 italic text-sm">Tidak ada keuntungan yang dicantumkan.</p>
+                      <p className="text-gray-500 italic text-sm">{t('det_no_benefits')}</p>
                     )}
                   </section>
                 )}
               </>
             )}
 
-            {activeTab === 'Tentang Perusahaan' && (
+            {activeTab === 'company' && (
               <section>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Tentang {company.name}</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_about_company')}: {company.name}</h2>
                 <p className="text-gray-600 leading-relaxed">{company.description}</p>
                 <Link
                   to={`/perusahaan/${company.id}`}
                   className="inline-flex items-center text-sm font-semibold text-brand hover:text-brand-dark mt-4 group transition-colors"
                 >
-                  Lihat Profil Perusahaan <ArrowLeft className="ml-1 rotate-180 group-hover:translate-x-1 transition-transform" size={14} />
+                  {t('det_view_profile')} <ArrowLeft className="ml-1 rotate-180 group-hover:translate-x-1 transition-transform" size={14} />
                 </Link>
               </section>
             )}
@@ -353,19 +358,19 @@ export function DetailLowongan({ jobId, isEmbedded }) {
           <div className="space-y-6">
             {/* Job info card */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-gray-900 mb-5">Informasi Pekerjaan</h3>
+              <h3 className="text-base font-bold text-gray-900 mb-5">{t('det_overview')}</h3>
               <ul className="space-y-4">
                 <li className="flex gap-3">
                   <Briefcase className="text-gray-400 shrink-0 mt-0.5" size={20} />
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Tipe Pekerjaan</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t('det_type')}</p>
                     <p className="text-sm font-medium text-gray-900">{job.type}</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <MapPin className="text-gray-400 shrink-0 mt-0.5" size={20} />
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Lokasi</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t('det_location')}</p>
                     <p className="text-sm font-medium text-gray-900">{job.location}</p>
                   </div>
                 </li>
@@ -382,7 +387,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                   <li className="flex gap-3">
                     <Tag className="text-gray-400 shrink-0 mt-0.5" size={20} />
                     <div>
-                      <p className="text-xs text-gray-500 mb-0.5">Gaji</p>
+                      <p className="text-xs text-gray-500 mb-0.5">{t('det_salary')}</p>
                       <p className="text-sm font-medium text-gray-900">{job.salary}</p>
                     </div>
                   </li>
@@ -415,7 +420,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                 to={`/perusahaan/${company.id}`}
                 className="inline-flex items-center text-sm font-semibold text-brand hover:text-brand-dark group transition-colors"
               >
-                Lihat Profil Perusahaan
+                {t('det_view_profile')}
                 <ArrowLeft className="ml-1 rotate-180 group-hover:translate-x-1 transition-transform" size={14} />
               </Link>
             </div>

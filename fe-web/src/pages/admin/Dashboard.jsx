@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../../api/admin';
+import { useTranslation } from '../../context/LanguageContext';
 import {
   Users, Building2, Briefcase, FileText,
   TrendingUp, UserCheck, UserX, Shield
 } from 'lucide-react';
 
 export function AdminDashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,17 +27,17 @@ export function AdminDashboard() {
   }
 
   if (!stats) {
-    return <div className="py-20 text-center text-gray-500">Gagal memuat data.</div>;
+    return <div className="py-20 text-center text-gray-500">{t('no_data')}</div>;
   }
 
   const cards = [
-    { label: 'Total Pengguna', value: stats.total_users, icon: Users, color: 'bg-blue-500', lightColor: 'bg-blue-50', textColor: 'text-blue-600' },
-    { label: 'Mahasiswa', value: stats.total_students, icon: UserCheck, color: 'bg-emerald-500', lightColor: 'bg-emerald-50', textColor: 'text-emerald-600' },
-    { label: 'HR Staff', value: stats.total_hr, icon: Shield, color: 'bg-violet-500', lightColor: 'bg-violet-50', textColor: 'text-violet-600' },
-    { label: 'Pengguna Aktif', value: stats.active_users, icon: TrendingUp, color: 'bg-cyan-500', lightColor: 'bg-cyan-50', textColor: 'text-cyan-600' },
-    { label: 'Perusahaan', value: stats.total_companies, icon: Building2, color: 'bg-amber-500', lightColor: 'bg-amber-50', textColor: 'text-amber-600' },
-    { label: 'Lowongan', value: stats.total_opportunities, icon: Briefcase, color: 'bg-rose-500', lightColor: 'bg-rose-50', textColor: 'text-rose-600' },
-    { label: 'Total Lamaran', value: stats.total_applications, icon: FileText, color: 'bg-indigo-500', lightColor: 'bg-indigo-50', textColor: 'text-indigo-600' },
+    { label: t('admin_total_users'), value: stats.total_users, icon: Users, color: 'bg-blue-500', lightColor: 'bg-blue-50', textColor: 'text-blue-600' },
+    { label: t('admin_students'), value: stats.total_students, icon: UserCheck, color: 'bg-emerald-500', lightColor: 'bg-emerald-50', textColor: 'text-emerald-600' },
+    { label: t('admin_hr_staff'), value: stats.total_hr, icon: Shield, color: 'bg-violet-500', lightColor: 'bg-violet-50', textColor: 'text-violet-600' },
+    { label: t('admin_active_users'), value: stats.active_users, icon: TrendingUp, color: 'bg-cyan-500', lightColor: 'bg-cyan-50', textColor: 'text-cyan-600' },
+    { label: t('admin_companies'), value: stats.total_companies, icon: Building2, color: 'bg-amber-500', lightColor: 'bg-amber-50', textColor: 'text-amber-600' },
+    { label: t('admin_opportunities'), value: stats.total_opportunities, icon: Briefcase, color: 'bg-rose-500', lightColor: 'bg-rose-50', textColor: 'text-rose-600' },
+    { label: t('admin_total_apps'), value: stats.total_applications, icon: FileText, color: 'bg-indigo-500', lightColor: 'bg-indigo-50', textColor: 'text-indigo-600' },
   ];
 
   const statusBreakdown = stats.application_status_breakdown || {};
@@ -52,8 +54,8 @@ export function AdminDashboard() {
     <div>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-500 mt-1">Platform overview & management</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('admin_dashboard')}</h1>
+        <p className="text-gray-500 mt-1">{t('admin_subtitle')}</p>
       </div>
 
       {/* Stats grid */}
@@ -79,7 +81,7 @@ export function AdminDashboard() {
 
       {/* Application status breakdown */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Status Lamaran</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">{t('admin_app_status')}</h2>
         {Object.keys(statusBreakdown).length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {Object.entries(statusBreakdown).map(([status, count]) => (
@@ -93,7 +95,7 @@ export function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">Belum ada data lamaran.</p>
+          <p className="text-gray-500 text-sm">{t('admin_no_app_data')}</p>
         )}
       </div>
     </div>

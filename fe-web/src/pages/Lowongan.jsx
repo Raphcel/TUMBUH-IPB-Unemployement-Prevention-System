@@ -6,11 +6,13 @@ import { bookmarksApi } from '../api/bookmarks';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Bookmark, Search, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown, Banknote } from 'lucide-react';
 import { DetailLowongan } from './DetailLowongan';
+import { useTranslation } from '../context/LanguageContext';
 
 const PAGE_SIZE = 12;
 
 export function Lowongan() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
@@ -135,8 +137,8 @@ export function Lowongan() {
     if (!dateStr) return '';
     const diff = Date.now() - new Date(dateStr).getTime();
     const days = Math.floor(diff / 86400000);
-    if (days <= 0) return 'Hari ini';
-    return `${days} Hari yang lalu`;
+    if (days <= 0) return t('low_today', 'Today');
+    return `${days}d ago`;
   };
 
   return (
@@ -149,7 +151,7 @@ export function Lowongan() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
-                placeholder="Cari lowongan..."
+                placeholder={t('low_search_ph')}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -159,7 +161,7 @@ export function Lowongan() {
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
-                placeholder="Lokasi"
+                placeholder={t('low_location_ph')}
                 type="text"
                 value={locationTerm}
                 onChange={(e) => setLocationTerm(e.target.value)}
@@ -169,7 +171,7 @@ export function Lowongan() {
               type="submit"
               className="bg-gray-900 text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
             >
-              <Search className="w-4 h-4" /> Cari
+              <Search className="w-4 h-4" /> {t('low_search_btn')}
             </button>
           </form>
 
@@ -192,7 +194,7 @@ export function Lowongan() {
                       : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                   }`}
                 >
-                  {type === 'All' ? 'Tipe Pekerjaan' : type} {filterType === type && type !== 'All' ? null : <ChevronDown className="w-3 h-3" />}
+                  {type === 'All' ? t('low_type_all') : type} {filterType === type && type !== 'All' ? null : <ChevronDown className="w-3 h-3" />}
                 </button>
               ))}
             </div>
@@ -212,10 +214,10 @@ export function Lowongan() {
             {/* Results info */}
             <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-none bg-gray-50/50">
               <h2 className="text-sm font-medium text-gray-500">
-                {loading ? 'Memuat...' : `Ditemukan ${totalOpportunities} peluang`}
+                {loading ? t('loading') : `${t('low_found')} ${totalOpportunities} ${t('low_opportunities')}`}
               </h2>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>Terbaru</span>
+                <span>{t('low_latest')}</span>
                 <ChevronDown className="w-4 h-4" />
               </div>
             </div>
@@ -269,7 +271,7 @@ export function Lowongan() {
                         <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
                           {isNew(job) ? (
                             <span className="bg-green-100 text-brand font-semibold px-2 py-0.5 rounded flex items-center gap-1">
-                              ✓ Baru
+                              ✓ {t('new_badge')}
                             </span>
                           ) : (
                             <span />
@@ -282,12 +284,12 @@ export function Lowongan() {
                 ))
               ) : (
                 <div className="py-20 text-center text-gray-500">
-                  <p>Tidak ada lowongan yang sesuai.</p>
+                  <p>{t('low_no_results')}</p>
                   <button
                     onClick={() => { setSearchTerm(''); setFilterType('All'); setFilterLocation('All'); setFilterCompany('All'); }}
                     className="mt-3 text-brand hover:underline text-sm"
                   >
-                    Hapus Filter
+                    {t('low_clear_filters')}
                   </button>
                 </div>
               )}
@@ -341,7 +343,7 @@ export function Lowongan() {
             ) : (
               <div className="flex items-center justify-center h-full flex-1 text-gray-500 flex-col gap-4">
                 <Search className="w-12 h-12 text-gray-300" />
-                <p>Pilih lowongan untuk melihat detail</p>
+                <p>{t('low_select_detail')}</p>
               </div>
             )}
           </div>

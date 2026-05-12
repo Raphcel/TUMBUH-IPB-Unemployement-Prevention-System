@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
 import { MapPin, Users, Star, ChevronDown, Bookmark } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 export function Perusahaan() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,8 +17,8 @@ export function Perusahaan() {
     );
   };
 
-  const [filterIndustry, setFilterIndustry] = useState('Semua Industri');
-  const [filterLocation, setFilterLocation] = useState('Semua Lokasi');
+  const [filterIndustry, setFilterIndustry] = useState(t('comp_all_industries'));
+  const [filterLocation, setFilterLocation] = useState(t('comp_all_locations'));
 
   const [allIndustries, setAllIndustries] = useState([]);
   const [allLocations, setAllLocations] = useState([]);
@@ -35,17 +37,17 @@ export function Perusahaan() {
       .finally(() => setLoading(false));
   }, []);
 
-  const INDUSTRIES = ['Semua Industri', 'Teknologi', 'Keuangan', 'E-commerce', 'Pendidikan', 'Konsultan', 'Lainnya', ...allIndustries];
+  const INDUSTRIES = [t('comp_all_industries'), t('comp_technology'), t('comp_finance'), t('comp_ecommerce'), t('comp_education'), t('comp_consulting'), t('comp_others'), ...allIndustries];
   const uniqueIndustries = [...new Set(INDUSTRIES)];
 
-  const LOCATIONS = ['Semua Lokasi', 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote', ...allLocations];
+  const LOCATIONS = [t('comp_all_locations'), 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote', ...allLocations];
   const uniqueLocations = [...new Set(LOCATIONS)];
 
   const filteredCompanies = companies.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.industry || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchIndustry = filterIndustry === 'Semua Industri' || c.industry === filterIndustry;
-    const matchLocation = filterLocation === 'Semua Lokasi' || (c.location || '').includes(filterLocation);
+    const matchIndustry = filterIndustry === t('comp_all_industries') || c.industry === filterIndustry;
+    const matchLocation = filterLocation === t('comp_all_locations') || (c.location || '').includes(filterLocation);
     return matchSearch && matchIndustry && matchLocation;
   });
 
@@ -64,9 +66,9 @@ export function Perusahaan() {
           <aside className="w-56 shrink-0 hidden md:block">
             <div className="sticky top-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-gray-900">Filter</h2>
+                <h2 className="text-base font-bold text-gray-900">{t('comp_filter')}</h2>
                 <button
-                  onClick={() => { setFilterIndustry('Semua Industri'); setFilterLocation('Semua Lokasi'); }}
+                  onClick={() => { setFilterIndustry(t('comp_all_industries')); setFilterLocation(t('comp_all_locations')); }}
                   className="text-xs text-gray-400 hover:text-gray-700"
                 >
                   ↑
@@ -76,10 +78,10 @@ export function Perusahaan() {
               {/* Industry filter */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-800">Industri</h3>
+                  <h3 className="text-sm font-semibold text-gray-800">{t('comp_industry')}</h3>
                 </div>
                 <ul className="space-y-2">
-                  {['Semua Industri', 'Teknologi', 'Keuangan', 'E-commerce', 'Pendidikan', 'Konsultan', 'Lainnya'].map((ind) => (
+                  {[t('comp_all_industries'), t('comp_technology'), t('comp_finance'), t('comp_ecommerce'), t('comp_education'), t('comp_consulting'), t('comp_others')].map((ind) => (
                     <li key={ind}>
                       <label className="flex items-center gap-2.5 cursor-pointer group">
                         <input
@@ -101,10 +103,10 @@ export function Perusahaan() {
               {/* Location filter */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-800">Lokasi</h3>
+                  <h3 className="text-sm font-semibold text-gray-800">{t('comp_location')}</h3>
                 </div>
                 <ul className="space-y-2">
-                  {['Semua Lokasi', 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote'].map((loc) => (
+                  {[t('comp_all_locations'), 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote'].map((loc) => (
                     <li key={loc}>
                       <label className="flex items-center gap-2.5 cursor-pointer group">
                         <input
@@ -126,7 +128,7 @@ export function Perusahaan() {
               {/* Company size filter placeholder */}
               <div>
                 <button className="flex items-center justify-between w-full text-sm font-semibold text-gray-800">
-                  Ukuran Perusahaan <ChevronDown size={14} />
+                  {t('comp_company_size')} <ChevronDown size={14} />
                 </button>
               </div>
             </div>
@@ -137,7 +139,7 @@ export function Perusahaan() {
             {/* Results header */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-sm text-gray-600">
-                Ditemukan <span className="font-semibold text-gray-900">{sortedCompanies.length}</span> perusahaan
+                {t('comp_found')} <span className="font-semibold text-gray-900">{sortedCompanies.length}</span> {t('comp_companies')}
               </p>
               <div className="flex items-center gap-2">
                 <select
@@ -215,12 +217,12 @@ export function Perusahaan() {
               </div>
             ) : (
               <div className="py-20 text-center text-gray-500">
-                <p>Tidak ada perusahaan yang ditemukan.</p>
+                <p>{t('comp_no_results')}</p>
                 <button
-                  onClick={() => { setFilterIndustry('Semua Industri'); setFilterLocation('Semua Lokasi'); setSearchTerm(''); }}
+                  onClick={() => { setFilterIndustry(t('comp_all_industries')); setFilterLocation(t('comp_all_locations')); setSearchTerm(''); }}
                   className="mt-3 text-brand hover:underline text-sm"
                 >
-                  Hapus Filter
+                  {t('comp_clear_filters')}
                 </button>
               </div>
             )}

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, matchPath } from 'react-router-dom';
 import { Button } from '../ui/Button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserMenu } from './UserMenu';
+import { useTranslation } from '../../context/LanguageContext';
 
 // Tumbuh SVG Logo (layered leaves)
 function TumbuhLogo({ className = 'w-6 h-6' }) {
@@ -17,15 +18,18 @@ function TumbuhLogo({ className = 'w-6 h-6' }) {
   );
 }
 
-const NAV_LINKS = [
-  { name: 'Cari Lowongan', path: '/lowongan' },
-  { name: 'Perusahaan', path: '/perusahaan' },
-  { name: 'Karier Advice', path: '/panduan' },
-];
+
 
 export function Navbar() {
   const [openNav, setOpenNav] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { t, lang, setLang } = useTranslation();
+
+  const NAV_LINKS = [
+    { name: t('navbar_opportunities'), path: '/lowongan' },
+    { name: t('navbar_companies'), path: '/perusahaan' },
+    { name: t('navbar_career_advice'), path: '/panduan' },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -96,6 +100,16 @@ export function Navbar() {
             <UserMenu isTransparent={isTransparent} />
           ) : (
             <>
+              <button
+                onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+                title={t('language')}
+                className={`p-2 rounded-md transition-colors flex items-center gap-1 text-sm font-medium ${
+                  isTransparent ? 'text-white/80 hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Globe size={16} />
+                <span className="uppercase text-xs font-bold">{lang}</span>
+              </button>
               <Link
                 to="/login"
                 className={`text-sm font-medium px-4 py-2 border rounded-md transition-all ${
@@ -104,13 +118,13 @@ export function Navbar() {
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                Masuk
+                {t('navbar_login')}
               </Link>
               <Link
                 to="/register"
                 className="text-sm font-medium px-4 py-2 bg-brand hover:bg-brand-dark text-white rounded-md transition-colors"
               >
-                Daftar
+                {t('navbar_register')}
               </Link>
             </>
           )}
@@ -158,10 +172,10 @@ export function Navbar() {
                 ) : (
                   <>
                     <Link to="/login" onClick={() => setOpenNav(false)} className="text-center py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-md hover:bg-gray-50">
-                      Masuk
+                      {t('navbar_login')}
                     </Link>
                     <Link to="/register" onClick={() => setOpenNav(false)} className="text-center py-2 text-sm font-medium text-white bg-brand hover:bg-brand-dark rounded-md">
-                      Daftar
+                      {t('navbar_register')}
                     </Link>
                   </>
                 )}

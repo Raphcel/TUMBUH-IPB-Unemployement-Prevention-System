@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../../api/admin';
+import { useTranslation } from '../../context/LanguageContext';
 import { Trash2, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
 export function CompanyManagement() {
+  const { t } = useTranslation();
   const [companies, setCompanies] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -25,7 +27,7 @@ export function CompanyManagement() {
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
   const deleteCompany = async (companyId) => {
-    if (!confirm('Yakin hapus perusahaan ini? Semua lowongan terkait juga akan dihapus.')) return;
+    if (!confirm(t('admin_confirm_delete_company'))) return;
     try {
       await adminApi.deleteCompany(companyId);
       fetchCompanies();
@@ -40,8 +42,8 @@ export function CompanyManagement() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Kelola Perusahaan</h1>
-        <p className="text-gray-500 mt-1">Lihat dan kelola semua perusahaan yang terdaftar</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('admin_manage_comp')}</h1>
+        <p className="text-gray-500 mt-1">{t('admin_manage_comp_sub')}</p>
       </div>
 
       {/* Table */}
@@ -50,12 +52,12 @@ export function CompanyManagement() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Perusahaan</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Industri</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Lokasi</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Karyawan</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Rating</th>
-                <th className="text-right px-5 py-3 font-semibold text-gray-600">Aksi</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_comp_name')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_comp_industry')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_comp_location')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_comp_employees')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_comp_rating')}</th>
+                <th className="text-right px-5 py-3 font-semibold text-gray-600">{t('admin_actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +70,7 @@ export function CompanyManagement() {
               ) : companies.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-gray-400">
-                    Tidak ada perusahaan ditemukan.
+                    {t('admin_no_companies')}
                   </td>
                 </tr>
               ) : (
@@ -102,7 +104,7 @@ export function CompanyManagement() {
                       <div className="flex items-center justify-end">
                         <button
                           onClick={() => deleteCompany(c.id)}
-                          title="Hapus"
+                          title={t('delete_btn')}
                           className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 size={16} />
@@ -120,7 +122,7 @@ export function CompanyManagement() {
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
             <span className="text-xs text-gray-500">
-              Menampilkan {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} dari {total}
+              {t('admin_showing')} {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} {t('admin_of')} {total}
             </span>
             <div className="flex items-center gap-1">
               <button

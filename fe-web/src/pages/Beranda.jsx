@@ -4,81 +4,13 @@ import { opportunitiesApi } from '../api/opportunities';
 import { companiesApi } from '../api/companies';
 import { MapPin, Search, ArrowRight, Briefcase, Globe, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const CATEGORY_CARDS = [
-  {
-    label: 'Internship',
-    count: '2.458 peluang',
-    desc: 'Bangun pengalaman nyata mulai dari sekarang.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
-      </svg>
-    ),
-    color: 'green',
-    hoverBorder: 'hover:border-green-200',
-    hoverText: 'group-hover:text-green-600',
-    iconBg: 'bg-green-50 text-green-600 group-hover:bg-green-100',
-    type: 'Internship',
-  },
-  {
-    label: 'Full-time',
-    count: '3.128 peluang',
-    desc: 'Temukan peran penuh waktu untuk karier jangka panjang.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
-      </svg>
-    ),
-    color: 'blue',
-    hoverBorder: 'hover:border-blue-200',
-    hoverText: 'group-hover:text-blue-600',
-    iconBg: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
-    type: 'Full-time',
-  },
-  {
-    label: 'Remote',
-    count: '1.604 peluang',
-    desc: 'Kerja fleksibel dari mana saja, tanpa batas.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
-      </svg>
-    ),
-    color: 'purple',
-    hoverBorder: 'hover:border-purple-200',
-    hoverText: 'group-hover:text-purple-600',
-    iconBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
-    type: 'Remote',
-  },
-  {
-    label: 'Part-time',
-    count: '789 peluang',
-    desc: 'Seimbangkan waktu belajar dan pengalaman.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
-      </svg>
-    ),
-    color: 'yellow',
-    hoverBorder: 'hover:border-yellow-200',
-    hoverText: 'group-hover:text-yellow-600',
-    iconBg: 'bg-yellow-50 text-yellow-600 group-hover:bg-yellow-100',
-    type: 'Part-time',
-  },
-];
+import { useTranslation } from '../context/LanguageContext';
 
 const POPULAR_TAGS = ['Internship', 'Full-time', 'Remote', 'Data Analyst', 'UI/UX Designer'];
 
-const STATS = [
-  { value: '10K+', label: 'Perusahaan Terpercaya' },
-  { value: '50K+', label: 'Peluang Aktif' },
-  { value: '200K+', label: 'Talenta Bergabung' },
-  { value: '98%', label: 'Pengguna Puas' },
-];
-
 export function Beranda() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [companies, setCompanies] = useState([]);
@@ -100,6 +32,76 @@ export function Beranda() {
     navigate(`/lowongan?${params.toString()}`);
   };
 
+  const CATEGORY_CARDS = [
+    {
+      label: 'Internship',
+      count: t('cat_internship_count'),
+      desc: t('cat_internship_desc'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+        </svg>
+      ),
+      color: 'green',
+      hoverBorder: 'hover:border-green-200',
+      hoverText: 'group-hover:text-green-600',
+      iconBg: 'bg-green-50 text-green-600 group-hover:bg-green-100',
+      type: 'Internship',
+    },
+    {
+      label: 'Full-time',
+      count: t('cat_fulltime_count'),
+      desc: t('cat_fulltime_desc'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+        </svg>
+      ),
+      color: 'blue',
+      hoverBorder: 'hover:border-blue-200',
+      hoverText: 'group-hover:text-blue-600',
+      iconBg: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
+      type: 'Full-time',
+    },
+    {
+      label: 'Remote',
+      count: t('cat_remote_count'),
+      desc: t('cat_remote_desc'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+        </svg>
+      ),
+      color: 'purple',
+      hoverBorder: 'hover:border-purple-200',
+      hoverText: 'group-hover:text-purple-600',
+      iconBg: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
+      type: 'Remote',
+    },
+    {
+      label: 'Part-time',
+      count: t('cat_parttime_count'),
+      desc: t('cat_parttime_desc'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+        </svg>
+      ),
+      color: 'yellow',
+      hoverBorder: 'hover:border-yellow-200',
+      hoverText: 'group-hover:text-yellow-600',
+      iconBg: 'bg-yellow-50 text-yellow-600 group-hover:bg-yellow-100',
+      type: 'Part-time',
+    },
+  ];
+
+  const STATS = [
+    { value: '10K+', label: t('stat_companies') },
+    { value: '50K+', label: t('stat_opportunities') },
+    { value: '200K+', label: t('stat_talent') },
+    { value: '98%', label: t('stat_satisfied') },
+  ];
+
   // Duplicate for seamless scroll
   const scrollCompanies = [...companies, ...companies];
 
@@ -116,8 +118,8 @@ export function Beranda() {
               transition={{ duration: 0.7 }}
               className="text-5xl md:text-6xl font-bold leading-tight mb-6"
             >
-              Tumbuh bersama<br />
-              <span className="text-blue-400">peluang terbaik.</span>
+              {t('hero_title_1')}<br />
+              <span className="text-blue-400">{t('hero_title_2')}</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 24 }}
@@ -125,7 +127,7 @@ export function Beranda() {
               transition={{ duration: 0.7, delay: 0.15 }}
               className="text-lg text-gray-300 mb-8 max-w-lg"
             >
-              Temukan pengalaman, bangun skill, dan wujudkan karier impianmu.
+              {t('hero_subtitle')}
             </motion.p>
 
             {/* Search bar */}
@@ -141,7 +143,7 @@ export function Beranda() {
                 <input
                   type="text"
                   className="w-full text-gray-800 placeholder-gray-400 text-sm bg-transparent focus:outline-none"
-                  placeholder="Cari posisi, keahlian, atau perusahaan"
+                  placeholder={t('hero_search_ph')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -151,7 +153,7 @@ export function Beranda() {
                 <input
                   type="text"
                   className="w-full text-gray-800 placeholder-gray-400 text-sm bg-transparent focus:outline-none"
-                  placeholder="Lokasi"
+                  placeholder={t('hero_location_ph')}
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
                 />
@@ -160,7 +162,7 @@ export function Beranda() {
                 type="submit"
                 className="bg-brand hover:bg-brand-dark text-white px-8 py-3 rounded-md font-medium transition-colors w-full md:w-auto"
               >
-                Cari Lowongan
+                {t('hero_search_btn')}
               </button>
             </motion.form>
 
@@ -171,7 +173,7 @@ export function Beranda() {
               transition={{ duration: 0.6, delay: 0.45 }}
               className="flex flex-wrap items-center gap-3 text-sm text-gray-300"
             >
-              <span>Popular:</span>
+              <span>{t('hero_popular')}</span>
               {POPULAR_TAGS.map((tag) => (
                 <Link
                   key={tag}
@@ -194,7 +196,7 @@ export function Beranda() {
         {/* ── Trusted Brands ── */}
         <div className="relative z-10 py-16 bottom-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-sm text-gray-400 mb-6 font-medium">Dipercaya oleh perusahaan terbaik</p>
+            <p className="text-sm text-gray-400 mb-6 font-medium">{t('hero_trusted')}</p>
             {companies.length > 0 ? (
               <div className="flex overflow-hidden">
                 <div className="flex space-x-16 animate-scroll">
@@ -228,12 +230,12 @@ export function Beranda() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-10">
-            <h2 className="text-3xl font-bold text-gray-900">Peluang untuk setiap langkah kariermu</h2>
+            <h2 className="text-3xl font-bold text-gray-900">{t('cat_title')}</h2>
             <Link
               to="/lowongan"
               className="text-brand font-medium flex items-center gap-1 hover:underline text-sm"
             >
-              Lihat semua <ArrowRight className="w-4 h-4" />
+              {t('cat_see_all')} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

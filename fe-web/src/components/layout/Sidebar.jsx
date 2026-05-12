@@ -37,10 +37,10 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_company_profile'), path: '/hr/company', icon: Building },
   ];
   const adminLinks = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: Home },
-    { name: 'Pengguna', path: '/admin/users', icon: Users },
-    { name: 'Perusahaan', path: '/admin/companies', icon: Building },
-    { name: 'Lowongan', path: '/admin/opportunities', icon: Briefcase },
+    { name: t('nav_dashboard'), path: '/admin/dashboard', icon: Home },
+    { name: t('nav_users'), path: '/admin/users', icon: Users },
+    { name: t('nav_companies'), path: '/admin/companies', icon: Building },
+    { name: t('nav_opportunities'), path: '/admin/opportunities', icon: Briefcase },
   ];
 
   const links = role === 'admin' ? adminLinks : role === 'hr' ? hrLinks : studentLinks;

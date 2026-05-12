@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../../api/admin';
+import { useTranslation } from '../../context/LanguageContext';
 import { Search, UserX, UserCheck, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PAGE_SIZE = 20;
@@ -11,6 +12,7 @@ const ROLE_BADGES = {
 };
 
 export function UserManagement() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -46,7 +48,7 @@ export function UserManagement() {
   };
 
   const deleteUser = async (userId) => {
-    if (!confirm('Yakin hapus pengguna ini?')) return;
+    if (!confirm(t('admin_confirm_delete_user'))) return;
     try {
       await adminApi.deleteUser(userId);
       fetchUsers();
@@ -61,8 +63,8 @@ export function UserManagement() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Kelola Pengguna</h1>
-        <p className="text-gray-500 mt-1">Lihat, cari, dan kelola semua akun pengguna platform</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('admin_manage_users')}</h1>
+        <p className="text-gray-500 mt-1">{t('admin_manage_users_sub')}</p>
       </div>
 
       {/* Search & Filters */}
@@ -71,7 +73,7 @@ export function UserManagement() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Cari nama atau email..."
+            placeholder={t('admin_search_users')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
@@ -82,7 +84,7 @@ export function UserManagement() {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
         >
-          <option value="">Semua Role</option>
+          <option value="">{t('admin_all_roles')}</option>
           <option value="student">Student</option>
           <option value="hr">HR</option>
           <option value="admin">Admin</option>
@@ -95,11 +97,11 @@ export function UserManagement() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Pengguna</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Email</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Role</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">Status</th>
-                <th className="text-right px-5 py-3 font-semibold text-gray-600">Aksi</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_user')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_email')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_role')}</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">{t('admin_status')}</th>
+                <th className="text-right px-5 py-3 font-semibold text-gray-600">{t('admin_actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -112,7 +114,7 @@ export function UserManagement() {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center text-gray-400">
-                    Tidak ada pengguna ditemukan.
+                    {t('admin_no_users')}
                   </td>
                 </tr>
               ) : (
@@ -139,21 +141,21 @@ export function UserManagement() {
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex items-center gap-1 text-xs font-medium ${u.is_active ? 'text-green-600' : 'text-red-500'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${u.is_active ? 'bg-green-500' : 'bg-red-400'}`} />
-                        {u.is_active ? 'Aktif' : 'Nonaktif'}
+                        {u.is_active ? t('admin_active') : t('admin_inactive')}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => toggleActive(u.id)}
-                          title={u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                          title={u.is_active ? t('admin_deactivate') : t('admin_activate')}
                           className={`p-1.5 rounded-lg transition-colors ${u.is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}
                         >
                           {u.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
                         </button>
                         <button
                           onClick={() => deleteUser(u.id)}
-                          title="Hapus"
+                          title={t('delete_btn')}
                           className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 size={16} />
@@ -171,7 +173,7 @@ export function UserManagement() {
         {totalPages > 1 && (
           <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
             <span className="text-xs text-gray-500">
-              Menampilkan {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} dari {total}
+              {t('admin_showing')} {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} {t('admin_of')} {total}
             </span>
             <div className="flex items-center gap-1">
               <button
