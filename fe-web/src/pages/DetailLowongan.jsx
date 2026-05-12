@@ -11,8 +11,9 @@ import { resolveUploadUrl } from '../api/client';
 
 const TABS = ['Deskripsi', 'Kualifikasi', 'Keuntungan', 'Tentang Perusahaan'];
 
-export function DetailLowongan() {
-  const { id } = useParams();
+export function DetailLowongan({ jobId, isEmbedded }) {
+  const { id: paramId } = useParams();
+  const id = jobId || paramId;
   const { user } = useAuth();
   const { addToast } = useToast();
 
@@ -74,7 +75,7 @@ export function DetailLowongan() {
     : '-';
 
   return (
-    <div className="bg-white min-h-screen pb-20">
+    <div className={isEmbedded ? "bg-white h-full" : "bg-white min-h-screen pb-20"}>
       {/* ── Auth Modal ── */}
       <Modal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} title="Login Diperlukan" size="sm">
         <div className="text-center mb-6">
@@ -192,8 +193,9 @@ export function DetailLowongan() {
       </Modal>
 
       {/* ── Main Content ── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={isEmbedded ? "w-full" : "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
         {/* Back navigation */}
+        {!isEmbedded && (
         <Link
           to="/lowongan"
           className="inline-flex items-center text-sm text-gray-500 hover:text-brand transition-colors mb-6 group"
@@ -201,6 +203,7 @@ export function DetailLowongan() {
           <ArrowLeft className="mr-2 text-lg group-hover:-translate-x-1 transition-transform" size={16} />
           Kembali ke hasil pencarian
         </Link>
+        )}
 
         {/* Job header card */}
         <section className="bg-white rounded-xl mb-8">
@@ -288,9 +291,9 @@ export function DetailLowongan() {
         </nav>
 
         {/* Content area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+        <div className={`grid grid-cols-1 ${isEmbedded ? '' : 'lg:grid-cols-3'} gap-8 pb-12`}>
           {/* Left: main content */}
-          <div className="lg:col-span-2 space-y-10">
+          <div className={`${isEmbedded ? '' : 'lg:col-span-2'} space-y-10`}>
             {(activeTab === 'Deskripsi' || activeTab === 'Kualifikasi' || activeTab === 'Keuntungan') && (
               <>
                 {activeTab === 'Deskripsi' && (

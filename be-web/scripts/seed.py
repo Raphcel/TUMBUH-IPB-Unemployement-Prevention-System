@@ -220,6 +220,17 @@ def seed():
                 company_id=103,
                 is_active=True,
             ),
+            # Admin User
+            User(
+                id=100,
+                email="admin@tumbuh.id",
+                hashed_password=default_pw,
+                first_name="Admin",
+                last_name="Tumbuh",
+                role=UserRole.ADMIN,
+                avatar="https://ui-avatars.com/api/?name=Admin+Tumbuh&background=DC2626&color=fff",
+                is_active=True,
+            ),
         ]
         db.add_all(users)
         db.flush()

@@ -1,0 +1,122 @@
+"""
+Admin API routes — platform-wide management endpoints.
+All endpoints require 'admin' role.
+"""
+
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
+
+from app.domain.models.user import User
+from app.services.admin_service import AdminService
+from app.schemas.user import UserResponse
+from app.schemas.company import CompanyResponse
+from app.schemas.opportunity import OpportunityResponse
+from app.api.dependencies import require_role, get_admin_service
+
+router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+# ── Stats ────────────────────────────────────────────────────
+
+@router.get("/stats")
+def get_platform_stats(
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Get platform-wide statistics for the admin dashboard."""
+    return service.get_stats()
+
+
+# ── User Management ─────────────────────────────────────────
+
+@router.get("/users")
+def list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    role: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """List all users with optional filters."""
+    result = service.list_users(skip=skip, limit=limit, role=role, search=search, is_active=is_active)
+    return {
+        "items": [UserResponse.model_validate(u) for u in result["items"]],
+        "total": result["total"],
+    }
+
+
+@router.patch("/users/{user_id}/toggle-active")
+def toggle_user_active(
+    user_id: int,
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Toggle a user's active status."""
+    return service.toggle_user_active(user_id)
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Delete a user permanently."""
+    return service.delete_user(user_id)
+
+
+# ── Company Management ──────────────────────────────────────
+
+@router.get("/companies")
+def list_companies(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """List all companies."""
+    result = service.list_companies(skip=skip, limit=limit)
+    return {
+        "items": [CompanyResponse.model_validate(c) for c in result["items"]],
+        "total": result["total"],
+    }
+
+
+@router.delete("/companies/{company_id}")
+def delete_company(
+    company_id: int,
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Delete a company permanently."""
+    return service.delete_company(company_id)
+
+
+# ── Opportunity Management ──────────────────────────────────
+
+@router.get("/opportunities")
+def list_opportunities(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """List all opportunities."""
+    result = service.list_opportunities(skip=skip, limit=limit)
+    return {
+        "items": [OpportunityResponse.model_validate(o) for o in result["items"]],
+        "total": result["total"],
+    }
+
+
+@router.delete("/opportunities/{opportunity_id}")
+def delete_opportunity(
+    opportunity_id: int,
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Delete an opportunity permanently."""
+    return service.delete_opportunity(opportunity_id)

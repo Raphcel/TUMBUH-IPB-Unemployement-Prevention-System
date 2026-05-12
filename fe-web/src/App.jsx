@@ -35,6 +35,11 @@ const Pelamar            = lazyNamed(() => import('./pages/hr/Pelamar'),        
 const ProfilPerusahaanHR = lazyNamed(() => import('./pages/hr/ProfilPerusahaan'),  'ProfilPerusahaanHR');
 const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),      'FormLowongan');
 
+// ── Admin pages ────────────────────────────────────────────────────────────
+const AdminDashboard      = lazyNamed(() => import('./pages/admin/Dashboard'),        'AdminDashboard');
+const UserManagement      = lazyNamed(() => import('./pages/admin/UserManagement'),   'UserManagement');
+const CompanyManagement   = lazyNamed(() => import('./pages/admin/CompanyManagement'),'CompanyManagement');
+
 // ── Suspense fallback ──────────────────────────────────────────────────────
 function PageSpinner() {
   return (
@@ -151,7 +156,7 @@ function ProtectedRoute({ allowedRole, children }) {
   if (!user) return <Navigate to="/login" replace />;
 
   if (allowedRole && user.role !== allowedRole) {
-    const dest = user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard';
+    const dest = user.role === 'admin' ? '/admin/dashboard' : user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard';
     return <Navigate to={dest} replace />;
   }
 
@@ -218,6 +223,21 @@ function AppRoutes() {
         <Route path="applicants" element={<Navigate to="/hr/opportunities" replace />} />
         <Route path="company" element={<ProfilPerusahaanHR />} />
         <Route path="calendar" element={<Calendar />} />
+      </Route>
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRole="admin">
+            <DashboardLayout role="admin" />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="companies" element={<CompanyManagement />} />
+        <Route path="opportunities" element={<AdminDashboard />} />
       </Route>
 
       {/* 404 Catch-All */}

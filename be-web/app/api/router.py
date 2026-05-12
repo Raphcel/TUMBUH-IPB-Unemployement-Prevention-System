@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, users, companies, opportunities, applications, bookmarks, externships, notifications
+from app.api.routes import auth, users, companies, opportunities, applications, bookmarks, externships, notifications, admin
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -12,3 +12,5 @@ api_router.include_router(applications.router)
 api_router.include_router(bookmarks.router)
 api_router.include_router(externships.router)
 api_router.include_router(notifications.router)
+api_router.include_router(admin.router)
+
