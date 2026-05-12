@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tumbuh - Cari Lowongan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1A8754',
+            'primary-dark': '#146c43',
+            'primary-light': '#e8f5e9',
+            'gray-light': '#f9fafb',
+            'gray-border': '#e5e7eb',
+            'text-main': '#111827',
+            'text-muted': '#6b7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="custom-styles">
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #ffffff;
+      color: #111827;
+    }
+    .job-card:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border-color: #1A8754;
+      transition: all 0.2s ease-in-out;
+    }
+  </style>
+<!-- Feather Icons for SVG -->
+<script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body class="bg-white min-h-screen">
+<!-- BEGIN: Navigation -->
+<nav class="border-b border-gray-border bg-white sticky top-0 z-50 py-4 px-6 md:px-12 flex items-center justify-between">
+<div class="flex items-center gap-8">
+<!-- Logo -->
+<a class="flex items-center gap-2 text-xl font-bold text-gray-900" href="#">
+<svg class="w-6 h-6 text-primary" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2L2 22h20L12 2z"></path>
+</svg>
+        Tumbuh
+      </a>
+<!-- Nav Links -->
+<ul class="hidden md:flex items-center gap-6 text-sm font-medium text-text-muted">
+<li><a class="text-primary border-b-2 border-primary pb-1 font-semibold" href="#">Cari Lowongan</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Perusahaan</a></li>
+<li class="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">Eksplorasi <i class="w-4 h-4" data-feather="chevron-down"></i></li>
+<li class="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">Karier Advice <i class="w-4 h-4" data-feather="chevron-down"></i></li>
+</ul>
+</div>
+<!-- Auth Buttons -->
+<div class="hidden md:flex items-center gap-4">
+<button class="text-sm font-medium text-text-muted hover:text-primary px-4 py-2 border border-transparent hover:border-gray-border rounded-lg transition-all">Masuk</button>
+<button class="text-sm font-medium bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary-dark transition-colors">Daftar</button>
+</div>
+</nav>
+<!-- END: Navigation -->
+<!-- BEGIN: Main Content -->
+<main class="max-w-5xl mx-auto px-6 py-8">
+<!-- BEGIN: Search & Filter Section -->
+<section class="mb-8" data-purpose="search-and-filter">
+<!-- Search Bar -->
+<div class="flex flex-col md:flex-row gap-4 mb-4">
+<div class="relative flex-1">
+<i class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" data-feather="search"></i>
+<input class="w-full pl-12 pr-4 py-3 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Data Analyst Intern" type="text"/>
+</div>
+<div class="relative flex-1">
+<i class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" data-feather="map-pin"></i>
+<input class="w-full pl-12 pr-4 py-3 border border-gray-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Jakarta" type="text"/>
+</div>
+<button class="bg-[#1e293b] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+<i class="w-4 h-4" data-feather="search"></i> Cari
+        </button>
+</div>
+<!-- Filter Chips -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex flex-wrap items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 border border-gray-border rounded-full text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors">
+<i class="w-4 h-4" data-feather="sliders"></i> Filter
+          </button>
+<button class="flex items-center gap-2 px-4 py-2 border border-gray-border rounded-full text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors">
+            Lokasi <i class="w-4 h-4" data-feather="chevron-down"></i>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 border border-gray-border rounded-full text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors">
+            Tipe Pekerjaan <i class="w-4 h-4" data-feather="chevron-down"></i>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 border border-gray-border rounded-full text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors">
+            Bidang <i class="w-4 h-4" data-feather="chevron-down"></i>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 border border-gray-border rounded-full text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors">
+            Tanggal Diposting <i class="w-4 h-4" data-feather="chevron-down"></i>
+</button>
+</div>
+<button class="text-sm font-medium text-text-muted hover:text-gray-900 transition-colors">Reset</button>
+</div>
+</section>
+<!-- END: Search & Filter Section -->
+<!-- BEGIN: Results Info -->
+<div class="flex items-center justify-between mb-6" data-purpose="results-info">
+<h2 class="text-sm font-medium text-text-muted">Ditemukan 128 peluang</h2>
+<div class="flex items-center gap-2 text-sm text-text-muted">
+<span>Terbaru</span>
+<i class="w-4 h-4 cursor-pointer hover:text-gray-900" data-feather="chevron-down"></i>
+</div>
+</div>
+<!-- END: Results Info -->
+<!-- BEGIN: Job Listings -->
+<section class="space-y-4" data-purpose="job-listings">
+<!-- Job Card 1 -->
+<article class="job-card border border-gray-border rounded-xl p-6 bg-white transition-all cursor-pointer">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white">
+<img alt="GoTo Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGH88ecAuIgpwEVZ5pIgdB81ELQ9I-yrO6AV5EXl_ZGy_Bp1mOWez_JXhU4sUrZhAJfrXLNtZegBq1dSDoxp905KebzfbtCv-uGfTi32s_yUsfPT1mfyynSNGo3JSdQRd2HGLgep01SnLA6LFK8IL84F02ObtpNM57mDBPqDSrsF5bQSFBkll_RSfAOQUe6FMjeTfWYJiHUiJbk1tbeWLoamcJTjsHrmmLjDoV1kYzdaT4sv91gxjVrPMzXB3kOOV_XCb3NSRr5WCs"/>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900 mb-1 hover:text-primary transition-colors">Data Analyst Intern</h3>
+<p class="text-sm text-text-muted mb-2">GoTo</p>
+<div class="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+<span class="flex items-center gap-1"><i class="w-3 h-3" data-feather="map-pin"></i> Jakarta, Indonesia</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Hybrid</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Internship</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between h-full">
+<div class="flex items-center gap-3 mb-6">
+<span class="bg-green-100 text-primary text-xs font-semibold px-2 py-1 rounded flex items-center gap-1">
+<i class="w-3 h-3" data-feather="check"></i> Baru
+                </span>
+<button class="text-gray-400 hover:text-gray-600 transition-colors">
+<i class="w-5 h-5" data-feather="bookmark"></i>
+</button>
+</div>
+<span class="text-xs text-text-muted">Diposting 2 hari yang lalu</span>
+</div>
+</div>
+</article>
+<!-- Job Card 2 -->
+<article class="job-card border border-gray-border rounded-xl p-6 bg-white transition-all cursor-pointer">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white">
+<img alt="Tokopedia Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDF8nrk2Z1eiQjE7s13kpY0rwS1NQJi7VLh-dQBDhzPRZp2pINlvcdYFke3Nr5zY5jcziodGt4Txu2diWKIsnqX965Z1oSEEN-rGNYx0_t-ZAwUxBDV0YsvaXsZlwA0jjtZt5i8dIwl6aT9i0g5p7kJvEPJ3hdpNOSoNNof4RIjS7EhD9iJVBJfeI9OviUq7hhmMB3nUq6wQOownjlWzpsCpGnyf2qrquk-Rsz0mvHl639Zv7X28F_6hg7t2yyqdS3gmBXw6zlFdlUB"/>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900 mb-1 hover:text-primary transition-colors">Business Intelligence Intern</h3>
+<p class="text-sm text-text-muted mb-2">Tokopedia</p>
+<div class="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+<span class="flex items-center gap-1"><i class="w-3 h-3" data-feather="map-pin"></i> Jakarta, Indonesia</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>On-site</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Internship</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between h-full">
+<div class="flex items-center gap-3 mb-6">
+<span class="bg-green-100 text-primary text-xs font-semibold px-2 py-1 rounded flex items-center gap-1">
+<i class="w-3 h-3" data-feather="check"></i> Baru
+                </span>
+<button class="text-gray-400 hover:text-gray-600 transition-colors">
+<i class="w-5 h-5" data-feather="bookmark"></i>
+</button>
+</div>
+<span class="text-xs text-text-muted">Diposting 3 hari yang lalu</span>
+</div>
+</div>
+</article>
+<!-- Job Card 3 -->
+<article class="job-card border border-gray-border rounded-xl p-6 bg-white transition-all cursor-pointer">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white">
+<div class="text-blue-600 font-bold text-xl">N</div>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900 mb-1 hover:text-primary transition-colors">Data Analyst Intern</h3>
+<p class="text-sm text-text-muted mb-2">Nusantara Digital</p>
+<div class="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+<span class="flex items-center gap-1"><i class="w-3 h-3" data-feather="map-pin"></i> Jakarta, Indonesia</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Hybrid</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Internship</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between h-full">
+<div class="flex items-center gap-3 mb-6">
+<button class="text-gray-400 hover:text-gray-600 transition-colors ml-auto">
+<i class="w-5 h-5" data-feather="bookmark"></i>
+</button>
+</div>
+<span class="text-xs text-text-muted">Diposting 4 hari yang lalu</span>
+</div>
+</div>
+</article>
+<!-- Job Card 4 -->
+<article class="job-card border border-gray-border rounded-xl p-6 bg-white transition-all cursor-pointer">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white">
+<img alt="DANA Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxiP2gfMC2YfdA21slvASglHOuIDR6MaKuwMPTgqtg5mxwTw69ndW3cW4WxHbb74rHpFpOT788lkvWE3AryPSjwaAqxYnHXlf3H_kjItY1c5UYM8kDvLV-_DrvGIZr_QTdZ0vWLUAseKJD0y1-BK3FT1zM2xn-wk_5R1ov6ibyWUIkpteks7Ts4zMZ__Q2LCUTCK_ro6fmnT9ixtdAq1ESpQ66IW-Y75AYaln9YtvJbbhgNH4isnQAaNV_6zvcCQt2tVVtIB4ytTNc"/>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900 mb-1 hover:text-primary transition-colors">Data Analyst Intern</h3>
+<p class="text-sm text-text-muted mb-2">DANA Indonesia</p>
+<div class="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+<span class="flex items-center gap-1"><i class="w-3 h-3" data-feather="map-pin"></i> Jakarta, Indonesia</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Hybrid</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Internship</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between h-full">
+<div class="flex items-center gap-3 mb-6">
+<button class="text-gray-400 hover:text-gray-600 transition-colors ml-auto">
+<i class="w-5 h-5" data-feather="bookmark"></i>
+</button>
+</div>
+<span class="text-xs text-text-muted">Diposting 4 hari yang lalu</span>
+</div>
+</div>
+</article>
+<!-- Job Card 5 -->
+<article class="job-card border border-gray-border rounded-xl p-6 bg-white transition-all cursor-pointer">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white">
+<img alt="Traveloka Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtqd4hfL8EwhJcxfbwPaNmw6j6T_zZ5P4p8MSesJUFoKxWexca2I11x11TnOtu4m0gVMLpLEo-x89evE9XSh9dSxe0dBg2Us7ZIJCozbr53fkt3ZcUBt8NE-moFCl82p1ifU2ysHdXWk9zRYUQCf_o0X0dKepUryGWXrTPN_GRbRp-dG2ZCj2w9Z3M6vE6wf5ivaEWmvNdWT5zoESLgfvE2yV6t_nGC2XTLc80_8aDWVzb_1wznlkLMXyEL3h7WkH0S9u1BQLhUn2N"/>
+</div>
+<div>
+<h3 class="text-base font-bold text-gray-900 mb-1 hover:text-primary transition-colors">Product Data Intern</h3>
+<p class="text-sm text-text-muted mb-2">Traveloka</p>
+<div class="flex flex-wrap items-center gap-3 text-xs text-text-muted">
+<span class="flex items-center gap-1"><i class="w-3 h-3" data-feather="map-pin"></i> Jakarta, Indonesia</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>On-site</span>
+<span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+<span>Internship</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end justify-between h-full">
+<div class="flex items-center gap-3 mb-6">
+<button class="text-gray-400 hover:text-gray-600 transition-colors ml-auto">
+<i class="w-5 h-5" data-feather="bookmark"></i>
+</button>
+</div>
+<span class="text-xs text-text-muted">Diposting 6 hari yang lalu</span>
+</div>
+</div>
+</article>
+</section>
+<!-- END: Job Listings -->
+<!-- BEGIN: Pagination -->
+<div class="mt-8 flex justify-center items-center gap-2" data-purpose="pagination">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-border text-gray-400 hover:bg-gray-50 transition-colors" disabled="">
+<i class="w-4 h-4" data-feather="chevron-left"></i>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 text-white font-medium text-sm">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors">4</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors">5</button>
+<span class="text-gray-400 px-1">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors">13</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-border text-gray-600 hover:bg-gray-50 transition-colors">
+<i class="w-4 h-4" data-feather="chevron-right"></i>
+</button>
+</div>
+<!-- END: Pagination -->
+</main>
+<!-- END: Main Content -->
+<script data-purpose="icon-initialization">
+    feather.replace();
+  </script>
+</body></html>

@@ -1,31 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 import { opportunitiesApi } from '../api/opportunities';
 import { applicationsApi } from '../api/applications';
 import { useAuth } from '../context/AuthContext';
-import {
-  ArrowLeft,
-  MapPin,
-  DollarSign,
-  Calendar,
-  Clock,
-  Briefcase,
-  Lock,
-  X,
-  CheckCircle,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, MapPin, Bookmark, Briefcase, Building2, Clock, Tag, Lock, CheckCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/Button';
 import { resolveUploadUrl } from '../api/client';
+
+const TABS = ['Deskripsi', 'Kualifikasi', 'Keuntungan', 'Tentang Perusahaan'];
 
 export function DetailLowongan() {
   const { id } = useParams();
   const { user } = useAuth();
   const { addToast } = useToast();
+
+  const [activeTab, setActiveTab] = useState('Deskripsi');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
@@ -33,7 +24,7 @@ export function DetailLowongan() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [applyError, setApplyError] = useState('');
+  const [applyStep, setApplyStep] = useState(1);
 
   useEffect(() => {
     opportunitiesApi
@@ -43,33 +34,21 @@ export function DetailLowongan() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleApply = async () => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
+  const handleApply = () => {
+    if (!user) { setShowAuthModal(true); return; }
+    setApplyStep(1);
     setShowApplyModal(true);
   };
 
   const handleSubmitApplication = async () => {
     setApplying(true);
-    setApplyError('');
     try {
       await applicationsApi.apply(job.id, { cover_letter: coverLetter || null });
       setApplied(true);
       setShowApplyModal(false);
-      addToast({
-        title: 'Lamaran Terkirim!',
-        message: `Berhasil melamar di ${job.title} di ${job.company?.name || 'perusahaan'}.`,
-        type: 'success',
-      });
+      addToast({ title: 'Lamaran Terkirim!', message: `Berhasil melamar di ${job.title}.`, type: 'success' });
     } catch (err) {
-      setApplyError(err.message || 'Failed to apply');
-      addToast({
-        title: 'Lamaran Gagal',
-        message: err.message || 'Terjadi kesalahan. Silakan coba lagi.',
-        type: 'error',
-      });
+      addToast({ title: 'Lamaran Gagal', message: err.message || 'Terjadi kesalahan.', type: 'error' });
     } finally {
       setApplying(false);
     }
@@ -78,265 +57,368 @@ export function DetailLowongan() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
       </div>
     );
   }
 
   if (!job) {
-    return (
-      <div className="py-20 text-center text-secondary">
-        Opportunity not found
-      </div>
-    );
+    return <div className="py-20 text-center text-gray-500">Lowongan tidak ditemukan.</div>;
   }
 
   const company = job.company || {};
   const requirements = Array.isArray(job.requirements) ? job.requirements : [];
+  const benefits = Array.isArray(job.benefits) ? job.benefits : [];
   const deadlineStr = job.deadline
-    ? new Date(job.deadline).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
+    ? new Date(job.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
     : '-';
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="bg-white min-h-screen pb-20 relative"
-    >
-      {/* Auth Modal Overlay */}
-      <Modal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        title="Authentication Required"
-        size="sm"
-      >
+    <div className="bg-white min-h-screen pb-20">
+      {/* ── Auth Modal ── */}
+      <Modal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} title="Login Diperlukan" size="sm">
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="text-primary" size={24} />
+          <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="text-brand" size={24} />
           </div>
-          <p className="text-secondary mt-2">
-            You need to sign in to apply for this position.
-          </p>
+          <p className="text-gray-500 mt-2">Kamu perlu login untuk melamar posisi ini.</p>
         </div>
         <div className="space-y-3">
-          <Button to="/login" variant="primary" className="text-white w-full justify-center">
-            Log In
-          </Button>
-          <Button
-            to="/register"
-            variant="outline"
-            className="w-full justify-center"
-          >
-            Create Account
-          </Button>
+          <Button to="/login" variant="primary" className="w-full justify-center">Masuk</Button>
+          <Button to="/register" variant="outline" className="w-full justify-center">Buat Akun</Button>
         </div>
       </Modal>
 
-      {/* Apply Modal */}
+      {/* ── Apply Modal ── */}
       <Modal
         isOpen={showApplyModal}
-        onClose={() => setShowApplyModal(false)}
-        title="Lamar Posisi Ini"
+        onClose={() => { setShowApplyModal(false); setApplyStep(1); }}
+        title="Lamar Pekerjaan"
         size="md"
       >
-        <div className="space-y-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900">{job?.title}</h4>
-            <p className="text-sm text-secondary">{company.name}</p>
-          </div>
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-6 mb-6">
+          {[{ n: 1, label: 'Data Diri' }, { n: 2, label: 'Dokumen' }, { n: 3, label: 'Review' }].map(({ n, label }) => (
+            <div key={n} className="flex flex-col items-center gap-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors ${
+                applyStep === n
+                  ? 'bg-brand border-brand text-white'
+                  : applyStep > n
+                    ? 'bg-brand/20 border-brand text-brand'
+                    : 'bg-white border-gray-300 text-gray-400'
+              }`}>
+                {n}
+              </div>
+              <span className={`text-xs font-medium ${applyStep === n ? 'text-brand' : 'text-gray-400'}`}>{label}</span>
+            </div>
+          ))}
+        </div>
 
+        {/* Job summary */}
+        <div className="flex items-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
+          <div className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center bg-white shrink-0">
+            {company.logo
+              ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-1" />
+              : <span className="font-bold text-gray-400 text-sm">{company.name?.[0]}</span>
+            }
+          </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Surat Lamaran (opsional)
-            </label>
+            <p className="font-semibold text-gray-900 text-sm">{job.title}</p>
+            <p className="text-xs text-gray-500">{company.name}</p>
+          </div>
+        </div>
+
+        {applyStep === 1 && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">Surat Lamaran (opsional)</p>
             <textarea
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[120px] resize-y"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand min-h-[120px] resize-y"
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}
               placeholder="Tulis surat lamaran Anda..."
             />
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-sm text-gray-500">
+                {user?.cv_url ? (
+                  <>CV Anda: <a href={resolveUploadUrl(user.cv_url)} target="_blank" rel="noreferrer" className="text-brand font-medium hover:underline">Lihat CV</a></>
+                ) : (
+                  <>Belum ada CV. <Link to="/student/profile" className="text-brand font-medium hover:underline">Upload di halaman profil</Link>.</>
+                )}
+              </p>
+            </div>
           </div>
+        )}
 
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-sm text-secondary">
-              {user?.cv_url ? (
-                <>CV Anda: <a href={resolveUploadUrl(user.cv_url)} target="_blank" rel="noreferrer" className="text-primary font-medium hover:underline">Lihat CV</a></>
-              ) : (
-                <>Belum ada CV. <Link to="/student/profile" className="text-primary font-medium hover:underline">Upload di halaman profil</Link>.</>
-              )}
-            </p>
+        {applyStep === 2 && (
+          <div className="py-4 text-center text-gray-500 text-sm">
+            Periksa kembali dokumen-dokumen Anda sebelum mengirimkan lamaran.
           </div>
+        )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setShowApplyModal(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleSubmitApplication} disabled={applying}>
+        {applyStep === 3 && (
+          <div className="py-4 space-y-3">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-700">Posisi: <span className="text-gray-900">{job.title}</span></p>
+              <p className="text-sm font-medium text-gray-700 mt-1">Perusahaan: <span className="text-gray-900">{company.name}</span></p>
+            </div>
+            <p className="text-xs text-gray-400 text-center">Dengan menekan Kirim, kamu menyetujui syarat dan ketentuan Tumbuh.</p>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-4">
+          <button
+            onClick={() => applyStep > 1 ? setApplyStep(applyStep - 1) : setShowApplyModal(false)}
+            className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {applyStep > 1 ? 'Kembali' : 'Batal'}
+          </button>
+          {applyStep < 3 ? (
+            <button
+              onClick={() => setApplyStep(applyStep + 1)}
+              className="px-6 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Lanjutkan
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmitApplication}
+              disabled={applying}
+              className="px-6 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
+            >
               {applying ? 'Mengirim...' : 'Kirim Lamaran'}
-            </Button>
-          </div>
+            </button>
+          )}
         </div>
       </Modal>
 
-      <div className="bg-gradient-to-r from-[#0f2854] to-[#1a3a70] pt-24 pb-12 px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <Link
-            to="/lowongan"
-            className="text-white hover:text-white mb-6 inline-flex items-center gap-2 transition-colors"
-          >
-            <ArrowLeft size={16} /> Back to Opportunities
-          </Link>
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col md:flex-row gap-6 items-start"
-          >
-            <div className="w-20 h-20 rounded-xl bg-white p-2 flex items-center justify-center shadow-lg">
-              {company.logo ? (
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <Link to={`/perusahaan/${company.id}`} className="text-2xl font-bold text-gray-400">
-                  {company.name?.[0]}
-                </Link>
-              )}
+      {/* ── Main Content ── */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back navigation */}
+        <Link
+          to="/lowongan"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-brand transition-colors mb-6 group"
+        >
+          <ArrowLeft className="mr-2 text-lg group-hover:-translate-x-1 transition-transform" size={16} />
+          Kembali ke hasil pencarian
+        </Link>
+
+        {/* Job header card */}
+        <section className="bg-white rounded-xl mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Company logo */}
+            <div className="w-20 h-20 rounded-xl border border-gray-200 flex items-center justify-center p-2 bg-white shrink-0 shadow-sm">
+              {company.logo
+                ? <img alt={company.name} className="w-full h-auto object-contain" src={company.logo} />
+                : <span className="text-2xl font-bold text-gray-400">{company.name?.[0]}</span>
+              }
             </div>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {job.title}
-              </h1>
-              <div className="flex items-center gap-4 text-white">
-                <span className="font-medium text-white">{company.name}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <MapPin size={14} /> {job.location}
-                </span>
+
+            <div className="flex-1 w-full">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">{job.title}</h1>
+                  <p className="text-lg text-gray-600 mb-3">{company.name}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-5">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="text-gray-400" size={16} />
+                  <span>{job.location}</span>
+                </div>
+                {job.work_mode && (
+                  <><div className="w-1 h-1 rounded-full bg-gray-300" /><span>{job.work_mode}</span></>
+                )}
+                <div className="w-1 h-1 rounded-full bg-gray-300" />
+                <span>{job.type}</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  {job.created_at && (
+                    <span>Diposting {Math.round((Date.now() - new Date(job.created_at)) / 86400000)} hari yang lalu</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    aria-label="Simpan lowongan"
+                    className="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg border border-gray-300 text-gray-500 hover:text-brand hover:border-brand transition-colors"
+                  >
+                    <Bookmark size={18} />
+                  </button>
+                  {user?.role !== 'hr' && (
+                    applied ? (
+                      <div className="flex items-center gap-2 text-white bg-brand px-4 py-2 rounded-lg font-semibold text-sm">
+                        <CheckCircle size={16} /> Sudah Dilamar
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleApply}
+                        disabled={applying}
+                        className="bg-brand hover:bg-brand-dark text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+                      >
+                        Lamar Sekarang
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             </div>
-            {user?.role !== 'hr' && (
-              applied ? (
-                <div className="flex items-center gap-2 text-white bg-green-500/80 px-4 py-2 rounded-lg font-semibold">
-                  <CheckCircle size={18} /> Applied
-                </div>
-              ) : (
-                <Button
-                  onClick={handleApply}
-                  disabled={applying}
-                  variant='secondary'
-                  className="bg-accent hover:bg-highlight text-primary font-semibold w-full md:w-auto shadow-lg shadow-accent/20 border-none"
+          </div>
+        </section>
+
+        {/* Tabs */}
+        <nav className="border-b border-gray-200 mb-8 overflow-x-auto">
+          <ul className="flex whitespace-nowrap min-w-full">
+            {TABS.map((tab) => (
+              <li key={tab} className="mr-8">
+                <button
+                  onClick={() => setActiveTab(tab)}
+                  className={`inline-block py-4 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === tab
+                      ? 'text-brand border-brand font-semibold'
+                      : 'text-gray-500 border-transparent hover:text-gray-800'
+                  }`}
                 >
-                  {applying ? 'Applying...' : 'Apply Now'}
-                </Button>
-              )
-            )}
-          </motion.div>
-        </div>
-      </div>
+                  {tab}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-      <div className="mx-auto max-w-4xl px-6 lg:px-8 -mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="md:col-span-2 space-y-6"
-          >
-            <Card className="shadow-lg border-gray-100/50">
-              <CardBody className="p-8">
-                <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-                  <Briefcase size={20} className="text-accent" /> Job
-                  Description
-                </h2>
-                <p className="text-secondary whitespace-pre-line leading-relaxed">
-                  {job.description}
-                </p>
-
-                {requirements.length > 0 && (
-                  <>
-                    <h3 className="text-lg font-bold text-primary mt-8 mb-4">
-                      Requirements
-                    </h3>
-                    <ul className="space-y-3">
-                      {requirements.map((req, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-start gap-3 text-secondary"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
-                          <span className="leading-relaxed">{req}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
+        {/* Content area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+          {/* Left: main content */}
+          <div className="lg:col-span-2 space-y-10">
+            {(activeTab === 'Deskripsi' || activeTab === 'Kualifikasi' || activeTab === 'Keuntungan') && (
+              <>
+                {activeTab === 'Deskripsi' && (
+                  <section>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Deskripsi Pekerjaan</h2>
+                    <div className="text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</div>
+                  </section>
                 )}
-              </CardBody>
-            </Card>
-          </motion.div>
 
-          <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="space-y-6"
-          >
-            <Card className="shadow-lg border-gray-100/50">
-              <CardBody className="p-6">
-                <h3 className="font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
-                  Overview
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs font-medium text-secondary uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Briefcase size={12} /> Job Type
-                    </p>
-                    <p className="font-medium text-gray-900">{job.type}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-secondary uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <DollarSign size={12} /> Salary
-                    </p>
-                    <p className="font-medium text-gray-900">
-                      {job.salary || '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-secondary uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Calendar size={12} /> Deadline
-                    </p>
-                    <p className="font-medium text-gray-900">{deadlineStr}</p>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
+                {activeTab === 'Kualifikasi' && (
+                  <section>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Kualifikasi</h2>
+                    {requirements.length > 0 ? (
+                      <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                        {requirements.map((req, idx) => <li key={idx}>{req}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-500 italic text-sm">Tidak ada kualifikasi yang dicantumkan.</p>
+                    )}
+                  </section>
+                )}
 
-            <Card className="shadow-lg border-gray-100/50">
-              <CardBody className="p-6">
-                <h3 className="font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
-                  About Company
-                </h3>
-                <p className="text-secondary text-sm mb-4 leading-relaxed line-clamp-4">
-                  {company.description}
-                </p>
+                {activeTab === 'Keuntungan' && (
+                  <section>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Keuntungan</h2>
+                    {benefits.length > 0 ? (
+                      <div className="flex flex-wrap gap-2.5">
+                        {benefits.map((b, idx) => (
+                          <span key={idx} className="inline-flex items-center px-4 py-2 rounded-full border border-gray-200 bg-white text-sm text-gray-600 font-medium">
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic text-sm">Tidak ada keuntungan yang dicantumkan.</p>
+                    )}
+                  </section>
+                )}
+              </>
+            )}
+
+            {activeTab === 'Tentang Perusahaan' && (
+              <section>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Tentang {company.name}</h2>
+                <p className="text-gray-600 leading-relaxed">{company.description}</p>
                 <Link
                   to={`/perusahaan/${company.id}`}
-                  className="text-primary text-sm font-medium hover:text-accent transition-colors flex items-center gap-1"
+                  className="inline-flex items-center text-sm font-semibold text-brand hover:text-brand-dark mt-4 group transition-colors"
                 >
-                  View Company Profile &rarr;
+                  Lihat Profil Perusahaan <ArrowLeft className="ml-1 rotate-180 group-hover:translate-x-1 transition-transform" size={14} />
                 </Link>
-              </CardBody>
-            </Card>
-          </motion.div>
+              </section>
+            )}
+          </div>
+
+          {/* Right: sidebar */}
+          <div className="space-y-6">
+            {/* Job info card */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <h3 className="text-base font-bold text-gray-900 mb-5">Informasi Pekerjaan</h3>
+              <ul className="space-y-4">
+                <li className="flex gap-3">
+                  <Briefcase className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Tipe Pekerjaan</p>
+                    <p className="text-sm font-medium text-gray-900">{job.type}</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <MapPin className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Lokasi</p>
+                    <p className="text-sm font-medium text-gray-900">{job.location}</p>
+                  </div>
+                </li>
+                {job.work_mode && (
+                  <li className="flex gap-3">
+                    <Building2 className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Model Kerja</p>
+                      <p className="text-sm font-medium text-gray-900">{job.work_mode}</p>
+                    </div>
+                  </li>
+                )}
+                {job.salary && (
+                  <li className="flex gap-3">
+                    <Tag className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Gaji</p>
+                      <p className="text-sm font-medium text-gray-900">{job.salary}</p>
+                    </div>
+                  </li>
+                )}
+                {job.deadline && (
+                  <li className="flex gap-3">
+                    <Clock className="text-gray-400 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Deadline</p>
+                      <p className="text-sm font-medium text-gray-900">{deadlineStr}</p>
+                    </div>
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Company profile card */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-lg border border-gray-100 flex items-center justify-center p-1 bg-white shrink-0">
+                  {company.logo
+                    ? <img alt={company.name} className="w-full h-auto object-contain" src={company.logo} />
+                    : <span className="font-bold text-gray-400">{company.name?.[0]}</span>
+                  }
+                </div>
+                <h3 className="text-base font-bold text-gray-900">{company.name}</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4 line-clamp-4">{company.description}</p>
+              <Link
+                to={`/perusahaan/${company.id}`}
+                className="inline-flex items-center text-sm font-semibold text-brand hover:text-brand-dark group transition-colors"
+              >
+                Lihat Profil Perusahaan
+                <ArrowLeft className="ml-1 rotate-180 group-hover:translate-x-1 transition-transform" size={14} />
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </main>
+    </div>
   );
 }

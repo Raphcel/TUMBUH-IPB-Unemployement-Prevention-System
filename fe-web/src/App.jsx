@@ -37,14 +37,9 @@ const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),   
 
 // ── Suspense fallback ──────────────────────────────────────────────────────
 function PageSpinner() {
-  const { t } = useTranslation();
-
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div
-        className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]"
-        aria-label={t('loading')}
-      />
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
     </div>
   );
 }
@@ -71,7 +66,7 @@ function ErrorBoundaryFallback() {
       </p>
       <button
         onClick={() => window.location.reload()}
-        className="px-6 py-3 bg-[#0f2854] text-white rounded-lg hover:bg-[#0f2854]/90 transition-colors"
+        className="px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors"
       >
         {copy.action}
       </button>
@@ -123,14 +118,14 @@ function NotFound() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-      <h1 className="text-7xl font-bold text-[#0f2854] mb-4">404</h1>
+      <h1 className="text-7xl font-bold text-brand mb-4">404</h1>
       <h2 className="text-2xl font-semibold text-gray-800 mb-2">{copy.title}</h2>
       <p className="text-gray-600 mb-8 text-center max-w-md">
         {copy.description}
       </p>
       <Link
         to="/"
-        className="px-6 py-3 bg-[#0f2854] text-white rounded-lg hover:bg-[#0f2854]/90 transition-colors"
+        className="px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors"
       >
         {copy.action}
       </Link>
