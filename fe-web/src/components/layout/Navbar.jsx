@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, matchPath } from 'react-router-dom';
 import { Button } from '../ui/Button';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserMenu } from './UserMenu';
@@ -20,6 +20,7 @@ function TumbuhLogo({ className = 'w-6 h-6' }) {
 const NAV_LINKS = [
   { name: 'Cari Lowongan', path: '/lowongan' },
   { name: 'Perusahaan', path: '/perusahaan' },
+  { name: 'Karier Advice', path: '/panduan' },
 ];
 
 export function Navbar() {
@@ -86,13 +87,7 @@ export function Navbar() {
               {link.name}
             </Link>
           ))}
-          {/* Dropdown placeholders */}
-          <button className={`flex items-center gap-1 text-sm font-medium transition-colors ${isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-            Eksplorasi <ChevronDown size={14} />
-          </button>
-          <button className={`flex items-center gap-1 text-sm font-medium transition-colors ${isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-            Karier Advice <ChevronDown size={14} />
-          </button>
+          {/* Dropdown placeholders removed */}
         </div>
 
         {/* Auth actions */}
