@@ -11,6 +11,7 @@ from starlette.responses import JSONResponse
 from app.config.settings import get_settings
 from app.config.limiter import limiter
 from app.api.router import api_router
+from app.services.audit_service import audit_log
 import app.domain.models  # noqa: F401
 
 logging.basicConfig(
@@ -54,6 +55,14 @@ def create_app() -> FastAPI:
 
     @application.exception_handler(RateLimitExceeded)
     async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        audit_log(
+            "RATE_LIMIT_EXCEEDED",
+            level="warn",
+            ip=request.client.host if request.client else None,
+            resource="system",
+            detail=f"Rate limit exceeded on {request.method} {request.url.path}",
+            success=False,
+        )
         return JSONResponse(
             status_code=429,
             content={"detail": "Too many requests. Please try again later."},
@@ -75,6 +84,14 @@ def create_app() -> FastAPI:
         if isinstance(exc, HTTPException):
             return await http_exception_handler(request, exc)
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        audit_log(
+            "UNHANDLED_ERROR",
+            level="error",
+            ip=request.client.host if request.client else None,
+            resource="system",
+            detail=f"Unhandled error on {request.method} {request.url.path}: {exc}",
+            success=False,
+        )
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal server error"},

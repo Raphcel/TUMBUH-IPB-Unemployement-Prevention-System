@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 
 from app.repositories.company_repository import CompanyRepository
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyListResponse
+from app.services.audit_service import audit_log
 
 
 class CompanyService:
@@ -44,6 +45,15 @@ class CompanyService:
                 detail="Company with this name already exists",
             )
         company = self._company_repo.create(data.model_dump())
+
+        audit_log(
+            "COMPANY_CREATE",
+            resource="company",
+            resource_id=company.id,
+            detail=f"New company created: '{data.name}'",
+            success=True,
+        )
+
         return CompanyResponse.model_validate(company)
 
     def update_company(self, company_id: int, data: CompanyUpdate) -> CompanyResponse:
@@ -53,6 +63,15 @@ class CompanyService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
 
         updated = self._company_repo.update(company, data.model_dump(exclude_unset=True))
+
+        audit_log(
+            "COMPANY_UPDATE",
+            resource="company",
+            resource_id=company_id,
+            detail=f"Company {company_id} updated",
+            success=True,
+        )
+
         return CompanyResponse.model_validate(updated)
 
     def delete_company(self, company_id: int) -> dict:
@@ -60,4 +79,14 @@ class CompanyService:
         success = self._company_repo.delete(company_id)
         if not success:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+
+        audit_log(
+            "COMPANY_DELETE",
+            level="warn",
+            resource="company",
+            resource_id=company_id,
+            detail=f"Company {company_id} deleted",
+            success=True,
+        )
+
         return {"message": "Company deleted successfully"}

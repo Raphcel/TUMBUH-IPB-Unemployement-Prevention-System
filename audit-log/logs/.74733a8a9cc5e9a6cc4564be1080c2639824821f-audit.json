@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\ASUS\\OneDrive\\Documents\\GitHub\\TUMBUH\\audit-log\\logs\\.74733a8a9cc5e9a6cc4564be1080c2639824821f-audit.json",
+    "files": [
+        {
+            "date": 1778595836492,
+            "name": "C:\\Users\\ASUS\\OneDrive\\Documents\\GitHub\\TUMBUH\\audit-log\\logs\\audit-2026-05-12.log",
+            "hash": "70b93dfe97c9f67ba004943b7cd352cfea69a1be4d9dc4c1a07f1337b120ed2a"
+        }
+    ],
+    "hashType": "sha256"
+}

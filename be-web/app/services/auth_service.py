@@ -9,6 +9,7 @@ from app.config.settings import get_settings
 from app.domain.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserResponse, TokenResponse
+from app.services.audit_service import audit_log
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,14 @@ class AuthService:
         """Register a new user and return access + refresh tokens."""
         existing = self._user_repo.get_by_email(data.email)
         if existing:
+            audit_log(
+                "AUTH_REGISTER_DUPLICATE",
+                level="warn",
+                user_email=data.email,
+                resource="auth",
+                detail=f"Registration attempt with existing email: {data.email}",
+                success=False,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="A user with this email already exists",
@@ -79,6 +88,15 @@ class AuthService:
         refresh_token = self.create_refresh_token(token_data)
 
         logger.info("User registered: %s (role=%s)", user.email, user.role.value)
+        audit_log(
+            "AUTH_REGISTER",
+            user_id=user.id,
+            user_role=user.role.value,
+            user_email=user.email,
+            resource="auth",
+            detail=f"New {user.role.value} account registered: {user.email}",
+            success=True,
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -91,6 +109,14 @@ class AuthService:
         user = self._user_repo.get_by_email(email)
         if not user or not self.verify_password(password, user.hashed_password):
             logger.warning("Failed login attempt for email: %s", email)
+            audit_log(
+                "AUTH_LOGIN_FAILURE",
+                level="warn",
+                user_email=email,
+                resource="auth",
+                detail=f"Failed login attempt — incorrect credentials for: {email}",
+                success=False,
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
@@ -98,6 +124,16 @@ class AuthService:
 
         if not user.is_active:
             logger.warning("Deactivated user login attempt: %s", email)
+            audit_log(
+                "AUTH_LOGIN_BLOCKED",
+                level="warn",
+                user_id=user.id,
+                user_role=user.role.value,
+                user_email=email,
+                resource="auth",
+                detail=f"Login blocked — deactivated account: {email}",
+                success=False,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated",
@@ -108,6 +144,15 @@ class AuthService:
         refresh_token = self.create_refresh_token(token_data)
 
         logger.info("User logged in: %s", user.email)
+        audit_log(
+            "AUTH_LOGIN_SUCCESS",
+            user_id=user.id,
+            user_role=user.role.value,
+            user_email=user.email,
+            resource="auth",
+            detail=f"User logged in: {user.email}",
+            success=True,
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -132,6 +177,16 @@ class AuthService:
         token_data = {"sub": str(user.id), "role": user.role.value}
         new_access = self.create_access_token(token_data)
         new_refresh = self.create_refresh_token(token_data)
+
+        audit_log(
+            "AUTH_TOKEN_REFRESH",
+            user_id=user.id,
+            user_role=user.role.value,
+            user_email=user.email,
+            resource="auth",
+            detail=f"Token refreshed for: {user.email}",
+            success=True,
+        )
 
         return TokenResponse(
             access_token=new_access,
