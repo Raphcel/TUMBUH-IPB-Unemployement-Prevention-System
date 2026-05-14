@@ -2,11 +2,27 @@ from functools import lru_cache
 import json
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, DotEnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+
+class SettingsDotEnvSource(DotEnvSettingsSource):
+    """Disable eager JSON decoding for env fields that we parse manually."""
+
+    def prepare_field_value(self, field_name, field, value, value_is_complex):
+        if field_name == "CORS_ORIGINS":
+            return value
+        return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        enable_decoding=False,
+        extra="ignore",
+    )
 
     APP_NAME: str = "IPB Career Tracker API"
     APP_VERSION: str = "1.0.0"
@@ -35,6 +51,22 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls,
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ):
+        return (
+            init_settings,
+            env_settings,
+            SettingsDotEnvSource(settings_cls),
+            file_secret_settings,
+        )
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value):
@@ -47,10 +79,6 @@ class Settings(BaseSettings):
                 return json.loads(value)
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 @lru_cache()
