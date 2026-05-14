@@ -3,6 +3,7 @@ export const en = {
   // ── Navigation / Common ─────────────────────────────────────────────────
   nav_dashboard:        'Dashboard',
   nav_my_applications:  'My Applications',
+  nav_cv_builder:       'CV Builder',
   nav_profile:          'Profile',
   nav_opportunities:    'Opportunities',
   nav_calendar:         'Calendar',

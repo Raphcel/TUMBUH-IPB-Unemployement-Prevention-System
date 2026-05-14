@@ -55,6 +55,54 @@ export function clearTokens() {
 
 let _isRefreshing = false;
 
+async function refreshSession() {
+  if (!_refreshToken || _isRefreshing) return false;
+
+  _isRefreshing = true;
+  try {
+    const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: _refreshToken }),
+    });
+    if (!refreshRes.ok) return false;
+
+    const refreshData = await refreshRes.json();
+    setToken(refreshData.access_token);
+    setRefreshToken(refreshData.refresh_token);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    _isRefreshing = false;
+  }
+}
+
+export async function fetchWithAuth(url, options = {}) {
+  const headers = {
+    ...(!_token || options.headers?.Authorization ? {} : { Authorization: `Bearer ${_token}` }),
+    ...(options.headers || {}),
+  };
+
+  let res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 && _refreshToken && !url.includes('/auth/')) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      const retryHeaders = {
+        ...headers,
+        Authorization: `Bearer ${_token}`,
+      };
+      res = await fetch(url, { ...options, headers: retryHeaders });
+    } else {
+      clearTokens();
+      window.location.href = '/login';
+    }
+  }
+
+  return res;
+}
+
 async function request(
   path,
   { method = 'GET', body, headers = {}, signal, ...opts } = {}
@@ -63,7 +111,6 @@ async function request(
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(_token ? { Authorization: `Bearer ${_token}` } : {}),
       ...headers,
     },
     ...(signal ? { signal } : {}),
@@ -74,36 +121,10 @@ async function request(
     cfg.body = JSON.stringify(body);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, cfg);
+  const res = await fetchWithAuth(`${API_BASE}${path}`, cfg);
 
   // 204 No Content
   if (res.status === 204) return null;
-
-  // 401 — attempt refresh once, then logout
-  if (res.status === 401 && _refreshToken && !_isRefreshing && !path.includes('/auth/')) {
-    _isRefreshing = true;
-    try {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: _refreshToken }),
-      });
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        setToken(refreshData.access_token);
-        setRefreshToken(refreshData.refresh_token);
-        _isRefreshing = false;
-        // Retry original request with new token
-        return request(path, { method, body, headers, signal, ...opts });
-      }
-    } catch {
-      // refresh failed
-    }
-    _isRefreshing = false;
-    clearTokens();
-    window.location.href = '/login';
-    return;
-  }
 
   const data = await res.json().catch(() => null);
 

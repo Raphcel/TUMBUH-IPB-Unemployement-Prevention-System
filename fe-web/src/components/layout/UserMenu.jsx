@@ -15,6 +15,7 @@ import {
     Settings,
     Languages,
     Check,
+    FileBadge2,
 } from 'lucide-react';
 
 export function UserMenu({ isTransparent = false, isMobile = false }) {
@@ -33,6 +34,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
     const studentLinks = [
         { name: t('nav_dashboard'),        path: '/student/dashboard',    icon: <LayoutDashboard size={16} /> },
         { name: t('nav_my_applications'),  path: '/student/applications', icon: <FileText size={16} /> },
+        { name: t('nav_cv_builder'),       path: '/student/cv-builder',   icon: <FileBadge2 size={16} /> },
         { name: t('nav_profile'),          path: '/student/profile',      icon: <User size={16} /> },
     ];
 

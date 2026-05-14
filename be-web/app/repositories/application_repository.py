@@ -90,3 +90,18 @@ class ApplicationRepository(BaseRepository[Application]):
             .filter(Application.id.in_(ids))
             .all()
         )
+
+    def student_has_application_with_company(self, student_id: int, company_id: int) -> bool:
+        """Check whether a student applied to at least one opportunity owned by a company."""
+        from app.domain.models.opportunity import Opportunity
+
+        return (
+            self._db.query(Application.id)
+            .join(Opportunity, Opportunity.id == Application.opportunity_id)
+            .filter(
+                Application.student_id == student_id,
+                Opportunity.company_id == company_id,
+            )
+            .first()
+            is not None
+        )

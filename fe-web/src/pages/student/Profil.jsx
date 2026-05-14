@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -29,10 +30,26 @@ export function ProfilStudent() {
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [saveMsgType, setSaveMsgType] = useState('success');
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCV, setUploadingCV] = useState(false);
+  const [openingCV, setOpeningCV] = useState(false);
+  const [downloadingCV, setDownloadingCV] = useState(false);
   const isId = lang === 'id';
+
+  useEffect(() => {
+    setForm({
+      first_name: user?.first_name || '',
+      last_name: user?.last_name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      nim: user?.nim || '',
+      major: user?.major || '',
+      gpa: user?.gpa || '',
+      bio: user?.bio || '',
+    });
+  }, [user]);
 
   const handleChange = (field) => (e) => {
     setForm({ ...form, [field]: e.target.value });
@@ -45,8 +62,10 @@ export function ProfilStudent() {
     try {
       await usersApi.update(form);
       await refreshUser();
+      setSaveMsgType('success');
       setSaveMsg(isId ? 'Profil berhasil disimpan!' : 'Profile saved successfully.');
     } catch (err) {
+      setSaveMsgType('error');
       setSaveMsg(isId ? 'Gagal menyimpan profil.' : 'Failed to save profile.');
       console.error(err);
     } finally {
@@ -74,6 +93,7 @@ export function ProfilStudent() {
       setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
+      e.target.value = '';
     }
   };
 
@@ -95,6 +115,29 @@ export function ProfilStudent() {
       addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunggah CV.' : 'Failed to upload CV.') });
     } finally {
       setUploadingCV(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleViewCV = async () => {
+    setOpeningCV(true);
+    try {
+      await usersApi.viewMyCV();
+    } catch (err) {
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal membuka CV.' : 'Failed to open CV.') });
+    } finally {
+      setOpeningCV(false);
+    }
+  };
+
+  const handleDownloadCV = async () => {
+    setDownloadingCV(true);
+    try {
+      await usersApi.downloadMyCV();
+    } catch (err) {
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunduh CV.' : 'Failed to download CV.') });
+    } finally {
+      setDownloadingCV(false);
     }
   };
 
@@ -152,18 +195,39 @@ export function ProfilStudent() {
               <h3 className="font-semibold text-gray-900 mb-4">CV & Resume</h3>
               <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
                 <p className="text-sm text-gray-500 mb-2">
-                  {user?.cv_url ? (isId ? 'CV sudah diunggah' : 'CV uploaded') : (isId ? 'Belum ada CV' : 'No CV uploaded')}
+                  {user?.has_cv ? (isId ? 'CV sudah diunggah' : 'CV uploaded') : (isId ? 'Belum ada CV' : 'No CV uploaded')}
                 </p>
-                {user?.cv_url && (
-                  <a
-                    href={resolveUploadUrl(user.cv_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-primary hover:text-accent font-medium inline-block mb-2"
-                  >
-                    {isId ? 'Lihat CV' : 'View CV'}
-                  </a>
+                <p className="text-xs text-gray-500 mb-3">
+                  {isId
+                    ? 'Butuh versi baru? Gunakan CV Builder untuk menyusun draft, unduh PDF, lalu pilih sendiri kapan menjadi CV akun aktif.'
+                    : 'Need a tailored version? Use CV Builder to draft it, download a PDF, and choose when it becomes your active account CV.'}
+                </p>
+                {user?.has_cv && (
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleViewCV}
+                      disabled={openingCV}
+                    >
+                      {openingCV ? (isId ? 'Membuka...' : 'Opening...') : (isId ? 'Lihat CV' : 'View CV')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleDownloadCV}
+                      disabled={downloadingCV}
+                    >
+                      {downloadingCV ? (isId ? 'Mengunduh...' : 'Downloading...') : (isId ? 'Unduh CV' : 'Download CV')}
+                    </Button>
+                  </div>
                 )}
+                <Link
+                  to="/student/cv-builder"
+                  className="mb-3 inline-flex w-full items-center justify-center rounded-lg border border-[#0f2854] px-3 py-2 text-sm font-medium text-[#0f2854] transition-colors hover:bg-[#0f2854] hover:text-white"
+                >
+                  {isId ? 'Buka CV Builder' : 'Open CV Builder'}
+                </Link>
                 <input
                   ref={cvInputRef}
                   type="file"
@@ -177,7 +241,7 @@ export function ProfilStudent() {
                   onClick={() => cvInputRef.current?.click()}
                   disabled={uploadingCV}
                 >
-                  {uploadingCV ? (isId ? 'Mengunggah...' : 'Uploading...') : 'Update CV'}
+                  {uploadingCV ? (isId ? 'Mengunggah...' : 'Uploading...') : (user?.has_cv ? 'Update CV' : (isId ? 'Unggah CV' : 'Upload CV'))}
                 </Button>
               </div>
             </CardBody>
@@ -214,6 +278,7 @@ export function ProfilStudent() {
                     label="Email"
                     value={form.email}
                     onChange={handleChange('email')}
+                    disabled
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,7 +307,7 @@ export function ProfilStudent() {
 
                 {saveMsg && (
                   <p
-                    className={`text-sm ${saveMsg.includes('berhasil') ? 'text-emerald-600' : 'text-red-600'}`}
+                    className={`text-sm ${saveMsgType === 'success' ? 'text-emerald-600' : 'text-red-600'}`}
                   >
                     {saveMsg}
                   </p>

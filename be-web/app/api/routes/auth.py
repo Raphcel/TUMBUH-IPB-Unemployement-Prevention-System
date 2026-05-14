@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Request
 
 from app.domain.models.user import User
 from app.services.auth_service import AuthService
+from app.services.user_service import UserService
 from app.schemas.user import UserCreate, UserLogin, RefreshRequest, TokenResponse, UserResponse
-from app.api.dependencies import get_auth_service, get_current_user
+from app.api.dependencies import get_auth_service, get_current_user, get_user_service
 from app.config.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -41,6 +42,9 @@ def refresh(
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
+def me(
+    current_user: User = Depends(get_current_user),
+    user_service: UserService = Depends(get_user_service),
+):
     """Get the currently authenticated user's profile."""
-    return current_user
+    return user_service.get_profile(current_user.id)

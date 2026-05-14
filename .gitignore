@@ -42,6 +42,8 @@ fe-web/dist/
 
 # User uploaded files (runtime data)
 be-web/app/uploads/
+be-web/uploads/
+be-web/private_uploads/
 
 # Agent tooling
 skills-lock.json
