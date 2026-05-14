@@ -7,6 +7,7 @@ dist/
 build/
 venv/
 .venv/
+myenv/
 
 # Database
 *.db
@@ -44,3 +45,15 @@ be-web/app/uploads/
 
 # Agent tooling
 skills-lock.json
+
+# Local orchestration docs for agent-assisted development
+/AGENT.md
+/MASTER.md
+/docs/progress/
+/docs/prompts/
+/docs/architecture/
+/docs/notes/
+
+# Local app environments
+be-web/venv/
+be-web/myenv/

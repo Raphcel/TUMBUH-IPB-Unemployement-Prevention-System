@@ -1,289 +1,304 @@
-# DEPLOYMENT.md — Deploying TUMBUH to Production
+# DEPLOYMENT.md
 
-> Guide for deploying the TUMBUH project (including the Winston Audit Log) to **Vercel**, a **VPS**, and **Supabase**.
+Deployment guidance for TUMBUH with Supabase as managed PostgreSQL while keeping FastAPI, SQLAlchemy, Alembic, and JWT auth in place.
 
----
+## Supported Architecture
 
-## Current Architecture (Localhost)
+Supabase is used as PostgreSQL only.
 
-```
-localhost:5174  →  React Frontend (Vite)
-localhost:8000  →  FastAPI Backend (Uvicorn)
-localhost:3001  →  Winston Audit Log Server (Express)
-localhost:5432  →  PostgreSQL Database
+```text
+React frontend -> FastAPI backend -> SQLAlchemy/Alembic -> Supabase Postgres
 ```
 
-In production, each of these will live on a different service:
+Do not treat Supabase as a replacement for the FastAPI backend in this project.
 
+## Deployment Modes
+
+Supported database modes:
+
+1. Local PostgreSQL through Docker Compose.
+2. Shared Supabase PostgreSQL for dev/staging.
+3. Future production Supabase PostgreSQL for deployed backend environments.
+
+Local Docker Compose should remain available even if dev and production move to Supabase.
+
+## Supabase Connection Strategy
+
+Project-specific connection details provided by the user:
+
+### Direct connection
+
+- Host: `db.xvtwlzwjzjhqfgutkavw.supabase.co`
+- Port: `5432`
+- Database: `postgres`
+- User: `postgres`
+
+Template:
+
+```text
+postgresql://postgres:[YOUR-PASSWORD]@db.xvtwlzwjzjhqfgutkavw.supabase.co:5432/postgres
 ```
-Vercel          →  React Frontend
-VPS (Railway/   →  FastAPI Backend
-  Render/DO)
-VPS or Vercel   →  Winston Audit Log Server
-Supabase        →  PostgreSQL Database
+
+Use this only for persistent backend hosts where IPv6 is available. Supabase marked this connection as not IPv4-compatible.
+
+### Shared Session Pooler
+
+- Host: `aws-1-ap-northeast-1.pooler.supabase.com`
+- Port: `5432`
+- Database: `postgres`
+- User: `postgres.xvtwlzwjzjhqfgutkavw`
+
+Template:
+
+```text
+postgresql://postgres.xvtwlzwjzjhqfgutkavw:[YOUR-PASSWORD]@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
 ```
 
----
+Use this for normal development, staging, and deployments that need IPv4-compatible connectivity.
 
-## Step 1: Migrate Database to Supabase
+### Transaction Pooler
 
-### 1.1 Create a Supabase Project
+Treat the transaction pooler as an opt-in serverless pattern only. Do not adopt it for this project unless SQLAlchemy behavior, session handling, and migration workflow have been tested deliberately.
 
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Choose a region closest to your users (e.g., Singapore for Indonesia)
-3. Set a strong database password — save it securely
+### SSL requirement
 
-### 1.2 Get Your Connection String
+Unless the dashboard-provided URL already includes SSL behavior, append `?sslmode=require` to the `DATABASE_URL` used by SQLAlchemy and Alembic.
 
-After project creation, go to **Settings → Database → Connection string → URI** and copy it. It looks like:
-
-```
-postgresql://postgres.[project-ref]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
-```
-
-### 1.3 Update Backend Configuration
-
-In your `be-web/.env` file (or your VPS environment variables), replace:
+Recommended example for this project:
 
 ```env
-# Old (localhost)
-DATABASE_URL=postgresql://postgres:user123@localhost:5432/career_tracker
-
-# New (Supabase)
-DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.xvtwlzwjzjhqfgutkavw:YOUR_PASSWORD@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
 ```
 
-### 1.4 Run Migrations Against Supabase
+Do not put the real password into committed files.
+
+## Backend Environment
+
+Configure these backend environment variables:
+
+- `DATABASE_URL`
+- `DB_POOL_SIZE`
+- `DB_MAX_OVERFLOW`
+- `SECRET_KEY`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `AUDIT_LOG_URL` for deployed audit logging integration
+
+Example values:
+
+```env
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=10
+SECRET_KEY=replace-with-a-strong-random-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+## Backend Setup For Supabase
+
+Developer setup flow:
 
 ```bash
 cd be-web
-
-# Make sure your .env points to Supabase
+cp .env.example .env
+# edit DATABASE_URL to the Session Pooler URL with the real password
 alembic upgrade head
-
-# (Optional) Seed demo data
 python -m scripts.seed
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-> [!IMPORTANT]
-> Supabase uses port **6543** (connection pooling via PgBouncer) or **5432** (direct). Use **6543** for production apps. If Alembic migrations fail on 6543, temporarily switch to port 5432 for migrations only, then switch back.
+For a deployed backend, set equivalent environment variables in the hosting platform and run migrations as part of release or one-time database initialization.
 
----
+## Schema Initialization And Migration Workflow
 
-## Step 2: Deploy the Audit Log Server
-
-The Winston audit log server is a standalone Node.js app. You have two options:
-
-### Option A: Deploy to a VPS (Recommended for logs)
-
-Good choices: **Railway**, **Render**, **DigitalOcean App Platform**, or any Linux VPS.
-
-#### Railway / Render (Easiest)
-
-1. Push your code to GitHub
-2. Create a new service on [Railway](https://railway.app) or [Render](https://render.com)
-3. Set the **Root Directory** to `audit-log`
-4. Set the **Start Command** to `npm start`
-5. Set environment variable: `AUDIT_PORT=3001` (or let the platform assign a port via `PORT`)
-6. Note the deployed URL (e.g., `https://tumbuh-audit.up.railway.app`)
-
-#### Modify `server.js` for Platform Port
-
-Most platforms provide a `PORT` environment variable. The `server.js` already handles this:
-
-```js
-const PORT = process.env.AUDIT_PORT || process.env.PORT || 3001;
-```
-
-> [!TIP]
-> If you use Railway or Render, update `server.js` line to also check `process.env.PORT`:
-> ```js
-> const PORT = process.env.AUDIT_PORT || process.env.PORT || 3001;
-> ```
-
-### Option B: Deploy to Vercel (Serverless — Limited)
-
-> [!WARNING]
-> Vercel is **serverless** — it doesn't have persistent file storage. This means Winston's file-based logging **will not persist** between requests. If you deploy the audit log to Vercel, you need to replace the file transports with a cloud-based solution (e.g., log to Supabase tables or an external logging service like Logtail/Betterstack).
-
-If you still want Vercel for the audit log:
-
-1. Create `audit-log/vercel.json`:
-
-```json
-{
-  "version": 2,
-  "builds": [{ "src": "server.js", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "server.js" }]
-}
-```
-
-2. Replace the file transports in `server.js` with a database transport (see "Cloud Logging Alternative" section below).
-
----
-
-## Step 3: Deploy the FastAPI Backend
-
-### Option A: Railway / Render
-
-1. Create a new service, set **Root Directory** to `be-web`
-2. Set the **Start Command** to:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port $PORT
-   ```
-3. Add environment variables:
-   ```
-   DATABASE_URL=postgresql://postgres.[ref]:[pass]@...supabase.com:6543/postgres
-   SECRET_KEY=your-strong-random-secret
-   ACCESS_TOKEN_EXPIRE_MINUTES=60
-   DEBUG=False
-   ```
-4. Note the deployed URL (e.g., `https://tumbuh-api.up.railway.app`)
-
-### Option B: DigitalOcean / Traditional VPS
+For an empty Supabase database:
 
 ```bash
-# On your VPS
-git clone https://github.com/your-username/TUMBUH.git
-cd TUMBUH/be-web
-
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Set environment variables
-export DATABASE_URL="postgresql://..."
-export SECRET_KEY="your-strong-secret"
-
-# Run with gunicorn for production
-pip install gunicorn
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+cd be-web && alembic upgrade head
 ```
 
-### Update Audit Log URL
+For an existing database with data that must be preserved:
 
-After deploying the audit log server, update the backend to point to it:
+1. Export from the source PostgreSQL instance with `pg_dump`.
+2. Restore into Supabase with `pg_restore`.
+3. Run validation queries to confirm tables, row counts, constraints, and sequence values.
+4. Run `cd be-web && alembic current` and confirm the migration state matches the checked-in Alembic history.
+5. Apply any pending migrations only after validating that the restored schema is in sync.
 
-**`be-web/app/config/audit.py`:**
+Alembic remains the schema authority. Avoid making schema changes manually in the Supabase dashboard unless required for emergency inspection, and reconcile any manual changes back into migrations immediately.
 
-```python
-import os
+## Service Deployment
 
-# In production, set AUDIT_LOG_URL environment variable
-AUDIT_LOG_URL = os.environ.get("AUDIT_LOG_URL", "http://localhost:3001/log")
-AUDIT_LOG_TIMEOUT = 2
-```
+### Frontend
 
-Then set the environment variable on your backend's hosting platform:
-
-```
-AUDIT_LOG_URL=https://tumbuh-audit.up.railway.app/log
-```
-
----
-
-## Step 4: Deploy the Frontend to Vercel
-
-### 4.1 Configure API URL
-
-Create `fe-web/.env.production`:
+Deploy the React app separately, for example on Vercel, and point it at a backend URL:
 
 ```env
-VITE_API_URL=https://tumbuh-api.up.railway.app/api/v1
+VITE_API_URL=https://your-backend.example.com/api/v1
 ```
 
-### 4.2 Deploy to Vercel
+Frontend code must never contain:
 
-1. Go to [vercel.com](https://vercel.com) and import your GitHub repository
-2. Set **Root Directory** to `fe-web`
-3. Framework Preset: **Vite**
-4. Add environment variable:
-   ```
-   VITE_API_URL=https://tumbuh-api.up.railway.app/api/v1
-   ```
-5. Deploy!
+- Database URLs
+- Supabase database passwords
+- Supabase service role keys
+- Supabase anon keys for direct database access
 
-### 4.3 Update Backend CORS
+### FastAPI backend
 
-Add your Vercel domain to `be-web/app/config/settings.py` or via environment variable:
+Deploy the backend on a persistent host such as Railway, Render, DigitalOcean, or another VPS/container platform.
 
-```python
-CORS_ORIGINS: list[str] = [
-    "http://localhost:5174",
-    "https://tumbuh.vercel.app",        # ← add your Vercel domain
-    "https://your-custom-domain.com",   # ← if using custom domain
-]
+Recommended runtime principles:
+
+- Keep JWT auth in the backend.
+- Keep SQLAlchemy and Alembic as the data layer.
+- Point `DATABASE_URL` to Supabase.
+- Use the direct connection when the host supports IPv6 and long-lived connections.
+- Otherwise use the Session Pooler URL.
+
+Example startup command:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
----
+### Audit log service
 
-## Step 5: Update All Cross-Service URLs
+Deploy `audit-log/` separately if audit events are needed in shared environments. Keep in mind that file-based logging on serverless platforms is not persistent.
 
-Here's a checklist of URLs that need to change for production:
+Set the backend audit endpoint with:
 
-| Config Location | Variable | Localhost | Production |
-|----------------|----------|-----------|------------|
-| `fe-web/.env.production` | `VITE_API_URL` | `http://127.0.0.1:8000/api/v1` | `https://tumbuh-api.up.railway.app/api/v1` |
-| `be-web/.env` | `DATABASE_URL` | `postgresql://...localhost:5432/...` | `postgresql://...supabase.com:6543/postgres` |
-| `be-web/.env` | `SECRET_KEY` | `your-secret-key...` | A strong random string (32+ chars) |
-| `be-web/app/config/audit.py` | `AUDIT_LOG_URL` | `http://localhost:3001/log` | `https://tumbuh-audit.up.railway.app/log` |
-| `be-web/app/config/settings.py` | `CORS_ORIGINS` | `localhost:5174` | `your-vercel-domain.vercel.app` |
-
----
-
-## Cloud Logging Alternative (Optional)
-
-If you want to avoid running a separate audit log server entirely, you can log directly to a **Supabase table** from the FastAPI backend.
-
-### Create an Audit Log Table in Supabase
-
-```sql
-CREATE TABLE audit_logs (
-    id BIGSERIAL PRIMARY KEY,
-    timestamp TIMESTAMPTZ DEFAULT NOW(),
-    level VARCHAR(10) NOT NULL DEFAULT 'info',
-    action VARCHAR(100) NOT NULL,
-    user_id INTEGER,
-    user_role VARCHAR(20) DEFAULT 'anonymous',
-    user_email VARCHAR(255),
-    ip VARCHAR(45),
-    resource VARCHAR(50),
-    resource_id INTEGER,
-    detail TEXT,
-    success BOOLEAN DEFAULT TRUE
-);
-
-CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+```env
+AUDIT_LOG_URL=https://your-audit-service.example.com/log
 ```
 
-Then modify `be-web/app/services/audit_service.py` to insert into this table via SQLAlchemy instead of sending HTTP requests to the Winston server. This removes the need for the Node.js audit log service entirely — but you lose the Winston-specific features (daily rotation, multiple transports, etc.).
+## Team Workflow Guidance
 
----
+- Frontend-only developers can target a shared deployed backend by setting `VITE_API_URL`.
+- Backend developers can run FastAPI locally while pointing `DATABASE_URL` at the shared Supabase dev database.
+- Developers making schema changes must generate Alembic migrations and coordinate before applying them to the shared database.
+- For isolated work, developers can still use local Docker Compose PostgreSQL on host port `5433`.
 
-## Production Checklist
+## Local Docker Compose Reference
 
-- [ ] Supabase database created and migrations run
-- [ ] Backend deployed with correct `DATABASE_URL` and `SECRET_KEY`
-- [ ] Audit log server deployed (or replaced with Supabase table)
-- [ ] `AUDIT_LOG_URL` updated in backend config
-- [ ] Frontend deployed to Vercel with correct `VITE_API_URL`
-- [ ] CORS origins updated to include Vercel domain
-- [ ] Test login flow end-to-end
-- [ ] Verify audit logs are being recorded
-- [ ] Set `DEBUG=False` in production
+The repository keeps local PostgreSQL available through `docker-compose.yml`:
 
----
+```bash
+docker compose up -d postgres
+```
 
-## Recommended Hosting Costs
+Local Docker connection:
 
-| Service | Free Tier | Notes |
-|---------|-----------|-------|
-| **Vercel** (Frontend) | ✅ Free | Generous free tier for static/SSR sites |
-| **Railway** (Backend + Audit) | ✅ $5 trial credit | $5/month after trial; great for small projects |
-| **Render** (Backend + Audit) | ✅ Free tier | Free tier sleeps after 15 min inactivity |
-| **Supabase** (Database) | ✅ Free tier | 500 MB storage, 2 projects free |
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/career_tracker
+```
 
-> [!TIP]
-> For a student project, you can run both the FastAPI backend and the Audit Log server on a single Railway/Render service by using a process manager like `supervisord` or by combining them into a Docker Compose setup.
+## Optional Tooling
+
+Supabase dashboard tooling may suggest:
+
+```bash
+npx skills add supabase/agent-skills
+```
+
+That is optional only. It is not required for this project because the application talks to Supabase as plain PostgreSQL through SQLAlchemy and Alembic.
+
+## Dokploy Deployment
+
+Dokploy is a valid deployment target for this repository. The current repository now includes Dockerfiles for:
+
+- `be-web/`
+- `fe-web/`
+- `audit-log/`
+
+Recommended Dokploy layout:
+
+1. Create a backend application from `be-web/Dockerfile`.
+2. Create a frontend application from `fe-web/Dockerfile`.
+3. Create the audit-log application from `audit-log/Dockerfile` only if shared audit logging is required.
+
+### Backend in Dokploy
+
+Build context:
+
+```text
+be-web
+```
+
+Runtime behavior:
+
+- The container runs `alembic upgrade head` before starting Uvicorn.
+- The backend listens on `PORT`, defaulting to `8000`.
+
+Required environment variables:
+
+```env
+DATABASE_URL=postgresql://postgres.xvtwlzwjzjhqfgutkavw:YOUR_PASSWORD@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+SECRET_KEY=replace-with-a-strong-random-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=10
+CORS_ORIGINS=https://your-frontend.example.com
+```
+
+`CORS_ORIGINS` now supports either:
+
+- a comma-separated string
+- a JSON array string
+
+Example JSON form:
+
+```env
+CORS_ORIGINS=["https://tumbuh.example.com","https://staging-tumbuh.example.com"]
+```
+
+### Frontend in Dokploy
+
+Build context:
+
+```text
+fe-web
+```
+
+The frontend Docker build expects a build arg:
+
+```text
+VITE_API_URL
+```
+
+Example:
+
+```text
+https://api.your-domain.example/api/v1
+```
+
+If you place the frontend and backend behind the same public domain with path routing, use:
+
+```text
+https://your-frontend.example/api/v1
+```
+
+### Audit Log in Dokploy
+
+Build context:
+
+```text
+audit-log
+```
+
+Then point the backend at it with:
+
+```env
+AUDIT_LOG_URL=https://your-audit-service.example.com/log
+```
+
+### Git Flow for Dokploy
+
+- You do not need to deploy from GitHub `main`.
+- Dokploy can deploy from a feature branch first.
+- Push the branch, connect Dokploy to that branch, verify it, then merge to `main` when the deployment is stable.
+
+### Team Development With Supabase
+
+- `be-web/.env` remains local and uncommitted for each developer.
+- `be-web/.env.example` stays sanitized and should never contain real credentials.
+- Developers who need backend access should copy `.env.example` to `.env` and set the shared Supabase `DATABASE_URL` with the real password.
+- Frontend-only developers can skip direct database access and point `VITE_API_URL` at the shared deployed backend instead.
