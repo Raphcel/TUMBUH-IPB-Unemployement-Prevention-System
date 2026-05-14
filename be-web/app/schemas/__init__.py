@@ -16,6 +16,9 @@ from app.schemas.bookmark import (
 from app.schemas.externship import (
     ExternshipCreate, ExternshipUpdate, ExternshipResponse, ExternshipListResponse,
 )
+from app.schemas.resume import (
+    ResumeProfileCreate, ResumeProfileUpdate, ResumeProfileResponse,
+)
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserLogin", "UserResponse", "TokenResponse",
@@ -24,4 +27,5 @@ __all__ = [
     "ApplicationCreate", "ApplicationStatusUpdate", "ApplicationResponse", "ApplicationListResponse",
     "BookmarkCreate", "BookmarkResponse", "BookmarkListResponse",
     "ExternshipCreate", "ExternshipUpdate", "ExternshipResponse", "ExternshipListResponse",
+    "ResumeProfileCreate", "ResumeProfileUpdate", "ResumeProfileResponse",
 ]

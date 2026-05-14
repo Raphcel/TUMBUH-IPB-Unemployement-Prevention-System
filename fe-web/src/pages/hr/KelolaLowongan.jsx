@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { opportunitiesApi } from '../../api/opportunities';
 import { applicationsApi } from '../../api/applications';
+import { usersApi } from '../../api/users';
 import { resolveUploadUrl } from '../../api/client';
 import {
   ChevronDown,
@@ -484,10 +485,35 @@ function ApplicantPanel({ applicants, loading, onStatusChange, onBulkStatusChang
 // Applicant Detail Modal
 // ═══════════════════════════════════════════════════════════
 function ApplicantDetailModal({ app, onClose, onStatusChange }) {
+  const { addToast } = useToast();
+  const [openingCV, setOpeningCV] = useState(false);
+  const [downloadingCV, setDownloadingCV] = useState(false);
   if (!app) return null;
   const student = app.student || {};
   const avatarUrl = resolveUploadUrl(student.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.applicantName || 'U')}&background=0f2854&color=fff`;
   const history = app.history || [];
+
+  const handleViewCV = async () => {
+    setOpeningCV(true);
+    try {
+      await usersApi.viewUserCV(student.id);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal membuka CV.' });
+    } finally {
+      setOpeningCV(false);
+    }
+  };
+
+  const handleDownloadCV = async () => {
+    setDownloadingCV(true);
+    try {
+      await usersApi.downloadUserCV(student.id);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal mengunduh CV.' });
+    } finally {
+      setDownloadingCV(false);
+    }
+  };
 
   return (
     <Modal isOpen={!!app} onClose={onClose} title="Detail Pelamar" size="lg">
@@ -531,15 +557,25 @@ function ApplicantDetailModal({ app, onClose, onStatusChange }) {
         )}
 
         {/* CV download */}
-        {student.cv_url && (
-          <a
-            href={resolveUploadUrl(student.cv_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-accent transition-colors bg-blue-50 rounded-lg px-4 py-2"
-          >
-            <FileDown size={16} /> Download CV
-          </a>
+        {student.has_cv && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleViewCV}
+              disabled={openingCV}
+            >
+              <FileDown size={16} /> {openingCV ? 'Opening...' : 'View CV'}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleDownloadCV}
+              disabled={downloadingCV}
+            >
+              {downloadingCV ? 'Downloading...' : 'Download CV'}
+            </Button>
+          </div>
         )}
 
         {/* Status history */}

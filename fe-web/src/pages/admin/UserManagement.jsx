@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../../api/admin';
+import { resolveUploadUrl } from '../../api/client';
 import { useTranslation } from '../../context/LanguageContext';
 import { Search, UserX, UserCheck, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -124,7 +125,7 @@ export function UserManagement() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0 overflow-hidden">
                           {u.avatar ? (
-                            <img src={u.avatar} alt="" className="w-full h-full object-cover" />
+                            <img src={resolveUploadUrl(u.avatar)} alt="" className="w-full h-full object-cover" />
                           ) : (
                             u.first_name?.[0]
                           )}
