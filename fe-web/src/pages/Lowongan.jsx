@@ -1,48 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Input, Select } from '../components/ui/Input';
 import { opportunitiesApi } from '../api/opportunities';
 import { companiesApi } from '../api/companies';
 import { bookmarksApi } from '../api/bookmarks';
 import { useAuth } from '../context/AuthContext';
-import {
-  MapPin,
-  DollarSign,
-  Bookmark,
-  Filter,
-  X,
-  Search,
-  Briefcase,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Bookmark, Search, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown, Banknote } from 'lucide-react';
+import { DetailLowongan } from './DetailLowongan';
+import { useTranslation } from '../context/LanguageContext';
 
 const PAGE_SIZE = 12;
 
 export function Lowongan() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [locationTerm, setLocationTerm] = useState(searchParams.get('location') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
-  const [showFilters, setShowFilters] = useState(false);
   const [savedJobs, setSavedJobs] = useState([]);
 
-  const [filterType, setFilterType] = useState(
-    searchParams.get('type') || 'All'
-  );
-  const [filterLocation, setFilterLocation] = useState(
-    searchParams.get('location') || 'All'
-  );
-  const [filterCompany, setFilterCompany] = useState(
-    searchParams.get('company') || 'All'
-  );
+  const [filterType, setFilterType] = useState(searchParams.get('type') || 'All');
+  const [filterLocation, setFilterLocation] = useState(searchParams.get('location') || 'All');
+  const [filterCompany, setFilterCompany] = useState(searchParams.get('company') || 'All');
 
   const [page, setPage] = useState(0);
+  const [allOpportunities, setAllOpportunities] = useState([]);
+  const [totalOpportunities, setTotalOpportunities] = useState(0);
+  const [allCompanies, setAllCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedJobId, setSelectedJobId] = useState(null);
 
   // Debounce search
   useEffect(() => {
@@ -59,12 +46,6 @@ export function Lowongan() {
     setSearchParams(params, { replace: true });
   }, [searchTerm, filterType, filterLocation, filterCompany, setSearchParams]);
 
-  const [allOpportunities, setAllOpportunities] = useState([]);
-  const [totalOpportunities, setTotalOpportunities] = useState(0);
-  const [allCompanies, setAllCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch companies once
   useEffect(() => {
     companiesApi.list(0, 100)
       .then((compData) => {
@@ -74,7 +55,6 @@ export function Lowongan() {
       .catch(console.error);
   }, []);
 
-  // Fetch opportunities with server-side filters
   useEffect(() => {
     setLoading(true);
     opportunitiesApi
@@ -93,38 +73,33 @@ export function Lowongan() {
       .finally(() => setLoading(false));
   }, [debouncedSearch, filterType, filterLocation, page]);
 
-  // Reset page when filters change
+  // Auto-select first job
   useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, filterType, filterLocation, filterCompany]);
+    if (allOpportunities.length > 0) {
+      if (!selectedJobId || !allOpportunities.find(j => j.id === selectedJobId)) {
+        setSelectedJobId(allOpportunities[0].id);
+      }
+    } else {
+      setSelectedJobId(null);
+    }
+  }, [allOpportunities]);
 
-  // Load bookmarks for logged-in students only
+  useEffect(() => { setPage(0); }, [debouncedSearch, filterType, filterLocation, filterCompany]);
+
   useEffect(() => {
     if (!user || user.role !== 'student') return;
-    bookmarksApi
-      .mine()
+    bookmarksApi.mine()
       .then((bks) => {
-        const ids = (Array.isArray(bks) ? bks : bks.items || []).map(
-          (b) => b.opportunity_id ?? b.id
-        );
+        const ids = (Array.isArray(bks) ? bks : bks.items || []).map((b) => b.opportunity_id ?? b.id);
         setSavedJobs(ids);
       })
       .catch(() => {});
   }, [user]);
 
-  const locations = [
-    'All',
-    ...new Set(allOpportunities.map((job) => job.location).filter(Boolean)),
-  ];
-  const companyOptions = ['All', ...allCompanies.map((c) => c.name)];
-
-  // Client-side company filter (since backend doesn't support company filter)
   const filteredJobs = filterCompany === 'All'
     ? allOpportunities
     : allOpportunities.filter((job) => {
-        const jobCompany =
-          job.company?.name ||
-          allCompanies.find((c) => c.id === job.company_id)?.name || '';
+        const jobCompany = job.company?.name || allCompanies.find((c) => c.id === job.company_id)?.name || '';
         return jobCompany === filterCompany;
       });
 
@@ -145,300 +120,235 @@ export function Lowongan() {
     }
   };
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0 },
-    },
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setDebouncedSearch(searchTerm);
+    if (locationTerm) setFilterLocation(locationTerm);
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  // Is a listing "new" (posted within 7 days)?
+  const isNew = (job) => {
+    if (!job.created_at) return false;
+    const diff = (Date.now() - new Date(job.created_at)) / 86400000;
+    return diff <= 7;
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days <= 0) return t('low_today', 'Today');
+    return `${days}d ago`;
   };
 
   return (
-    <div className="bg-white min-h-screen py-16">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
+    <div className="bg-white min-h-screen flex flex-col">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
+        {/* Search + Filters */}
+        <section className="mb-6 flex-none">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
+                placeholder={t('low_search_ph')}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="relative flex-1">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
+                placeholder={t('low_location_ph')}
+                type="text"
+                value={locationTerm}
+                onChange={(e) => setLocationTerm(e.target.value)}
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-gray-900 text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+            >
+              <Search className="w-4 h-4" /> {t('low_search_btn')}
+            </button>
+          </form>
+
+          {/* Filter chips */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => {}}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <SlidersHorizontal className="w-4 h-4" /> Filter
+              </button>
+              {['All', 'Internship', 'Full-time', 'Part-time', 'Remote'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type)}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-full text-sm font-medium transition-colors ${
+                    filterType === type
+                      ? 'border-brand bg-brand/5 text-brand'
+                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {type === 'All' ? t('low_type_all') : type} {filterType === type && type !== 'All' ? null : <ChevronDown className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setFilterType('All'); setFilterLocation('All'); setFilterCompany('All'); setSearchTerm(''); setLocationTerm(''); }}
+              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Reset
+            </button>
           </div>
-        ) : (
-          <>
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h1 className="text-3xl font-semibold tracking-tight text-primary">
-                  Explore Opportunities
-                </h1>
-                <p className="mt-2 text-secondary text-lg">
-                  Browse roles that match your ambition.
-                </p>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="relative w-full md:w-96"
-              >
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                  <div className="relative flex-1 md:w-64">
-                    <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                    <Input
-                      className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary/20"
-                      placeholder="Search position or company..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    variant={showFilters ? 'secondary' : 'outline'}
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="!border-none flex items-center gap-2"
-                  >
-                    <Filter size={18} /> Filters
-                  </Button>
-                </div>
-              </motion.div>
+        </section>
+
+        {/* Master-Detail Layout */}
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
+          {/* Left: Job listings */}
+          <div className="w-full lg:w-1/2 flex flex-col min-h-0 border border-gray-200 rounded-xl bg-white overflow-hidden">
+            {/* Results info */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-none bg-gray-50/50">
+              <h2 className="text-sm font-medium text-gray-500">
+                {loading ? t('loading') : `${t('low_found')} ${totalOpportunities} ${t('low_opportunities')}`}
+              </h2>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>{t('low_latest')}</span>
+                <ChevronDown className="w-4 h-4" />
+              </div>
             </div>
 
-            {/* Expandable Filter Panel */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden mb-8"
-                >
-                  <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-semibold text-primary">
-                        Refine Search
-                      </h3>
-                      <button
-                        onClick={() => setShowFilters(false)}
-                        className="text-secondary hover:text-primary"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                          Type
-                        </label>
-                        <Select
-                          value={filterType}
-                          onChange={(e) => setFilterType(e.target.value)}
-                          options={[
-                            { value: 'All', label: 'All Types' },
-                            { value: 'Internship', label: 'Internship' },
-                            { value: 'Full-time', label: 'Full-time' },
-                            { value: 'Scholarship', label: 'Scholarship' },
-                          ]}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                          Location
-                        </label>
-                        <Select
-                          value={filterLocation}
-                          onChange={(e) => setFilterLocation(e.target.value)}
-                          options={locations.map((loc) => ({
-                            value: loc,
-                            label: loc,
-                          }))}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                          Company
-                        </label>
-                        <Select
-                          value={filterCompany}
-                          onChange={(e) => setFilterCompany(e.target.value)}
-                          options={companyOptions.map((c) => ({
-                            value: c,
-                            label: c,
-                          }))}
-                          className="bg-white"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                      <Button
-                        variant="ghost"
-                        className="text-sm text-secondary hover:text-red-500"
-                        onClick={() => {
-                          setFilterType('All');
-                          setFilterLocation('All');
-                          setFilterCompany('All');
-                        }}
-                      >
-                        Reset Filters
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-              {filteredJobs.length > 0 ? (
+            {/* Job listings */}
+            <div className="overflow-y-auto flex-1 custom-scrollbar p-3 space-y-3 bg-gray-50/30">
+              {loading ? (
+                <div className="flex justify-center py-20">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
+                </div>
+              ) : filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => (
-                  <motion.div
+                  <article
                     key={job.id}
-                    initial="hidden"
-                    animate="visible"
-                    variants={itemVariants}
-                    whileHover={{ y: -5 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
+                    onClick={() => setSelectedJobId(job.id)}
+                    className={`border rounded-lg p-5 bg-white transition-all cursor-pointer hover:shadow-sm ${
+                      selectedJobId === job.id ? 'border-brand ring-1 ring-brand bg-brand/5' : 'border-gray-200 hover:border-brand/50'
+                    }`}
                   >
-                    <Card className="hover:border-primary/20 transition-all duration-300 group relative flex flex-col h-full border-gray-200">
-                      <CardBody className="p-6 flex flex-col h-full">
-                        {user?.role === 'student' && (
-                        <div className="absolute top-6 right-6 z-10">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white shrink-0">
+                        {job.company?.logo ? (
+                          <img alt={job.company?.name} className="w-full h-full object-contain" src={job.company.logo} />
+                        ) : (
+                          <span className="text-lg font-bold text-gray-400">{job.company?.name?.[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2 mb-1">
+                          <h3 className="text-base font-bold text-gray-900 truncate pr-2 hover:text-brand transition-colors">
+                            {job.title}
+                          </h3>
                           <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              toggleSave(job.id);
-                            }}
-                            className={`transition-all duration-200 ${savedJobs.includes(job.id) ? 'text-accent fill-accent' : 'text-gray-300 hover:text-accent'}`}
-                            title={
-                              savedJobs.includes(job.id) ? 'Unsave' : 'Save'
-                            }
+                            onClick={(e) => { e.stopPropagation(); toggleSave(job.id); }}
+                            className={`transition-colors shrink-0 z-10 ${savedJobs.includes(job.id) ? 'text-brand' : 'text-gray-400 hover:text-gray-600'}`}
                           >
-                            <Bookmark
-                              size={20}
-                              fill={
-                                savedJobs.includes(job.id)
-                                  ? 'currentColor'
-                                  : 'none'
-                              }
-                            />
+                            <Bookmark className="w-5 h-5" fill={savedJobs.includes(job.id) ? 'currentColor' : 'none'} />
                           </button>
                         </div>
-                        )}
-
-                        <Link
-                          to={`/lowongan/${job.id}`}
-                          className="block flex-1"
-                        >
-                          <div className="mb-4 pr-8">
-                            <h3 className="font-semibold text-lg text-primary line-clamp-1 group-hover:text-accent transition-colors">
-                              {job.title}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-2 text-sm text-secondary">
-                              <Briefcase size={14} />
-                              <span>{job.company?.name}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mb-6">
-                            <Badge
-                              variant={
-                                job.type === 'Internship'
-                                  ? 'info'
-                                  : job.type === 'Scholarship'
-                                    ? 'success'
-                                    : 'neutral'
-                              }
-                            >
-                              {job.type}
-                            </Badge>
-                          </div>
-
-                          <div className="space-y-2 mb-6 text-sm text-secondary">
-                            <div className="flex items-center gap-2">
-                              <MapPin size={14} className="text-gray-400" />
-                              {job.location}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <DollarSign size={14} className="text-gray-400" />
-                              {job.salary}
-                            </div>
-                          </div>
-                        </Link>
-
-                        <div className="mt-auto pt-4 border-t border-gray-100 w-full">
-                          <Button
-                            to={`/lowongan/${job.id}`}
-                            className="w-full justify-center bg-[#0f2854] hover:bg-[#183a6d] text-white font-semibold rounded border-none shadow-sm transition-colors focus:ring-2 focus:ring-accent/30"
-                          >
-                            View Details
-                          </Button>
+                        <p className="text-sm text-gray-500 mb-2 truncate">{job.company?.name}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> <span className="truncate max-w-[100px]">{job.location}</span>
+                          </span>
+                          {job.work_mode && (
+                            <><span className="w-1 h-1 bg-gray-300 rounded-full" /><span>{job.work_mode}</span></>
+                          )}
+                          <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                          <span>{job.type}</span>
                         </div>
-                      </CardBody>
-                    </Card>
-                  </motion.div>
+                        <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+                          {isNew(job) ? (
+                            <span className="bg-green-100 text-brand font-semibold px-2 py-0.5 rounded flex items-center gap-1">
+                              ✓ {t('new_badge')}
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          <span>{timeAgo(job.posted_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
                 ))
               ) : (
-                <div className="col-span-full py-20 text-center text-secondary">
-                  <p>Tidak ada lowongan yang sesuai dengan pencarian Anda.</p>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setFilterType('All');
-                      setFilterLocation('All');
-                      setFilterCompany('All');
-                    }}
-                    className="mt-2"
+                <div className="py-20 text-center text-gray-500">
+                  <p>{t('low_no_results')}</p>
+                  <button
+                    onClick={() => { setSearchTerm(''); setFilterType('All'); setFilterLocation('All'); setFilterCompany('All'); }}
+                    className="mt-3 text-brand hover:underline text-sm"
                   >
-                    Hapus Filter
-                  </Button>
+                    {t('low_clear_filters')}
+                  </button>
                 </div>
               )}
-            </motion.div>
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-10">
-                <Button
-                  variant="outline"
-                  size="sm"
+              <div className="p-4 border-t border-gray-100 flex justify-center items-center gap-2 flex-none bg-white">
+                <button
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-40"
                   disabled={page === 0}
                   onClick={() => setPage(page - 1)}
-                  className="flex items-center gap-1"
                 >
-                  <ChevronLeft size={16} /> Sebelumnya
-                </Button>
-                <span className="text-sm text-secondary">
-                  Halaman {page + 1} dari {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i).map((i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium text-sm transition-colors ${
+                      page === i ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                {totalPages > 5 && <span className="text-gray-400 px-1">...</span>}
+                {totalPages > 5 && (
+                  <button
+                    onClick={() => setPage(totalPages - 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors"
+                  >
+                    {totalPages}
+                  </button>
+                )}
+                <button
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage(page + 1)}
-                  className="flex items-center gap-1"
                 >
-                  Selanjutnya <ChevronRight size={16} />
-                </Button>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* Right: Job detail pane */}
+          <div className="hidden lg:flex lg:w-1/2 bg-white border border-gray-200 rounded-xl overflow-hidden min-h-0 relative flex-col">
+            {selectedJobId ? (
+              <DetailLowongan jobId={selectedJobId} isEmbedded={true} />
+            ) : (
+              <div className="flex items-center justify-center h-full flex-1 text-gray-500 flex-col gap-4">
+                <Search className="w-12 h-12 text-gray-300" />
+                <p>{t('low_select_detail')}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

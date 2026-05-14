@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
-import { Card, CardBody } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Input, Select } from '../components/ui/Input';
-import { Button } from '../components/ui/Button';
-import { Filter } from 'lucide-react';
-import { X } from 'lucide-react';
-import { Search, Star, MapPin } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Users, Star, ChevronDown, Bookmark } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 export function Perusahaan() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
+  const [savedCompanies, setSavedCompanies] = useState([]);
 
-  const [filterLocation, setFilterLocation] = useState('All');
-  const [filterIndustry, setFilterIndustry] = useState('All');
+  const toggleSaveCompany = (id) => {
+    setSavedCompanies((prev) =>
+      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
+    );
+  };
 
-  const [allLocations, setAllLocations] = useState([]);
+  const [filterIndustry, setFilterIndustry] = useState(t('comp_all_industries'));
+  const [filterLocation, setFilterLocation] = useState(t('comp_all_locations'));
+
   const [allIndustries, setAllIndustries] = useState([]);
+  const [allLocations, setAllLocations] = useState([]);
+  const [sortBy, setSortBy] = useState('A - Z');
 
   useEffect(() => {
     companiesApi
@@ -28,242 +30,204 @@ export function Perusahaan() {
       .then((data) => {
         const comps = Array.isArray(data) ? data : data.items || [];
         setCompanies(comps);
-
-        setAllLocations([
-          ...new Set(comps.map((c) => c.location).filter(Boolean)),
-        ]);
-        setAllIndustries([
-          ...new Set(comps.map((c) => c.industry).filter(Boolean)),
-        ]);
+        setAllIndustries([...new Set(comps.map((c) => c.industry).filter(Boolean))]);
+        setAllLocations([...new Set(comps.map((c) => c.location).filter(Boolean))]);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const locations = React.useMemo(
-    () => ['All', ...[...new Set((allLocations || []).filter(Boolean))]],
-    [allLocations]
-  );
+  const INDUSTRIES = [t('comp_all_industries'), t('comp_technology'), t('comp_finance'), t('comp_ecommerce'), t('comp_education'), t('comp_consulting'), t('comp_others'), ...allIndustries];
+  const uniqueIndustries = [...new Set(INDUSTRIES)];
 
-  const industries = React.useMemo(
-    () => ['All', ...[...new Set((allIndustries || []).filter(Boolean))]],
-    [allIndustries]
-  );
+  const LOCATIONS = [t('comp_all_locations'), 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote', ...allLocations];
+  const uniqueLocations = [...new Set(LOCATIONS)];
 
-  const filteredCompanies = companies.filter(
-    (company) =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.industry.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCompanies = companies.filter((c) => {
+    const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.industry || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchIndustry = filterIndustry === t('comp_all_industries') || c.industry === filterIndustry;
+    const matchLocation = filterLocation === t('comp_all_locations') || (c.location || '').includes(filterLocation);
+    return matchSearch && matchIndustry && matchLocation;
+  });
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-  };
+  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
+    if (sortBy === 'A - Z') return a.name.localeCompare(b.name);
+    if (sortBy === 'Z - A') return b.name.localeCompare(a.name);
+    if (sortBy === 'Rating') return (b.rating || 0) - (a.rating || 0);
+    return 0;
+  });
 
   return (
-    <div className="bg-white min-h-screen py-16">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-3xl font-semibold tracking-tight text-primary">
-              Partner Companies
-            </h1>
-            <p className="mt-2 text-secondary text-lg">
-              Connect with industry leaders and top employers.
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="relative w-full md:w-96"
-          >
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <Input
-                  className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary/20"
-                  placeholder="Search by name or industry..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button
-                variant={showFilters ? 'secondary' : 'outline'}
-                onClick={() => setShowFilters(!showFilters)}
-                className="!border-none flex items-center gap-2"
-              >
-                <Filter size={18} /> Filters
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Expandable Filter Panel */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="overflow-hidden mb-8"
-            >
-              <div className="p-6 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-primary">Refine Search</h3>
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="text-secondary hover:text-primary"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                      Location
-                    </label>
-                    <Select
-                      value={filterLocation}
-                      onChange={(e) => setFilterLocation(e.target.value)}
-                      options={locations.map((loc) => ({
-                        value: loc,
-                        label: loc,
-                      }))}
-                      className="bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">
-                      Industry
-                    </label>
-                    <Select
-                      value={filterIndustry}
-                      onChange={(e) => setFilterIndustry(e.target.value)}
-                      options={industries.map((ind) => ({
-                        value: ind,
-                        label: ind,
-                      }))}
-                      className="bg-white"
-                    />
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    className="text-sm text-secondary hover:text-red-500"
-                    onClick={() => {
-                      setFilterLocation('All');
-                      setFilterIndustry('All');
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {loading ? (
-          <div className="col-span-full flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0f2854]" />
-          </div>
-        ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {filteredCompanies.length > 0 ? (
-              filteredCompanies.map((company, index) => (
-                <motion.div
-                  key={company.id}
-                  initial="hidden"
-                  animate="visible"
-                  variants={itemVariants}
-                  whileHover={{ y: -5 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
+    <div className="bg-white min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
+          {/* ── Sidebar Filter ── */}
+          <aside className="w-56 shrink-0 hidden md:block">
+            <div className="sticky top-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-gray-900">{t('comp_filter')}</h2>
+                <button
+                  onClick={() => { setFilterIndustry(t('comp_all_industries')); setFilterLocation(t('comp_all_locations')); }}
+                  className="text-xs text-gray-400 hover:text-gray-700"
                 >
+                  ↑
+                </button>
+              </div>
+
+              {/* Industry filter */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-800">{t('comp_industry')}</h3>
+                </div>
+                <ul className="space-y-2">
+                  {[t('comp_all_industries'), t('comp_technology'), t('comp_finance'), t('comp_ecommerce'), t('comp_education'), t('comp_consulting'), t('comp_others')].map((ind) => (
+                    <li key={ind}>
+                      <label className="flex items-center gap-2.5 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="industry"
+                          checked={filterIndustry === ind}
+                          onChange={() => setFilterIndustry(ind)}
+                          className="w-4 h-4 accent-brand"
+                        />
+                        <span className={`text-sm ${filterIndustry === ind ? 'text-brand font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>
+                          {ind}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Location filter */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-800">{t('comp_location')}</h3>
+                </div>
+                <ul className="space-y-2">
+                  {[t('comp_all_locations'), 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote'].map((loc) => (
+                    <li key={loc}>
+                      <label className="flex items-center gap-2.5 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="location"
+                          checked={filterLocation === loc}
+                          onChange={() => setFilterLocation(loc)}
+                          className="w-4 h-4 accent-brand"
+                        />
+                        <span className={`text-sm ${filterLocation === loc ? 'text-brand font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>
+                          {loc}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Company size filter placeholder */}
+              <div>
+                <button className="flex items-center justify-between w-full text-sm font-semibold text-gray-800">
+                  {t('comp_company_size')} <ChevronDown size={14} />
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          {/* ── Main content ── */}
+          <div className="flex-1 min-w-0">
+            {/* Results header */}
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-sm text-gray-600">
+                {t('comp_found')} <span className="font-semibold text-gray-900">{sortedCompanies.length}</span> {t('comp_companies')}
+              </p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                >
+                  <option>A - Z</option>
+                  <option>Z - A</option>
+                  <option>Rating</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Company list */}
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
+              </div>
+            ) : sortedCompanies.length > 0 ? (
+              <div className="space-y-3">
+                {sortedCompanies.map((company) => (
                   <Link
+                    key={company.id}
                     to={`/perusahaan/${company.id}`}
-                    className="group h-full block"
+                    className="flex items-center justify-between p-5 border border-gray-200 rounded-xl bg-white hover:border-brand hover:shadow-sm transition-all group"
                   >
-                    <Card className="h-full hover:border-primary/30 hover:shadow-lg transition-all duration-300 relative overflow-hidden bg-white border-gray-100">
-                      {/* Decorative background accent */}
-                      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-[#0f2854]/8 to-[#727272]/5 -z-10" />
+                    <div className="flex items-center gap-4">
+                      {/* Logo */}
+                      <div className="w-12 h-12 rounded-lg border border-gray-200 flex items-center justify-center p-2 bg-white shrink-0">
+                        {company.logo
+                          ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain" />
+                          : <span className="text-lg font-bold text-gray-400">{company.name?.[0]}</span>
+                        }
+                      </div>
 
-                      <CardBody className="flex flex-col items-center text-center p-6 pt-10 h-full">
-                        <div className="w-24 h-24 rounded-2xl mb-5 bg-white shadow-sm border border-gray-100 flex items-center justify-center p-4">
-                          <img
-                            src={company.logo}
-                            alt={company.name}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-
-                        <h3 className="text-xl font-semibold text-primary group-hover:text-accent transition-colors mb-2">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 group-hover:text-brand transition-colors">
                           {company.name}
                         </h3>
-
-                        <div className="flex items-center gap-2 mb-4">
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-accent/20 text-accent bg-accent/5"
-                          >
-                            {company.industry}
-                          </Badge>
+                        <p className="text-sm text-gray-500 mb-2">{company.industry}</p>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          {company.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin size={12} /> {company.location}
+                            </span>
+                          )}
+                          {company.employee_count && (
+                            <span className="flex items-center gap-1">
+                              <Users size={12} /> {company.employee_count}
+                            </span>
+                          )}
                           {company.rating && (
-                            <span className="flex items-center text-xs font-medium text-yellow-500 gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
-                              <Star size={12} fill="currentColor" />{' '}
-                              {company.rating}
+                            <span className="flex items-center gap-1 text-yellow-500">
+                              <Star size={12} fill="currentColor" /> {company.rating}
                             </span>
                           )}
                         </div>
+                      </div>
+                    </div>
 
-                        <p className="text-sm text-secondary line-clamp-2 mb-6 h-10">
-                          {company.description}
-                        </p>
-
-                        <div className="mt-auto w-full pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-secondary">
-                          <div className="flex items-center gap-1">
-                            <MapPin size={14} /> {company.location || '-'}
-                          </div>
-                          <span className="group-hover:translate-x-1 transition-transform text-primary font-medium">
-                            View Profile &rarr;
-                          </span>
-                        </div>
-                      </CardBody>
-                    </Card>
+                    <div className="shrink-0 ml-4 flex items-center gap-4">
+                      <button
+                        onClick={(e) => { e.preventDefault(); toggleSaveCompany(company.id); }}
+                        className={`transition-colors z-10 ${savedCompanies.includes(company.id) ? 'text-brand' : 'text-gray-400 hover:text-gray-600'}`}
+                      >
+                        <Bookmark className="w-5 h-5" fill={savedCompanies.includes(company.id) ? 'currentColor' : 'none'} />
+                      </button>
+                      <svg className="w-5 h-5 text-gray-300 group-hover:text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M18 6H9M18 6v9" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+                      </svg>
+                    </div>
                   </Link>
-                </motion.div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="col-span-full py-20 text-center text-secondary">
-                <p>No companies found matching "{searchTerm}".</p>
+              <div className="py-20 text-center text-gray-500">
+                <p>{t('comp_no_results')}</p>
+                <button
+                  onClick={() => { setFilterIndustry(t('comp_all_industries')); setFilterLocation(t('comp_all_locations')); setSearchTerm(''); }}
+                  className="mt-3 text-brand hover:underline text-sm"
+                >
+                  {t('comp_clear_filters')}
+                </button>
               </div>
             )}
-          </motion.div>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

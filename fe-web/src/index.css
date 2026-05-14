@@ -5,7 +5,6 @@
 }
 
 @layer base {
-
     input,
     select,
     textarea {
@@ -20,11 +19,15 @@
 }
 
 @theme {
-    /* Brand Colors */
-    --color-brand: #0f2854;
-    --color-brand-light: #2a4a82;
-    --color-brand-dark: #071630;
-    --color-brand-muted: #eef2f6;
+    /* Brand Colors — Tumbuh Emerald Green */
+    --color-brand: #1a8754;
+    --color-brand-light: #22a96a;
+    --color-brand-dark: #146c43;
+    --color-brand-muted: #e8f5e9;
+
+    /* Dark Navy — used for hero backgrounds */
+    --color-navy: #0b1c2d;
+    --color-navy-light: #0f2854;
 
     /* Surface Colors */
     --color-surface: #ffffff;
@@ -39,13 +42,26 @@
     --color-text-inverse: #ffffff;
 
     /* Legacy compatibility */
-    --color-primary: #0f2854;
-    --color-secondary: #727272;
-    --color-highlight: #bde8f5;
-    --color-accent: #6f819b;
+    --color-primary: #1a8754;
+    --color-secondary: #6b7280;
+    --color-highlight: #bbf7d0;
+    --color-accent: #22a96a;
     --color-white: #ffffff;
     --color-bg-light: #f9fafb;
 
     /* Typography Settings */
     --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@keyframes scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.animate-scroll {
+    animation: scroll 30s linear infinite;
+}
+
+.animate-scroll:hover {
+    animation-play-state: paused;
 }

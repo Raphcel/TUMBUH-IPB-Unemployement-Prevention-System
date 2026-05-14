@@ -5,36 +5,49 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0f2854',  // Primary Brand Blue
-          light: '#2a4a82',    // Lighter shade for hover
-          dark: '#071630',     // Dark shade for active
-          muted: '#eef2f6',    // Very light background accent
+          DEFAULT: '#1a8754',
+          light: '#22a96a',
+          dark: '#146c43',
+          muted: '#e8f5e9',
+        },
+        navy: {
+          DEFAULT: '#0b1c2d',
+          light: '#0f2854',
         },
         surface: {
-          DEFAULT: '#ffffff',  // Standard white card/bg
-          elevated: '#fcfcfd', // Slightly off-white for raised elements
-          muted: '#f9fafb',    // Gray backs
-          border: '#e5e7eb',   // Subtle borders
+          DEFAULT: '#ffffff',
+          elevated: '#fcfcfd',
+          muted: '#f9fafb',
+          border: '#e5e7eb',
         },
         text: {
-          DEFAULT: '#111827',  // High contrast primary text
-          muted: '#6b7280',    // Secondary text
-          light: '#9ca3af',    // Placeholder or tertiary
-          inverse: '#ffffff',  // White text on dark bg
+          DEFAULT: '#111827',
+          muted: '#6b7280',
+          light: '#9ca3af',
+          inverse: '#ffffff',
         },
-        // Kept for backward compatibility where not yet refactored
-        primary: '#0f2854',
-        secondary: '#727272',
-        highlight: '#bde8f5',
-        accent: '#6f819b',
+        // Legacy compatibility
+        primary: '#1a8754',
+        secondary: '#6b7280',
+        highlight: '#bbf7d0',
+        accent: '#22a96a',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
-        'gradient-dark': 'linear-gradient(to right, #071630, #0f2854)',
-        'gradient-light': 'linear-gradient(to right, #fcfcfd, #f9fafb)',
-      }
+        'gradient-dark': 'linear-gradient(to right, #0b1c2d, #0f2854)',
+        'gradient-brand': 'linear-gradient(to right, #146c43, #1a8754)',
+      },
+      keyframes: {
+        scroll: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+      },
+      animation: {
+        scroll: 'scroll 30s linear infinite',
+      },
     },
   },
   plugins: [],

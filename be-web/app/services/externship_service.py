@@ -4,6 +4,7 @@ from app.repositories.externship_repository import ExternshipRepository
 from app.schemas.externship import (
     ExternshipCreate, ExternshipUpdate, ExternshipResponse, ExternshipListResponse,
 )
+from app.services.audit_service import audit_log
 
 
 class ExternshipService:
@@ -17,6 +18,17 @@ class ExternshipService:
         ext_dict = data.model_dump()
         ext_dict["student_id"] = student_id
         externship = self._externship_repo.create(ext_dict)
+
+        audit_log(
+            "EXTERNSHIP_CREATE",
+            user_id=student_id,
+            user_role="student",
+            resource="externship",
+            resource_id=externship.id,
+            detail=f"Student {student_id} created externship at '{data.company_name}'",
+            success=True,
+        )
+
         return ExternshipResponse.model_validate(externship)
 
     def get_student_externships(
@@ -45,6 +57,17 @@ class ExternshipService:
             )
 
         updated = self._externship_repo.update(externship, data.model_dump(exclude_unset=True))
+
+        audit_log(
+            "EXTERNSHIP_UPDATE",
+            user_id=student_id,
+            user_role="student",
+            resource="externship",
+            resource_id=externship_id,
+            detail=f"Student {student_id} updated externship {externship_id}",
+            success=True,
+        )
+
         return ExternshipResponse.model_validate(updated)
 
     def delete_externship(self, externship_id: int, student_id: int) -> dict:
@@ -60,4 +83,16 @@ class ExternshipService:
             )
 
         self._externship_repo.delete(externship_id)
+
+        audit_log(
+            "EXTERNSHIP_DELETE",
+            level="warn",
+            user_id=student_id,
+            user_role="student",
+            resource="externship",
+            resource_id=externship_id,
+            detail=f"Student {student_id} deleted externship {externship_id}",
+            success=True,
+        )
+
         return {"message": "Externship deleted successfully"}

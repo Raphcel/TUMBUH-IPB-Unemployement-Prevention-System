@@ -10,6 +10,7 @@ from app.schemas.application import (
     ApplicationCreate, ApplicationStatusUpdate,
     ApplicationResponse, ApplicationListResponse,
 )
+from app.services.audit_service import audit_log
 
 
 class ApplicationService:
@@ -54,6 +55,17 @@ class ApplicationService:
             "history": initial_history,
         }
         application = self._application_repo.create(app_dict)
+
+        audit_log(
+            "APPLICATION_SUBMIT",
+            user_id=student_id,
+            user_role="student",
+            resource="application",
+            resource_id=application.id,
+            detail=f"Student {student_id} applied to opportunity {data.opportunity_id}",
+            success=True,
+        )
+
         return self._to_response(application)
 
     def get_student_applications(
@@ -110,6 +122,17 @@ class ApplicationService:
             application,
             {"status": data.status, "history": json.dumps(history)},
         )
+
+        audit_log(
+            "APPLICATION_STATUS_UPDATE",
+            user_id=company_id,
+            user_role="hr",
+            resource="application",
+            resource_id=application_id,
+            detail=f"Application {application_id} status changed to {data.status.value}",
+            success=True,
+        )
+
         return self._to_response(updated)
 
     def bulk_update_status(
@@ -153,6 +176,15 @@ class ApplicationService:
                 app, {"status": new_status, "history": json.dumps(history)}
             )
             results.append(self._to_response(updated))
+
+        audit_log(
+            "APPLICATION_BULK_STATUS_UPDATE",
+            user_id=company_id,
+            user_role="hr",
+            resource="application",
+            detail=f"Bulk status update to {new_status.value} for {len(application_ids)} applications: {application_ids}",
+            success=True,
+        )
 
         return results
 
