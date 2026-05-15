@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import asc, desc, nullslast
 
 from app.domain.models.opportunity import Opportunity, OpportunityType
 from app.repositories.base import BaseRepository
@@ -35,6 +36,7 @@ class OpportunityRepository(BaseRepository[Opportunity]):
         query: str | None = None,
         type_filter: OpportunityType | None = None,
         location: str | None = None,
+        sort: str = "latest",
         skip: int = 0,
         limit: int = 100,
     ) -> list[Opportunity]:
@@ -54,7 +56,14 @@ class OpportunityRepository(BaseRepository[Opportunity]):
         if location:
             q = q.filter(Opportunity.location.ilike(f"%{location}%"))
 
-        return q.order_by(Opportunity.posted_at.desc()).offset(skip).limit(limit).all()
+        if sort == "oldest":
+            q = q.order_by(asc(Opportunity.posted_at))
+        elif sort == "deadline":
+            q = q.order_by(nullslast(asc(Opportunity.deadline)), desc(Opportunity.posted_at))
+        else:
+            q = q.order_by(desc(Opportunity.posted_at))
+
+        return q.offset(skip).limit(limit).all()
 
     def count_by_company(self, company_id: int) -> int:
         """Count opportunities for a given company."""

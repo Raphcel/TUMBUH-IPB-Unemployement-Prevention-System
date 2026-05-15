@@ -77,7 +77,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
     : '-';
 
   return (
-    <div className={isEmbedded ? "bg-white h-full" : "bg-white min-h-screen pb-20"}>
+    <div className={isEmbedded ? "h-full bg-[#fcfcfd]" : "min-h-screen bg-surface-muted pb-20"}>
       {/* ── Auth Modal ── */}
       <Modal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} title={t('det_login_to_apply')} size="sm">
         <div className="text-center mb-6">
@@ -195,7 +195,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       </Modal>
 
       {/* ── Main Content ── */}
-      <main className={isEmbedded ? "w-full" : "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
+      <main className={isEmbedded ? "h-full w-full overflow-y-auto p-5 xl:p-6" : "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
         {/* Back navigation */}
         {!isEmbedded && (
         <Link
@@ -208,10 +208,10 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         )}
 
         {/* Job header card */}
-        <section className="bg-white rounded-xl mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <section className="mb-6 rounded-2xl border border-surface-border bg-white p-5 shadow-sm xl:p-6">
+          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             {/* Company logo */}
-            <div className="w-20 h-20 rounded-xl border border-gray-200 flex items-center justify-center p-2 bg-white shrink-0 shadow-sm">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white p-2 shadow-sm xl:h-20 xl:w-20">
               {company.logo
                 ? <img alt={company.name} className="w-full h-auto object-contain" src={company.logo} />
                 : <span className="text-2xl font-bold text-gray-400">{company.name?.[0]}</span>
@@ -221,12 +221,12 @@ export function DetailLowongan({ jobId, isEmbedded }) {
             <div className="flex-1 w-full">
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">{job.title}</h1>
-                  <p className="text-lg text-gray-600 mb-3">{company.name}</p>
+                  <h1 className="mb-1 text-xl font-bold text-text xl:text-2xl">{job.title}</h1>
+                  <p className="mb-3 text-base text-text-muted xl:text-lg">{company.name}</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-5">
+              <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-text-muted">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="text-gray-400" size={16} />
                   <span>{job.location}</span>
@@ -238,7 +238,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                 <span>{job.type}</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-100">
+              <div className="flex flex-col justify-between gap-4 border-t border-surface-border pt-4 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   {job.created_at && (
                     <span>{t('det_posted')} {Math.round((Date.now() - new Date(job.created_at)) / 86400000)}d</span>
@@ -247,20 +247,20 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                 <div className="flex items-center gap-3">
                   <button
                     aria-label="Simpan lowongan"
-                    className="hidden sm:flex items-center justify-center w-10 h-10 rounded-lg border border-gray-300 text-gray-500 hover:text-brand hover:border-brand transition-colors"
+                    className="hidden h-9 w-9 items-center justify-center rounded-lg border border-surface-border text-text-muted transition-colors hover:border-brand hover:text-brand sm:flex"
                   >
                     <Bookmark size={18} />
                   </button>
                   {user?.role !== 'hr' && (
                     applied ? (
-                      <div className="flex items-center gap-2 text-white bg-brand px-4 py-2 rounded-lg font-semibold text-sm">
+                      <div className="flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white">
                         <CheckCircle size={16} /> {t('det_applied')}
                       </div>
                     ) : (
                       <button
                         onClick={handleApply}
                         disabled={applying}
-                        className="bg-brand hover:bg-brand-dark text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+                        className="h-10 rounded-lg bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
                       >
                         {t('det_apply')}
                       </button>
@@ -273,12 +273,12 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         </section>
 
         {/* Tabs */}
-        <nav className="border-b border-gray-200 mb-8 overflow-x-auto">
+        <nav className="mb-6 overflow-x-auto rounded-2xl border border-surface-border bg-white px-4 shadow-sm">
           <ul className="flex whitespace-nowrap min-w-full">
             {TAB_KEYS.map((tabKey) => {
               const tabLabel = t(`det_tab_${tabKey}`);
               return (
-              <li key={tabKey} className="mr-8">
+              <li key={tabKey} className="mr-6">
                 <button
                   onClick={() => setActiveTab(tabKey)}
                   className={`inline-block py-4 text-sm font-medium transition-colors border-b-2 ${
@@ -296,21 +296,21 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         </nav>
 
         {/* Content area */}
-        <div className={`grid grid-cols-1 ${isEmbedded ? '' : 'lg:grid-cols-3'} gap-8 pb-12`}>
+        <div className={`grid grid-cols-1 ${isEmbedded ? '' : 'lg:grid-cols-3'} gap-6 pb-8`}>
           {/* Left: main content */}
-          <div className={`${isEmbedded ? '' : 'lg:col-span-2'} space-y-10`}>
+          <div className={`${isEmbedded ? '' : 'lg:col-span-2'} space-y-6`}>
             {(activeTab === 'desc' || activeTab === 'qualif' || activeTab === 'benefits') && (
               <>
                 {activeTab === 'desc' && (
-                  <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_desc')}</h2>
-                    <div className="text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</div>
+                  <section className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
+                    <h2 className="mb-4 text-lg font-bold text-text">{t('det_desc')}</h2>
+                    <div className="whitespace-pre-line text-sm leading-7 text-text-muted">{job.description}</div>
                   </section>
                 )}
 
                 {activeTab === 'qualif' && (
-                  <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_qualifications')}</h2>
+                  <section className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
+                    <h2 className="mb-4 text-lg font-bold text-text">{t('det_qualifications')}</h2>
                     {requirements.length > 0 ? (
                       <ul className="list-disc pl-5 space-y-2 text-gray-600">
                         {requirements.map((req, idx) => <li key={idx}>{req}</li>)}
@@ -322,8 +322,8 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                 )}
 
                 {activeTab === 'benefits' && (
-                  <section>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_benefits')}</h2>
+                  <section className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
+                    <h2 className="mb-4 text-lg font-bold text-text">{t('det_benefits')}</h2>
                     {benefits.length > 0 ? (
                       <div className="flex flex-wrap gap-2.5">
                         {benefits.map((b, idx) => (
@@ -341,9 +341,9 @@ export function DetailLowongan({ jobId, isEmbedded }) {
             )}
 
             {activeTab === 'company' && (
-              <section>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('det_about_company')}: {company.name}</h2>
-                <p className="text-gray-600 leading-relaxed">{company.description}</p>
+              <section className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
+                <h2 className="mb-4 text-lg font-bold text-text">{t('det_about_company')}: {company.name}</h2>
+                <p className="leading-7 text-text-muted">{company.description}</p>
                 <Link
                   to={`/perusahaan/${company.id}`}
                   className="inline-flex items-center text-sm font-semibold text-brand hover:text-brand-dark mt-4 group transition-colors"
@@ -357,7 +357,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
           {/* Right: sidebar */}
           <div className="space-y-6">
             {/* Job info card */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
               <h3 className="text-base font-bold text-gray-900 mb-5">{t('det_overview')}</h3>
               <ul className="space-y-4">
                 <li className="flex gap-3">
@@ -405,7 +405,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
             </div>
 
             {/* Company profile card */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-lg border border-gray-100 flex items-center justify-center p-1 bg-white shrink-0">
                   {company.logo
