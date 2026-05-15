@@ -168,7 +168,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                             {/* ── Settings & Logout ── */}
                             <div className="border-t border-surface-border py-1 mt-1">
                                 <Link
-                                    to={user?.role === 'hr' ? '/hr/company' : '/student/profile'}
+                                    to={user?.role === 'hr' ? '/hr/company' : '/student/settings'}
                                     onClick={() => setDropdownOpen(false)}
                                     className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-muted hover:bg-surface-muted hover:text-text transition-colors text-left"
                                 >

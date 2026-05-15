@@ -26,7 +26,7 @@ from app.domain.models.company import Company
 from app.domain.models.opportunity import Opportunity, OpportunityType
 from app.domain.models.application import Application, ApplicationStatus
 from app.domain.models.bookmark import Bookmark
-from app.domain.models.externship import Externship, ExternshipStatus
+from app.domain.models.externship import Externship, ExternshipStatus, ExternshipType
 
 def hash_pw(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -147,6 +147,8 @@ def seed():
                 avatar="https://ui-avatars.com/api/?name=Budi+Santoso&background=10B981&color=fff",
                 phone="081234567890",
                 bio="Mahasiswa Ilmu Komputer semester 8, passionate about software engineering and AI.",
+                social_links={"linkedin": "https://linkedin.com/in/student-one", "github": "https://github.com/student-one"},
+                skills=["Python", "React", "Data Analysis", "Leadership"],
                 nim="G6401201001",
                 major="Ilmu Komputer",
                 university="IPB University",
@@ -164,6 +166,8 @@ def seed():
                 avatar="https://ui-avatars.com/api/?name=Dewi+Lestari&background=8B5CF6&color=fff",
                 phone="081298765432",
                 bio="Statistika IPB, data enthusiast with experience in machine learning projects.",
+                social_links={"linkedin": "https://linkedin.com/in/student-two"},
+                skills=["Python", "Pandas", "Machine Learning"],
                 nim="G1501211045",
                 major="Statistika dan Sains Data",
                 university="IPB University",
@@ -180,6 +184,8 @@ def seed():
                 avatar="https://ui-avatars.com/api/?name=Andi+Pratama&background=F59E0B&color=fff",
                 phone="082112345678",
                 bio="Teknik Komputer IPB, interested in embedded systems and IoT.",
+                social_links={"github": "https://github.com/student-three"},
+                skills=["C", "IoT", "Embedded Systems"],
                 nim="J0310201021",
                 major="Teknik Komputer",
                 university="IPB University",
@@ -448,6 +454,7 @@ def seed():
                 company="Tokopedia (Independent Study)",
                 duration="6 months",
                 description="Built a full-stack e-commerce dashboard using React and FastAPI.",
+                entry_type=ExternshipType.PROJECT,
                 status=ExternshipStatus.COMPLETED,
             ),
             Externship(
@@ -456,6 +463,7 @@ def seed():
                 company="IPB Lab AI",
                 duration="3 months",
                 description="Researched NLP models for Indonesian language processing.",
+                entry_type=ExternshipType.EXPERIENCE,
                 status=ExternshipStatus.ONGOING,
             ),
             Externship(
@@ -464,6 +472,7 @@ def seed():
                 company="Gojek (Bangkit Academy)",
                 duration="5 months",
                 description="Intensive bootcamp on data analytics with real industry datasets.",
+                entry_type=ExternshipType.EXPERIENCE,
                 status=ExternshipStatus.COMPLETED,
             ),
         ]

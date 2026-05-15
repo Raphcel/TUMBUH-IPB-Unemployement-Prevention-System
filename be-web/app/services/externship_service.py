@@ -25,7 +25,7 @@ class ExternshipService:
             user_role="student",
             resource="externship",
             resource_id=externship.id,
-            detail=f"Student {student_id} created externship at '{data.company_name}'",
+            detail=f"Student {student_id} created {data.entry_type.value.lower()} entry at '{data.company}'",
             success=True,
         )
 

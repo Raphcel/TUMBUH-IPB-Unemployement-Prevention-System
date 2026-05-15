@@ -37,6 +37,8 @@ class UserUpdate(BaseModel):
     gpa: float | None = None
     avatar: str | None = None
     cv_url: str | None = None
+    social_links: dict[str, str] | None = None
+    skills: list[str] | None = None
 
 
 class UserLogin(BaseModel):
@@ -62,6 +64,8 @@ class UserResponse(BaseModel):
     avatar: str | None = None
     phone: str | None = None
     bio: str | None = None
+    social_links: dict[str, str] = Field(default_factory=dict)
+    skills: list[str] = Field(default_factory=list)
     nim: str | None = None
     major: str | None = None
     university: str | None = None

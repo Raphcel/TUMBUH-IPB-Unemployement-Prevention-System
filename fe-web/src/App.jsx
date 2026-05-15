@@ -27,6 +27,7 @@ const StudentDashboard = lazyNamed(() => import('./pages/student/Dashboard'), 'S
 const LamaranSaya      = lazyNamed(() => import('./pages/student/LamaranSaya'), 'LamaranSaya');
 const Bookmarks        = lazyNamed(() => import('./pages/student/Bookmarks'),   'Bookmarks');
 const ProfilStudent    = lazyNamed(() => import('./pages/student/Profil'),       'ProfilStudent');
+const StudentSettings  = lazyNamed(() => import('./pages/student/Settings'),     'StudentSettings');
 const CVBuilder        = lazyNamed(() => import('./pages/student/CVBuilder'),    'CVBuilder');
 
 // ── HR pages ───────────────────────────────────────────────────────────────
@@ -207,6 +208,7 @@ function AppRoutes() {
         <Route path="bookmarks" element={<Bookmarks />} />
         <Route path="cv-builder" element={<CVBuilder />} />
         <Route path="profile" element={<ProfilStudent />} />
+        <Route path="settings" element={<StudentSettings />} />
       </Route>
 
       {/* HR Routes */}

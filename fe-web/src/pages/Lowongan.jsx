@@ -1,14 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { opportunitiesApi } from '../api/opportunities';
-import { companiesApi } from '../api/companies';
 import { bookmarksApi } from '../api/bookmarks';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Bookmark, Search, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown, Banknote } from 'lucide-react';
+import { MapPin, Bookmark, Search, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
 import { DetailLowongan } from './DetailLowongan';
 import { useTranslation } from '../context/LanguageContext';
 
 const PAGE_SIZE = 12;
+const JOB_TYPES = ['All', 'Internship', 'Full-time', 'Scholarship'];
+const SORT_OPTIONS = [
+  { value: 'latest', label: 'Latest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'deadline', label: 'Deadline soon' },
+];
+const INDONESIA_PROVINCES = [
+  'Aceh',
+  'Bali',
+  'Banten',
+  'Bengkulu',
+  'DI Yogyakarta',
+  'DKI Jakarta',
+  'Gorontalo',
+  'Jambi',
+  'Jawa Barat',
+  'Jawa Tengah',
+  'Jawa Timur',
+  'Kalimantan Barat',
+  'Kalimantan Selatan',
+  'Kalimantan Tengah',
+  'Kalimantan Timur',
+  'Kalimantan Utara',
+  'Kepulauan Bangka Belitung',
+  'Kepulauan Riau',
+  'Lampung',
+  'Maluku',
+  'Maluku Utara',
+  'Nusa Tenggara Barat',
+  'Nusa Tenggara Timur',
+  'Papua',
+  'Papua Barat',
+  'Papua Barat Daya',
+  'Papua Pegunungan',
+  'Papua Selatan',
+  'Papua Tengah',
+  'Riau',
+  'Sulawesi Barat',
+  'Sulawesi Selatan',
+  'Sulawesi Tengah',
+  'Sulawesi Tenggara',
+  'Sulawesi Utara',
+  'Sumatera Barat',
+  'Sumatera Selatan',
+  'Sumatera Utara',
+];
 
 export function Lowongan() {
   const { user } = useAuth();
@@ -16,18 +61,16 @@ export function Lowongan() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
-  const [locationTerm, setLocationTerm] = useState(searchParams.get('location') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [savedJobs, setSavedJobs] = useState([]);
 
   const [filterType, setFilterType] = useState(searchParams.get('type') || 'All');
   const [filterLocation, setFilterLocation] = useState(searchParams.get('location') || 'All');
-  const [filterCompany, setFilterCompany] = useState(searchParams.get('company') || 'All');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'latest');
 
   const [page, setPage] = useState(0);
   const [allOpportunities, setAllOpportunities] = useState([]);
   const [totalOpportunities, setTotalOpportunities] = useState(0);
-  const [allCompanies, setAllCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState(null);
 
@@ -42,18 +85,9 @@ export function Lowongan() {
     if (searchTerm) params.q = searchTerm;
     if (filterType !== 'All') params.type = filterType;
     if (filterLocation !== 'All') params.location = filterLocation;
-    if (filterCompany !== 'All') params.company = filterCompany;
+    if (sortBy !== 'latest') params.sort = sortBy;
     setSearchParams(params, { replace: true });
-  }, [searchTerm, filterType, filterLocation, filterCompany, setSearchParams]);
-
-  useEffect(() => {
-    companiesApi.list(0, 100)
-      .then((compData) => {
-        const comps = Array.isArray(compData) ? compData : compData.items || [];
-        setAllCompanies(comps);
-      })
-      .catch(console.error);
-  }, []);
+  }, [searchTerm, filterType, filterLocation, sortBy, setSearchParams]);
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +96,7 @@ export function Lowongan() {
         search: debouncedSearch || undefined,
         type: filterType !== 'All' ? filterType : undefined,
         location: filterLocation !== 'All' ? filterLocation : undefined,
+        sort: sortBy,
       })
       .then((oppData) => {
         const opps = Array.isArray(oppData) ? oppData : oppData.items || [];
@@ -71,7 +106,7 @@ export function Lowongan() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [debouncedSearch, filterType, filterLocation, page]);
+  }, [debouncedSearch, filterType, filterLocation, sortBy, page]);
 
   // Auto-select first job
   useEffect(() => {
@@ -84,7 +119,7 @@ export function Lowongan() {
     }
   }, [allOpportunities]);
 
-  useEffect(() => { setPage(0); }, [debouncedSearch, filterType, filterLocation, filterCompany]);
+  useEffect(() => { setPage(0); }, [debouncedSearch, filterType, filterLocation, sortBy]);
 
   useEffect(() => {
     if (!user || user.role !== 'student') return;
@@ -95,13 +130,6 @@ export function Lowongan() {
       })
       .catch(() => {});
   }, [user]);
-
-  const filteredJobs = filterCompany === 'All'
-    ? allOpportunities
-    : allOpportunities.filter((job) => {
-        const jobCompany = job.company?.name || allCompanies.find((c) => c.id === job.company_id)?.name || '';
-        return jobCompany === filterCompany;
-      });
 
   const totalPages = Math.ceil(totalOpportunities / PAGE_SIZE);
 
@@ -123,7 +151,13 @@ export function Lowongan() {
   const handleSearch = (e) => {
     e.preventDefault();
     setDebouncedSearch(searchTerm);
-    if (locationTerm) setFilterLocation(locationTerm);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterType('All');
+    setFilterLocation('All');
+    setSortBy('latest');
   };
 
   // Is a listing "new" (posted within 7 days)?
@@ -146,65 +180,77 @@ export function Lowongan() {
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
         {/* Search + Filters */}
         <section className="mb-6 flex-none">
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
-                placeholder={t('low_search_ph')}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="relative flex-1">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"
-                placeholder={t('low_location_ph')}
-                type="text"
-                value={locationTerm}
-                onChange={(e) => setLocationTerm(e.target.value)}
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-gray-900 text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-            >
-              <Search className="w-4 h-4" /> {t('low_search_btn')}
-            </button>
-          </form>
-
-          {/* Filter chips */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => {}}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
-              >
-                <SlidersHorizontal className="w-4 h-4" /> Filter
-              </button>
-              {['All', 'Internship', 'Full-time', 'Part-time', 'Remote'].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-full text-sm font-medium transition-colors ${
-                    filterType === type
-                      ? 'border-brand bg-brand/5 text-brand'
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                  }`}
+          <form
+            onSubmit={handleSearch}
+            className="rounded-2xl border border-surface-border bg-surface p-3 shadow-sm"
+          >
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(240px,1fr)_220px_auto]">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light" />
+                <input
+                  className="h-11 w-full rounded-xl border border-surface-border bg-white pl-10 pr-4 text-sm"
+                  placeholder={t('low_search_ph')}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light" />
+                <select
+                  className="h-11 w-full appearance-none rounded-xl border border-surface-border bg-white pl-10 pr-4 text-sm"
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
                 >
-                  {type === 'All' ? t('low_type_all') : type} {filterType === type && type !== 'All' ? null : <ChevronDown className="w-3 h-3" />}
-                </button>
-              ))}
+                  <option value="All">{t('low_location_ph')}</option>
+                  {INDONESIA_PROVINCES.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
+              >
+                <Search className="h-4 w-4" />
+                {t('low_search_btn')}
+              </button>
             </div>
-            <button
-              onClick={() => { setFilterType('All'); setFilterLocation('All'); setFilterCompany('All'); setSearchTerm(''); setLocationTerm(''); }}
-              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              Reset
-            </button>
-          </div>
+
+            <div className="mt-3 flex flex-col gap-3 border-t border-surface-border pt-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 pr-2 text-sm font-medium text-text-muted">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filter
+                </span>
+                {JOB_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setFilterType(type)}
+                    className={`h-9 rounded-lg border px-3 text-sm font-medium transition-colors ${
+                      filterType === type
+                        ? 'border-brand bg-brand-muted text-brand-dark'
+                        : 'border-surface-border bg-white text-text-muted hover:bg-surface-muted'
+                    }`}
+                  >
+                    {type === 'All' ? t('low_type_all') : type}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex h-9 items-center gap-2 self-start rounded-lg px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-muted hover:text-text lg:self-auto"
+              >
+                <X className="h-4 w-4" />
+                {t('reset')}
+              </button>
+            </div>
+          </form>
         </section>
 
         {/* Master-Detail Layout */}
@@ -216,10 +262,19 @@ export function Lowongan() {
               <h2 className="text-sm font-medium text-gray-500">
                 {loading ? t('loading') : `${t('low_found')} ${totalOpportunities} ${t('low_opportunities')}`}
               </h2>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>{t('low_latest')}</span>
-                <ChevronDown className="w-4 h-4" />
-              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-500">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="h-8 rounded-lg border border-surface-border bg-white px-2 text-sm text-text"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             {/* Job listings */}
@@ -228,8 +283,8 @@ export function Lowongan() {
                 <div className="flex justify-center py-20">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
                 </div>
-              ) : filteredJobs.length > 0 ? (
-                filteredJobs.map((job) => (
+              ) : allOpportunities.length > 0 ? (
+                allOpportunities.map((job) => (
                   <article
                     key={job.id}
                     onClick={() => setSelectedJobId(job.id)}
@@ -286,7 +341,7 @@ export function Lowongan() {
                 <div className="py-20 text-center text-gray-500">
                   <p>{t('low_no_results')}</p>
                   <button
-                    onClick={() => { setSearchTerm(''); setFilterType('All'); setFilterLocation('All'); setFilterCompany('All'); }}
+                    onClick={clearFilters}
                     className="mt-3 text-brand hover:underline text-sm"
                   >
                     {t('low_clear_filters')}

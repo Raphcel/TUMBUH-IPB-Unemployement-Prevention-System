@@ -16,12 +16,13 @@ def list_opportunities(
     search: str | None = Query(None, description="Search by title"),
     type: OpportunityType | None = Query(None, description="Filter by type"),
     location: str | None = Query(None, description="Filter by location"),
+    sort: str = Query("latest", pattern="^(latest|oldest|deadline)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     opportunity_service: OpportunityService = Depends(get_opportunity_service),
 ):
     """List and search opportunities with optional filters."""
-    return opportunity_service.list_opportunities(search, type, location, skip, limit)
+    return opportunity_service.list_opportunities(search, type, location, sort, skip, limit)
 
 
 @router.get("/{opportunity_id}", response_model=OpportunityResponse)
