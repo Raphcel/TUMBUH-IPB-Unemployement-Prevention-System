@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from app.domain.models.externship import ExternshipStatus
+from app.domain.models.externship import ExternshipStatus, ExternshipType
 
 
 # ── Request Schemas ──────────────────────────────────────────
@@ -12,6 +12,7 @@ class ExternshipCreate(BaseModel):
     company: str = Field(..., max_length=200)
     duration: str | None = None
     description: str | None = None
+    entry_type: ExternshipType = ExternshipType.EXPERIENCE
     status: ExternshipStatus = ExternshipStatus.ONGOING
 
 
@@ -21,6 +22,7 @@ class ExternshipUpdate(BaseModel):
     company: str | None = None
     duration: str | None = None
     description: str | None = None
+    entry_type: ExternshipType | None = None
     status: ExternshipStatus | None = None
 
 
@@ -34,6 +36,7 @@ class ExternshipResponse(BaseModel):
     company: str
     duration: str | None = None
     description: str | None = None
+    entry_type: ExternshipType
     status: ExternshipStatus
     created_at: datetime
 

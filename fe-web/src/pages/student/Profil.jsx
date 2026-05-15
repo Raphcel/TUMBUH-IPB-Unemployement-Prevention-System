@@ -1,262 +1,257 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  BriefcaseBusiness,
+  Code2,
+  FolderKanban,
+  Globe,
+  Linkedin,
+  MapPin,
+} from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
-import { usersApi } from '../../api/users';
+import { externshipsApi } from '../../api/externships';
 import { resolveUploadUrl } from '../../api/client';
 import { useTranslation } from '../../context/LanguageContext';
-
 import { motion } from 'framer-motion';
 
+function Pill({ children, accent = false }) {
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-medium ${
+        accent
+          ? 'border-brand/20 bg-brand/10 text-brand-dark'
+          : 'border-surface-border bg-surface-muted text-text'
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function TimelineEntry({ entry }) {
+  return (
+    <div className="relative border-l-2 border-surface-border pl-6">
+      <span className="absolute -left-[9px] top-1.5 h-4 w-4 rounded-full border-4 border-white bg-brand shadow-sm" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-text">{entry.title}</h3>
+          <p className="mt-1 text-sm text-text-muted">{entry.company}</p>
+        </div>
+        {entry.duration && (
+          <span className="rounded bg-surface-muted px-2 py-1 text-xs text-text-muted">
+            {entry.duration}
+          </span>
+        )}
+      </div>
+      {entry.description && (
+        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-text-muted">
+          {entry.description}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ProjectCard({ entry }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-[#becabe] bg-[#f7f9fb]">
+      <div className="flex h-32 items-end justify-end bg-gradient-to-br from-brand/20 to-transparent p-4">
+        <FolderKanban className="text-brand/60" />
+      </div>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-text">{entry.title}</h3>
+        <p className="mt-1 line-clamp-2 text-sm leading-6 text-text-muted">
+          {entry.description || entry.company}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {entry.company && <Pill>{entry.company}</Pill>}
+          {entry.duration && <Pill>{entry.duration}</Pill>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProfilStudent() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const { lang } = useTranslation();
-  const { addToast } = useToast();
-  const avatarInputRef = useRef(null);
-  const cvInputRef = useRef(null);
-
-  const [form, setForm] = useState({
-    first_name: user?.first_name || '',
-    last_name: user?.last_name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    nim: user?.nim || '',
-    major: user?.major || '',
-    gpa: user?.gpa || '',
-    bio: user?.bio || '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingCV, setUploadingCV] = useState(false);
   const isId = lang === 'id';
+  const [entries, setEntries] = useState([]);
+  const [loadingEntries, setLoadingEntries] = useState(true);
 
-  const handleChange = (field) => (e) => {
-    setForm({ ...form, [field]: e.target.value });
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaveMsg('');
-    try {
-      await usersApi.update(form);
-      await refreshUser();
-      setSaveMsg(isId ? 'Profil berhasil disimpan!' : 'Profile saved successfully.');
-    } catch (err) {
-      setSaveMsg(isId ? 'Gagal menyimpan profil.' : 'Failed to save profile.');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAvatarSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      addToast({ type: 'error', title: 'Error', message: isId ? 'Ukuran gambar maksimal 2MB.' : 'Maximum image size is 2MB.' });
-      return;
+  useEffect(() => {
+    async function fetchEntries() {
+      try {
+        const data = await externshipsApi.mine();
+        setEntries(data.items || []);
+      } catch (err) {
+        console.error('Failed to load profile entries', err);
+      } finally {
+        setLoadingEntries(false);
+      }
     }
 
-    setAvatarPreview(URL.createObjectURL(file));
-    setUploadingAvatar(true);
-    try {
-      await usersApi.uploadAvatar(file);
-      await refreshUser();
-      addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'Foto profil berhasil diperbarui.' : 'Profile photo updated successfully.' });
-    } catch (err) {
-      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunggah foto.' : 'Failed to upload photo.') });
-      setAvatarPreview(null);
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
+    fetchEntries();
+  }, []);
 
-  const handleCVSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      addToast({ type: 'error', title: 'Error', message: isId ? 'Ukuran CV maksimal 5MB.' : 'Maximum CV size is 5MB.' });
-      return;
-    }
-
-    setUploadingCV(true);
-    try {
-      await usersApi.uploadCV(file);
-      await refreshUser();
-      addToast({ type: 'success', title: isId ? 'Berhasil' : 'Success', message: isId ? 'CV berhasil diunggah.' : 'CV uploaded successfully.' });
-    } catch (err) {
-      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunggah CV.' : 'Failed to upload CV.') });
-    } finally {
-      setUploadingCV(false);
-    }
-  };
-
-  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim();
+  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '-';
   const avatarUrl =
-    avatarPreview ||
     resolveUploadUrl(user?.avatar) ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0f2854&color=fff`;
+
+  const experienceEntries = entries.filter((entry) => entry.entry_type === 'Experience');
+  const projectEntries = entries.filter((entry) => entry.entry_type === 'Project');
+  const technicalSkills = [
+    user?.major,
+    user?.gpa ? `${isId ? 'IPK' : 'GPA'} ${user.gpa}` : null,
+    'Data Analysis',
+    'UI Design',
+  ].filter(Boolean);
+  const interpersonalSkills = ['Leadership', 'Public Speaking', 'Agile'];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6"
+      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]"
     >
-      <h1 className="text-2xl font-bold text-gray-900">{isId ? 'Profil Saya' : 'My Profile'}</h1>
+      <aside className="space-y-6">
+        <Card className="border-[#becabe]">
+          <div className="h-24 bg-[#e6e8ea]" />
+          <CardBody className="-mt-20 flex flex-col items-center text-center">
+            <img
+              src={avatarUrl}
+              alt={fullName}
+              className="h-32 w-32 rounded-full border-4 border-white bg-gray-200 object-cover shadow-lg"
+            />
+            <h1 className="mt-4 text-2xl font-semibold text-text">{fullName}</h1>
+            <p className="mt-1 text-sm text-text-muted">
+              {user?.major || (isId ? 'Mahasiswa' : 'Student')}
+            </p>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-text-muted">
+              <MapPin size={14} />
+              {user?.university || 'IPB University'}
+            </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-6">
-          <Card>
-            <CardBody className="flex flex-col items-center text-center">
-              <motion.img
-                whileHover={{ scale: 1.05 }}
-                src={avatarUrl}
-                alt={fullName}
-                className="w-24 h-24 rounded-full mb-4 bg-gray-200 shadow-md object-cover"
-              />
-              <h2 className="text-xl font-bold text-gray-900">{fullName}</h2>
-              <p className="text-gray-500">{user?.major || '-'}</p>
-              <p className="text-sm text-gray-400 mt-1">
-                {user?.university || 'IPB University'}
-              </p>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarSelect}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingAvatar}
-              >
-                {uploadingAvatar ? (isId ? 'Mengunggah...' : 'Uploading...') : (isId ? 'Ganti Foto' : 'Change Photo')}
-              </Button>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody>
-              <h3 className="font-semibold text-gray-900 mb-4">CV & Resume</h3>
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center bg-gray-50">
-                <p className="text-sm text-gray-500 mb-2">
-                  {user?.cv_url ? (isId ? 'CV sudah diunggah' : 'CV uploaded') : (isId ? 'Belum ada CV' : 'No CV uploaded')}
-                </p>
-                {user?.cv_url && (
-                  <a
-                    href={resolveUploadUrl(user.cv_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-primary hover:text-accent font-medium inline-block mb-2"
-                  >
-                    {isId ? 'Lihat CV' : 'View CV'}
-                  </a>
-                )}
-                <input
-                  ref={cvInputRef}
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={handleCVSelect}
-                />
+            <div className="mt-5 flex w-full gap-3 border-b border-surface-border pb-6">
+              <Button className="flex-1">{isId ? 'Pesan' : 'Message'}</Button>
+              {user?.cv_url && (
                 <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => cvInputRef.current?.click()}
-                  disabled={uploadingCV}
+                  href={resolveUploadUrl(user.cv_url)}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant="outline"
+                  className="flex-1"
                 >
-                  {uploadingCV ? (isId ? 'Mengunggah...' : 'Uploading...') : 'Update CV'}
+                  Resume
                 </Button>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center gap-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-text-muted">
+                <BriefcaseBusiness size={18} />
+              </span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-text-muted">
+                <Code2 size={18} />
+              </span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-text-muted">
+                <Globe size={18} />
+              </span>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="border-[#becabe]">
+          <CardBody>
+            <h2 className="text-xl font-semibold text-text">{isId ? 'Tentang Saya' : 'About Me'}</h2>
+            <p className="mt-4 whitespace-pre-line text-sm leading-6 text-text-muted">
+              {user?.bio ||
+                (isId
+                  ? 'Tambahkan ringkasan profesional di halaman pengaturan.'
+                  : 'Add a professional summary from the settings page.')}
+            </p>
+          </CardBody>
+        </Card>
+
+        <Card className="border-[#becabe]">
+          <CardBody>
+            <h2 className="text-xl font-semibold text-text">
+              {isId ? 'Keahlian & Ekspertise' : 'Skills & Expertise'}
+            </h2>
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                Technical
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {technicalSkills.map((skill, index) => (
+                  <Pill key={skill} accent={index > 1}>
+                    {skill}
+                  </Pill>
+                ))}
               </div>
-            </CardBody>
-          </Card>
-        </div>
+            </div>
+            <div className="mt-5">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                Interpersonal
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {interpersonalSkills.map((skill) => (
+                  <Pill key={skill}>{skill}</Pill>
+                ))}
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </aside>
 
-        <div className="md:col-span-2">
-          <Card>
-            <CardBody>
-              <h3 className="font-semibold text-gray-900 mb-6 pb-2 border-b border-gray-100">
-                {isId ? 'Informasi Pribadi' : 'Personal Information'}
-              </h3>
-              <form className="space-y-4" onSubmit={handleSave}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label={isId ? 'Nama Depan' : 'First Name'}
-                    value={form.first_name}
-                    onChange={handleChange('first_name')}
-                  />
-                  <Input
-                    label={isId ? 'Nama Belakang' : 'Last Name'}
-                    value={form.last_name}
-                    onChange={handleChange('last_name')}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="NIM"
-                    value={form.nim}
-                    onChange={handleChange('nim')}
-                    disabled
-                  />
-                  <Input
-                    label="Email"
-                    value={form.email}
-                    onChange={handleChange('email')}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label={isId ? 'Nomor Telepon' : 'Phone Number'}
-                    value={form.phone}
-                    onChange={handleChange('phone')}
-                  />
-                  <Input label={isId ? 'Jurusan' : 'Major'} value={form.major} disabled />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label={isId ? 'IPK Terakhir' : 'Latest GPA'} value={form.gpa} disabled />
-                </div>
+      <section className="space-y-6">
+        <Card className="border-[#becabe]">
+          <CardBody>
+            <div className="flex items-center gap-2">
+              <BriefcaseBusiness size={20} className="text-brand" />
+              <h2 className="text-2xl font-semibold text-text">
+                {isId ? 'Pengalaman' : 'Experience'}
+              </h2>
+            </div>
+            <div className="mt-6 space-y-8">
+              {loadingEntries ? (
+                <p className="text-sm text-text-muted">{isId ? 'Memuat...' : 'Loading...'}</p>
+              ) : experienceEntries.length > 0 ? (
+                experienceEntries.map((entry) => <TimelineEntry key={entry.id} entry={entry} />)
+              ) : (
+                <p className="text-sm text-text-muted">
+                  {isId ? 'Belum ada pengalaman yang ditampilkan.' : 'No experience to display yet.'}
+                </p>
+              )}
+            </div>
+          </CardBody>
+        </Card>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {isId ? 'Tentang Saya' : 'About Me'}
-                  </label>
-                  <textarea
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px] resize-y"
-                    value={form.bio}
-                    onChange={handleChange('bio')}
-                    placeholder={isId ? 'Ceritakan tentang diri Anda...' : 'Tell us about yourself...'}
-                  />
-                </div>
-
-                {saveMsg && (
-                  <p
-                    className={`text-sm ${saveMsg.includes('berhasil') ? 'text-emerald-600' : 'text-red-600'}`}
-                  >
-                    {saveMsg}
-                  </p>
-                )}
-                <div className="pt-4 flex justify-end">
-                  <Button type="submit" disabled={saving}>
-                    {saving ? (isId ? 'Menyimpan...' : 'Saving...') : (isId ? 'Simpan Perubahan' : 'Save Changes')}
-                  </Button>
-                </div>
-              </form>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
+        <Card className="border-[#becabe]">
+          <CardBody>
+            <div className="flex items-center gap-2">
+              <FolderKanban size={20} className="text-brand" />
+              <h2 className="text-2xl font-semibold text-text">
+                {isId ? 'Proyek Unggulan' : 'Featured Projects'}
+              </h2>
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {loadingEntries ? (
+                <p className="text-sm text-text-muted">{isId ? 'Memuat...' : 'Loading...'}</p>
+              ) : projectEntries.length > 0 ? (
+                projectEntries.map((entry) => <ProjectCard key={entry.id} entry={entry} />)
+              ) : (
+                <p className="text-sm text-text-muted md:col-span-2">
+                  {isId ? 'Belum ada proyek yang ditampilkan.' : 'No projects to display yet.'}
+                </p>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+      </section>
     </motion.div>
   );
 }

@@ -14,6 +14,13 @@ class ExternshipStatus(str, enum.Enum):
     COMPLETED = "Completed"
 
 
+class ExternshipType(str, enum.Enum):
+    EXPERIENCE = "Experience"
+    PROJECT = "Project"
+    CERTIFICATION = "Certification"
+    ORGANIZATION = "Organization"
+
+
 class Externship(Base):
     """Externship entity — represents a student's manual externship/project entry."""
 
@@ -25,6 +32,9 @@ class Externship(Base):
     company: str = Column(String(200), nullable=False)
     duration: str = Column(String(100), nullable=True)
     description: str = Column(Text, nullable=True)
+    entry_type: ExternshipType = Column(
+        Enum(ExternshipType), nullable=False, default=ExternshipType.EXPERIENCE
+    )
     status: ExternshipStatus = Column(
         Enum(ExternshipStatus), nullable=False, default=ExternshipStatus.ONGOING
     )

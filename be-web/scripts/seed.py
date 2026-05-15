@@ -26,7 +26,7 @@ from app.domain.models.company import Company
 from app.domain.models.opportunity import Opportunity, OpportunityType
 from app.domain.models.application import Application, ApplicationStatus
 from app.domain.models.bookmark import Bookmark
-from app.domain.models.externship import Externship, ExternshipStatus
+from app.domain.models.externship import Externship, ExternshipStatus, ExternshipType
 
 def hash_pw(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -448,6 +448,7 @@ def seed():
                 company="Tokopedia (Independent Study)",
                 duration="6 months",
                 description="Built a full-stack e-commerce dashboard using React and FastAPI.",
+                entry_type=ExternshipType.PROJECT,
                 status=ExternshipStatus.COMPLETED,
             ),
             Externship(
@@ -456,6 +457,7 @@ def seed():
                 company="IPB Lab AI",
                 duration="3 months",
                 description="Researched NLP models for Indonesian language processing.",
+                entry_type=ExternshipType.EXPERIENCE,
                 status=ExternshipStatus.ONGOING,
             ),
             Externship(
@@ -464,6 +466,7 @@ def seed():
                 company="Gojek (Bangkit Academy)",
                 duration="5 months",
                 description="Intensive bootcamp on data analytics with real industry datasets.",
+                entry_type=ExternshipType.EXPERIENCE,
                 status=ExternshipStatus.COMPLETED,
             ),
         ]
