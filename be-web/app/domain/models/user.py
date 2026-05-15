@@ -2,7 +2,7 @@ import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, Integer, String, Float, Text, Boolean, Enum, DateTime, ForeignKey
+    Column, Integer, String, Float, Text, Boolean, Enum, DateTime, ForeignKey, JSON
 )
 from sqlalchemy.orm import relationship
 
@@ -33,6 +33,8 @@ class User(Base):
     avatar: str = Column(String(500), nullable=True)
     phone: str = Column(String(20), nullable=True)
     bio: str = Column(Text, nullable=True)
+    social_links: dict = Column(JSON, nullable=False, default=dict)
+    skills: list = Column(JSON, nullable=False, default=list)
 
     # Student-specific fields
     nim: str = Column(String(20), nullable=True, index=True)  # Student ID number
