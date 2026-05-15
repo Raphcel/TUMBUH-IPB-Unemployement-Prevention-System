@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -12,6 +11,7 @@ from app.config.settings import get_settings
 from app.config.limiter import limiter
 from app.api.router import api_router
 from app.services.audit_service import audit_log
+from app.services.user_asset_service import AVATAR_DIR, ensure_upload_dirs
 import app.domain.models  # noqa: F401
 
 logging.basicConfig(
@@ -130,11 +130,9 @@ def create_app() -> FastAPI:
     # ── Register routes ──────────────────────────────────────
     application.include_router(api_router)
 
-    # ── Static files (uploads) ────────────────────────────────
-    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
-    os.makedirs(os.path.join(uploads_dir, "avatars"), exist_ok=True)
-    os.makedirs(os.path.join(uploads_dir, "cvs"), exist_ok=True)
-    application.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+    # ── Static files (public avatars only) ────────────────────
+    ensure_upload_dirs()
+    application.mount("/uploads/avatars", StaticFiles(directory=str(AVATAR_DIR)), name="avatars")
 
     # ── Health check ─────────────────────────────────────────
     @application.get("/health", tags=["Health"])

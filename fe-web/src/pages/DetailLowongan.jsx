@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { opportunitiesApi } from '../api/opportunities';
 import { applicationsApi } from '../api/applications';
+import { usersApi } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, MapPin, Bookmark, Briefcase, Building2, Clock, Tag, Lock, CheckCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
-import { resolveUploadUrl } from '../api/client';
 import { useTranslation } from '../context/LanguageContext';
 
 const TAB_KEYS = ['desc', 'qualif', 'benefits', 'company'];
@@ -28,6 +28,7 @@ export function DetailLowongan({ jobId, isEmbedded }) {
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [applyStep, setApplyStep] = useState(1);
+  const [openingCV, setOpeningCV] = useState(false);
 
   useEffect(() => {
     opportunitiesApi
@@ -54,6 +55,17 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       addToast({ title: 'Error', message: err.message, type: 'error' });
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleViewCV = async () => {
+    setOpeningCV(true);
+    try {
+      await usersApi.viewMyCV();
+    } catch (err) {
+      addToast({ title: 'Error', message: err.message || 'Failed to open CV', type: 'error' });
+    } finally {
+      setOpeningCV(false);
     }
   };
 
@@ -142,8 +154,18 @@ export function DetailLowongan({ jobId, isEmbedded }) {
             />
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-sm text-gray-500">
-                {user?.cv_url ? (
-                  <>CV Anda: <a href={resolveUploadUrl(user.cv_url)} target="_blank" rel="noreferrer" className="text-brand font-medium hover:underline">Lihat CV</a></>
+                {user?.has_cv ? (
+                  <>
+                    CV Anda:{' '}
+                    <button
+                      type="button"
+                      onClick={handleViewCV}
+                      disabled={openingCV}
+                      className="text-brand font-medium hover:underline disabled:no-underline disabled:text-gray-400"
+                    >
+                      {openingCV ? 'Membuka...' : 'Lihat CV'}
+                    </button>
+                  </>
                 ) : (
                   <>Belum ada CV. <Link to="/student/profile" className="text-brand font-medium hover:underline">Upload di halaman profil</Link>.</>
                 )}

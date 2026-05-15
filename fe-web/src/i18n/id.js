@@ -3,6 +3,7 @@ export const id = {
   // ── Navigation / Common ─────────────────────────────────────────────────
   nav_dashboard:        'Dasbor',
   nav_my_applications:  'Lamaran Saya',
+  nav_cv_builder:       'CV Builder',
   nav_profile:          'Profil',
   nav_opportunities:    'Lowongan',
   nav_calendar:         'Kalender',

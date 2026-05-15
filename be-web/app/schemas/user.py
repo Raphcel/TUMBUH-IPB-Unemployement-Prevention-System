@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import PurePosixPath
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, model_validator
 
 from app.domain.models.user import UserRole
 
@@ -70,9 +71,17 @@ class UserResponse(BaseModel):
     university: str | None = None
     gpa: float | None = None
     cv_url: str | None = None
+    has_cv: bool = False
+    cv_filename: str | None = None
     company_id: int | None = None
     is_active: bool = True
     created_at: datetime
+
+    @model_validator(mode="after")
+    def populate_cv_metadata(self):
+        self.has_cv = bool(self.cv_url)
+        self.cv_filename = PurePosixPath(self.cv_url).name if self.cv_url else None
+        return self
 
     class Config:
         from_attributes = True

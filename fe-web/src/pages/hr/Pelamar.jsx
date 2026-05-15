@@ -4,20 +4,25 @@ import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { opportunitiesApi } from '../../api/opportunities';
 import { applicationsApi } from '../../api/applications';
+import { usersApi } from '../../api/users';
 import { Modal } from '../../components/ui/Modal';
 import { Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { motion } from 'framer-motion';
 import { resolveUploadUrl } from '../../api/client';
+import { useToast } from '../../context/ToastContext';
 
 export function Pelamar() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const companyId = user?.company_id;
   const [applicants, setApplicants] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
+  const [openingCV, setOpeningCV] = useState(false);
+  const [downloadingCV, setDownloadingCV] = useState(false);
 
   useEffect(() => {
     if (!companyId) {
@@ -77,6 +82,28 @@ export function Pelamar() {
   const filteredApplicants = selectedJobId
     ? applicants.filter((a) => a.opportunity_id === Number(selectedJobId))
     : applicants;
+
+  const handleViewCV = async (studentId) => {
+    setOpeningCV(true);
+    try {
+      await usersApi.viewUserCV(studentId);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal membuka CV.' });
+    } finally {
+      setOpeningCV(false);
+    }
+  };
+
+  const handleDownloadCV = async (studentId) => {
+    setDownloadingCV(true);
+    try {
+      await usersApi.downloadUserCV(studentId);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal mengunduh CV.' });
+    } finally {
+      setDownloadingCV(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -259,15 +286,25 @@ export function Pelamar() {
               </div>
             )}
 
-            {student.cv_url && (
-              <a
-                href={resolveUploadUrl(student.cv_url)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:text-accent font-medium"
-              >
-                Unduh CV
-              </a>
+            {student.has_cv && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleViewCV(student.id)}
+                  disabled={openingCV}
+                >
+                  {openingCV ? 'Membuka CV...' : 'Lihat CV'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDownloadCV(student.id)}
+                  disabled={downloadingCV}
+                >
+                  {downloadingCV ? 'Mengunduh...' : 'Unduh CV'}
+                </Button>
+              </div>
             )}
 
             {selectedApp?.history && selectedApp.history.length > 0 && (

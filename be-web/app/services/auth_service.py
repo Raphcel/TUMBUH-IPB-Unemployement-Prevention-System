@@ -10,6 +10,11 @@ from app.domain.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserResponse, TokenResponse
 from app.services.audit_service import audit_log
+from app.services.user_asset_service import (
+    ensure_asset_in_managed_location,
+    is_managed_avatar_url,
+    is_managed_cv_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +106,7 @@ class AuthService:
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(user),
+            user=self._to_user_response(user),
         )
 
     def login(self, email: str, password: str) -> TokenResponse:
@@ -157,7 +162,7 @@ class AuthService:
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(user),
+            user=self._to_user_response(user),
         )
 
     def refresh(self, refresh_token: str) -> TokenResponse:
@@ -191,7 +196,7 @@ class AuthService:
         return TokenResponse(
             access_token=new_access,
             refresh_token=new_refresh,
-            user=UserResponse.model_validate(user),
+            user=self._to_user_response(user),
         )
 
     def get_current_user(self, token: str) -> User:
@@ -210,3 +215,17 @@ class AuthService:
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated")
         return user
+
+    def _to_user_response(self, user: User) -> UserResponse:
+        updates: dict[str, str | None] = {}
+
+        if is_managed_avatar_url(user.avatar) and not ensure_asset_in_managed_location("avatar", user.avatar):
+            updates["avatar"] = None
+
+        if is_managed_cv_url(user.cv_url) and not ensure_asset_in_managed_location("cv", user.cv_url):
+            updates["cv_url"] = None
+
+        if updates:
+            user = self._user_repo.update(user, updates)
+
+        return UserResponse.model_validate(user)

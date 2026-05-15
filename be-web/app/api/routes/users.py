@@ -1,22 +1,82 @@
-import os
+import re
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
 from app.domain.models.user import User
+from app.repositories.application_repository import ApplicationRepository
+from app.repositories.user_repository import UserRepository
+from app.services.user_asset_service import (
+    AVATAR_DIR,
+    PRIVATE_CV_DIR,
+    build_avatar_url,
+    build_cv_storage_url,
+    delete_managed_asset,
+    ensure_asset_in_managed_location,
+    ensure_upload_dirs,
+)
 from app.services.user_service import UserService
 from app.schemas.user import UserUpdate, UserResponse
-from app.api.dependencies import get_current_user, get_user_service
+from app.api.dependencies import (
+    get_application_repo,
+    get_current_user,
+    get_user_repo,
+    get_user_service,
+)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads")
-AVATAR_DIR = os.path.join(UPLOAD_DIR, "avatars")
-CV_DIR = os.path.join(UPLOAD_DIR, "cvs")
-
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+IMAGE_EXTENSIONS = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+}
 MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2MB
 MAX_CV_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+def _build_cv_download_name(user: User) -> str:
+    full_name = f"{user.first_name}-{user.last_name}".strip("-").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", full_name).strip("-")
+    return f"{slug or f'user-{user.id}'}-cv.pdf"
+
+
+def _resolve_cv_file_or_404(user: User):
+    if not user.cv_url:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
+
+    file_path = ensure_asset_in_managed_location("cv", user.cv_url)
+    if not file_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV file is missing")
+
+    return file_path
+
+
+def _assert_cv_access(
+    current_user: User,
+    target_user: User,
+    application_repo: ApplicationRepository,
+) -> None:
+    if current_user.id == target_user.id:
+        return
+
+    if current_user.role.value == "admin":
+        return
+
+    if (
+        current_user.role.value == "hr"
+        and current_user.company_id
+        and application_repo.student_has_application_with_company(target_user.id, current_user.company_id)
+    ):
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You do not have access to this CV",
+    )
 
 
 @router.get("/me", response_model=UserResponse)
@@ -52,16 +112,18 @@ def upload_avatar(
     if len(contents) > MAX_IMAGE_SIZE:
         raise HTTPException(status_code=400, detail="Image must be smaller than 2MB")
 
-    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "jpg"
+    ext = IMAGE_EXTENSIONS.get(file.content_type, "jpg")
     filename = f"{current_user.id}_{int(time.time())}.{ext}"
-    os.makedirs(AVATAR_DIR, exist_ok=True)
-    filepath = os.path.join(AVATAR_DIR, filename)
+    ensure_upload_dirs()
+    filepath = AVATAR_DIR / filename
 
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    url = f"/uploads/avatars/{filename}"
+    previous_avatar = current_user.avatar
+    url = build_avatar_url(filename)
     user_service.update_profile(current_user.id, UserUpdate(avatar=url))
+    delete_managed_asset("avatar", previous_avatar)
 
     return {"url": url}
 
@@ -81,16 +143,33 @@ def upload_cv(
         raise HTTPException(status_code=400, detail="CV must be smaller than 5MB")
 
     filename = f"{current_user.id}_{int(time.time())}.pdf"
-    os.makedirs(CV_DIR, exist_ok=True)
-    filepath = os.path.join(CV_DIR, filename)
+    ensure_upload_dirs()
+    filepath = PRIVATE_CV_DIR / filename
 
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    url = f"/uploads/cvs/{filename}"
+    previous_cv = current_user.cv_url
+    url = build_cv_storage_url(filename)
     user_service.update_profile(current_user.id, UserUpdate(cv_url=url))
+    delete_managed_asset("cv", previous_cv)
 
     return {"url": url}
+
+
+@router.get("/me/cv")
+def get_my_cv(
+    download: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+):
+    """Open or download the authenticated user's CV."""
+    file_path = _resolve_cv_file_or_404(current_user)
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=_build_cv_download_name(current_user),
+        content_disposition_type="attachment" if download else "inline",
+    )
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -101,3 +180,27 @@ def get_user(
 ):
     """Get a user's profile by ID (authenticated only)."""
     return user_service.get_profile(user_id)
+
+
+@router.get("/{user_id}/cv")
+def get_user_cv(
+    user_id: int,
+    download: bool = Query(True),
+    current_user: User = Depends(get_current_user),
+    user_repo: UserRepository = Depends(get_user_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+):
+    """Open or download a student's CV when the requester is authorized."""
+    target_user = user_repo.get_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    _assert_cv_access(current_user, target_user, application_repo)
+    file_path = _resolve_cv_file_or_404(target_user)
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=_build_cv_download_name(target_user),
+        content_disposition_type="attachment" if download else "inline",
+    )

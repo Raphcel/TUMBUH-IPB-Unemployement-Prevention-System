@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   BriefcaseBusiness,
-  Code2,
   FolderKanban,
   Github,
   Globe,
@@ -176,6 +175,8 @@ export function ProfilStudent() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCV, setUploadingCV] = useState(false);
+  const [openingCV, setOpeningCV] = useState(false);
+  const [downloadingCV, setDownloadingCV] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState(null);
@@ -269,6 +270,14 @@ export function ProfilStudent() {
   const handleAvatarSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: isId ? 'Ukuran gambar maksimal 2MB.' : 'Maximum image size is 2MB.',
+      });
+      return;
+    }
     setUploadingAvatar(true);
     try {
       await usersApi.uploadAvatar(file);
@@ -286,12 +295,21 @@ export function ProfilStudent() {
       });
     } finally {
       setUploadingAvatar(false);
+      e.target.value = '';
     }
   };
 
   const handleCVSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: isId ? 'Ukuran CV maksimal 5MB.' : 'Maximum CV size is 5MB.',
+      });
+      return;
+    }
     setUploadingCV(true);
     try {
       await usersApi.uploadCV(file);
@@ -309,6 +327,29 @@ export function ProfilStudent() {
       });
     } finally {
       setUploadingCV(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleViewCV = async () => {
+    setOpeningCV(true);
+    try {
+      await usersApi.viewMyCV();
+    } catch (err) {
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal membuka CV.' : 'Failed to open CV.') });
+    } finally {
+      setOpeningCV(false);
+    }
+  };
+
+  const handleDownloadCV = async () => {
+    setDownloadingCV(true);
+    try {
+      await usersApi.downloadMyCV();
+    } catch (err) {
+      addToast({ type: 'error', title: isId ? 'Gagal' : 'Failed', message: err.message || (isId ? 'Gagal mengunduh CV.' : 'Failed to download CV.') });
+    } finally {
+      setDownloadingCV(false);
     }
   };
 
@@ -397,7 +438,6 @@ export function ProfilStudent() {
                 <MapPin size={14} />
                 {user?.university || 'IPB University'}
               </p>
-
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
               <input ref={cvInputRef} type="file" accept=".pdf" className="hidden" onChange={handleCVSelect} />
 
@@ -414,18 +454,17 @@ export function ProfilStudent() {
               </div>
 
               <div className="mt-4 flex w-full gap-3">
-                {user?.cv_url && (
-                  <Button
-                    href={resolveUploadUrl(user.cv_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    variant="ghost"
-                    className="flex-1"
-                  >
-                    {isId ? 'Lihat Resume' : 'View Resume'}
-                  </Button>
+                {user?.has_cv && (
+                  <>
+                    <Button variant="ghost" className="flex-1" onClick={handleViewCV} disabled={openingCV}>
+                      {openingCV ? (isId ? 'Membuka...' : 'Opening...') : isId ? 'Lihat Resume' : 'View Resume'}
+                    </Button>
+                    <Button variant="ghost" className="flex-1" onClick={handleDownloadCV} disabled={downloadingCV}>
+                      {downloadingCV ? (isId ? 'Mengunduh...' : 'Downloading...') : isId ? 'Unduh' : 'Download'}
+                    </Button>
+                  </>
                 )}
-                <Button variant="ghost" className="flex-1" disabled>
+                <Button to="/student/cv-builder" variant="ghost" className="flex-1">
                   CV Maker
                 </Button>
               </div>

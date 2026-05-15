@@ -12,6 +12,7 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  FileBadge2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,6 +27,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_calendar'), path: '/calendar', icon: Calendar },
     { name: t('nav_my_applications'), path: '/student/applications', icon: FileText },
     { name: t('nav_bookmarks'), path: '/student/bookmarks', icon: Bookmark },
+    { name: t('nav_cv_builder'), path: '/student/cv-builder', icon: FileBadge2 },
     { name: t('nav_profile'), path: '/student/profile', icon: User },
   ];
 
