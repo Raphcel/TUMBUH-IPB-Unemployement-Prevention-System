@@ -1,27 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
+import { companyFollowsApi } from '../api/companyFollows';
 import { MapPin, Users, Star, ChevronDown, Bookmark } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export function Perusahaan() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { addToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savedCompanies, setSavedCompanies] = useState([]);
 
-  const toggleSaveCompany = (id) => {
+  const toggleSaveCompany = async (id) => {
+    if (!user) {
+      addToast({
+        type: 'info',
+        title: 'Login required',
+        message: 'Please log in as a student to follow companies.',
+      });
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'student') {
+      addToast({
+        type: 'warning',
+        title: 'Student only',
+        message: 'Only student accounts can follow companies.',
+      });
+      return;
+    }
+
+    const wasFollowing = savedCompanies.includes(id);
     setSavedCompanies((prev) =>
-      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
+      wasFollowing ? prev.filter((cid) => cid !== id) : [...prev, id]
     );
+
+    try {
+      if (wasFollowing) {
+        await companyFollowsApi.unfollow(id);
+      } else {
+        await companyFollowsApi.follow(id);
+      }
+    } catch (err) {
+      setSavedCompanies((prev) =>
+        wasFollowing ? [...prev, id] : prev.filter((cid) => cid !== id)
+      );
+      addToast({
+        type: 'error',
+        title: 'Failed',
+        message: err.message || 'Could not update company follow.',
+      });
+    }
   };
 
   const [filterIndustry, setFilterIndustry] = useState(t('comp_all_industries'));
   const [filterLocation, setFilterLocation] = useState(t('comp_all_locations'));
 
-  const [allIndustries, setAllIndustries] = useState([]);
-  const [allLocations, setAllLocations] = useState([]);
   const [sortBy, setSortBy] = useState('A - Z');
 
   useEffect(() => {
@@ -30,18 +70,24 @@ export function Perusahaan() {
       .then((data) => {
         const comps = Array.isArray(data) ? data : data.items || [];
         setCompanies(comps);
-        setAllIndustries([...new Set(comps.map((c) => c.industry).filter(Boolean))]);
-        setAllLocations([...new Set(comps.map((c) => c.location).filter(Boolean))]);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const INDUSTRIES = [t('comp_all_industries'), t('comp_technology'), t('comp_finance'), t('comp_ecommerce'), t('comp_education'), t('comp_consulting'), t('comp_others'), ...allIndustries];
-  const uniqueIndustries = [...new Set(INDUSTRIES)];
+  useEffect(() => {
+    if (user?.role !== 'student') {
+      return;
+    }
 
-  const LOCATIONS = [t('comp_all_locations'), 'Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Remote', ...allLocations];
-  const uniqueLocations = [...new Set(LOCATIONS)];
+    companyFollowsApi
+      .mine()
+      .then((data) => {
+        const follows = Array.isArray(data) ? data : data.items || [];
+        setSavedCompanies(follows.map((follow) => follow.company_id));
+      })
+      .catch(console.error);
+  }, [user]);
 
   const filteredCompanies = companies.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

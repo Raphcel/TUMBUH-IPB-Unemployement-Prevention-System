@@ -1,12 +1,62 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, EmailStr, model_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
 
 from app.domain.models.user import UserRole
 
 
 # ── Request Schemas ──────────────────────────────────────────
+
+SOCIAL_LINK_DOMAINS = {
+    "linkedin": "linkedin.com",
+    "github": "github.com",
+    "instagram": "instagram.com",
+}
+
+
+def _normalize_url(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        return ""
+    if "://" not in cleaned:
+        cleaned = f"https://{cleaned}"
+    return cleaned
+
+
+def _is_valid_hostname(hostname: str | None) -> bool:
+    if not hostname:
+        return False
+    return hostname == "localhost" or "." in hostname
+
+
+def normalize_social_links(value: dict[str, str] | None) -> dict[str, str] | None:
+    if value is None:
+        return None
+
+    normalized: dict[str, str] = {}
+    for key, raw_url in value.items():
+        if raw_url is None:
+            continue
+
+        social_key = key.strip().lower()
+        url = _normalize_url(str(raw_url))
+        if not url:
+            continue
+
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not _is_valid_hostname(parsed.hostname):
+            raise ValueError(f"{social_key} must be a valid http or https URL")
+
+        expected_domain = SOCIAL_LINK_DOMAINS.get(social_key)
+        if expected_domain and not parsed.hostname.lower().endswith(expected_domain):
+            raise ValueError(f"{social_key} must use {expected_domain}")
+
+        normalized[social_key] = url
+
+    return normalized
+
 
 class UserCreate(BaseModel):
     """Schema for creating a new user (registration)."""
@@ -39,6 +89,11 @@ class UserUpdate(BaseModel):
     cv_url: str | None = None
     social_links: dict[str, str] | None = None
     skills: list[str] | None = None
+
+    @field_validator("social_links")
+    @classmethod
+    def validate_social_links(cls, value):
+        return normalize_social_links(value)
 
 
 class UserLogin(BaseModel):

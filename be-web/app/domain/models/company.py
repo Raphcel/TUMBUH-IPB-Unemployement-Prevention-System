@@ -37,6 +37,7 @@ class Company(Base):
     # Relationships
     staff = relationship("User", back_populates="company")
     opportunities = relationship("Opportunity", back_populates="company", cascade="all, delete-orphan")
+    followers = relationship("CompanyFollow", back_populates="company", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Company(id={self.id}, name='{self.name}')>"

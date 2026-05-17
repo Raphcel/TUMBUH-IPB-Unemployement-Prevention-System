@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const MotionDiv = motion.div;
 
 export function Input({ label, error, className = '', ...props }) {
   return (
@@ -25,7 +27,11 @@ export function Input({ label, error, className = '', ...props }) {
 
 export function Select({ label, error, options = [], className = '', value, onChange, placeholder = 'Select an option', ...props }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   // Update coordinates when opening the dropdown
@@ -37,20 +43,33 @@ export function Select({ label, error, options = [], className = '', value, onCh
         left: rect.left + window.scrollX,
         width: rect.width,
       });
+      window.setTimeout(() => searchInputRef.current?.focus(), 0);
     }
   }, [isOpen]);
 
-  // Handle window resize and scroll to close dropdown
+  // Handle window resize and page scroll to close dropdown, but allow option-list scrolling.
   useEffect(() => {
-    function handleResizeOrScroll() {
+    function handleResize() {
       if (isOpen) setIsOpen(false);
     }
-    window.addEventListener('resize', handleResizeOrScroll);
-    window.addEventListener('scroll', handleResizeOrScroll, true);
+
+    function handleScroll(event) {
+      if (
+        dropdownRef.current &&
+        event.target instanceof Node &&
+        dropdownRef.current.contains(event.target)
+      ) {
+        return;
+      }
+      if (isOpen) setIsOpen(false);
+    }
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
-      window.removeEventListener('resize', handleResizeOrScroll);
-      window.removeEventListener('scroll', handleResizeOrScroll, true);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen]);
 
@@ -70,8 +89,6 @@ export function Select({ label, error, options = [], className = '', value, onCh
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const dropdownRef = useRef(null);
-
   const handleSelect = (optionValue) => {
     // Mimic the event object that a native select would return
     const syntheticEvent = {
@@ -83,10 +100,49 @@ export function Select({ label, error, options = [], className = '', value, onCh
     if (onChange) {
       onChange(syntheticEvent);
     }
+    setSearchTerm('');
+    setActiveIndex(0);
     setIsOpen(false);
   };
 
   const selectedOption = options.find(opt => opt.value === value);
+  const filteredOptions = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return options;
+
+    return options
+      .filter((opt) => opt.label.toLowerCase().includes(term))
+      .sort((a, b) => {
+        const aStarts = a.label.toLowerCase().startsWith(term);
+        const bStarts = b.label.toLowerCase().startsWith(term);
+        if (aStarts === bStarts) return a.label.localeCompare(b.label);
+        return aStarts ? -1 : 1;
+      });
+  }, [options, searchTerm]);
+
+  const safeActiveIndex = Math.min(activeIndex, Math.max(0, filteredOptions.length - 1));
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((current) => Math.min(current + 1, filteredOptions.length - 1));
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+    if (event.key === 'Enter' && filteredOptions[safeActiveIndex]) {
+      event.preventDefault();
+      handleSelect(filteredOptions[safeActiveIndex].value);
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setIsOpen(false);
+    }
+  };
 
   return (
     <div className="w-full relative" ref={containerRef}>
@@ -127,21 +183,37 @@ export function Select({ label, error, options = [], className = '', value, onCh
           }}
         >
           <AnimatePresence>
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
               className="bg-white rounded-lg shadow-lg border border-gray-100 py-1 max-h-60 overflow-auto focus:outline-none"
+              onWheel={(event) => event.stopPropagation()}
             >
-              {options.length > 0 ? (
-                options.map((opt) => (
+              <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
+                <input
+                  ref={searchInputRef}
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setActiveIndex(0);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  onClick={(event) => event.stopPropagation()}
+                  placeholder="Type to search..."
+                  className="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                />
+              </div>
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((opt, index) => (
                   <div
                     key={opt.value}
-                    className={`px-3 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${value === opt.value
+                    className={`px-3 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${value === opt.value || index === safeActiveIndex
                       ? 'bg-primary/5 text-primary font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                       }`}
+                    onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => handleSelect(opt.value)}
                   >
                     <span className="truncate">{opt.label}</span>
@@ -152,10 +224,10 @@ export function Select({ label, error, options = [], className = '', value, onCh
                 ))
               ) : (
                 <div className="px-3 py-2 text-sm text-gray-400 text-center">
-                  No options
+                  No matches
                 </div>
               )}
-            </motion.div>
+            </MotionDiv>
           </AnimatePresence>
         </div>,
         document.body

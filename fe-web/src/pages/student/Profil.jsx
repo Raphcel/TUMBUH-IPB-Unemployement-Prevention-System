@@ -14,26 +14,17 @@ import {
 } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { AvatarCropModal } from '../../components/profile/AvatarCropModal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usersApi } from '../../api/users';
 import { externshipsApi } from '../../api/externships';
 import { resolveUploadUrl } from '../../api/client';
 import { useTranslation } from '../../context/LanguageContext';
-import { motion } from 'framer-motion';
-
-const commonSkills = [
-  'Python',
-  'React',
-  'Data Analysis',
-  'SQL',
-  'UI Design',
-  'Leadership',
-  'Public Speaking',
-  'Agile',
-];
+import { buildMajorOptions } from '../../data/ipbMajors';
+import { commonSkills, normalizeSkillLabel, normalizeSkillList } from '../../data/skills';
 
 const socialFields = [
   { key: 'linkedin', label: 'LinkedIn', icon: Linkedin },
@@ -41,6 +32,60 @@ const socialFields = [
   { key: 'instagram', label: 'Instagram', icon: Instagram },
   { key: 'website', label: 'Website', icon: Globe },
 ];
+
+const socialDomains = {
+  linkedin: 'linkedin.com',
+  github: 'github.com',
+  instagram: 'instagram.com',
+};
+
+function normalizeUrl(value) {
+  const cleaned = value.trim();
+  if (!cleaned) return '';
+  return cleaned.includes('://') ? cleaned : `https://${cleaned}`;
+}
+
+function normalizeSocialLinks(links, isId) {
+  const normalized = {};
+  const errors = {};
+
+  socialFields.forEach(({ key, label }) => {
+    const rawValue = links[key] || '';
+    const url = normalizeUrl(rawValue);
+    if (!url) return;
+
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      errors[key] = isId
+        ? `${label} harus berupa tautan yang valid.`
+        : `${label} must be a valid link.`;
+      return;
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+    const hasValidHost = hostname === 'localhost' || hostname.includes('.');
+    if (!['http:', 'https:'].includes(parsed.protocol) || !hasValidHost) {
+      errors[key] = isId
+        ? `${label} harus memakai tautan http atau https.`
+        : `${label} must use an http or https link.`;
+      return;
+    }
+
+    const expectedDomain = socialDomains[key];
+    if (expectedDomain && !hostname.endsWith(expectedDomain)) {
+      errors[key] = isId
+        ? `${label} harus memakai domain ${expectedDomain}.`
+        : `${label} must use ${expectedDomain}.`;
+      return;
+    }
+
+    normalized[key] = url;
+  });
+
+  return { normalized, errors };
+}
 
 const emptyEntryForm = {
   title: '',
@@ -168,12 +213,17 @@ export function ProfilStudent() {
   const [profileForm, setProfileForm] = useState({
     bio: '',
     avatar: '',
+    nim: '',
+    major: '',
+    gpa: '',
     social_links: {},
     skills: [],
   });
   const [customSkill, setCustomSkill] = useState('');
+  const [socialErrors, setSocialErrors] = useState({});
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarCropFile, setAvatarCropFile] = useState(null);
   const [uploadingCV, setUploadingCV] = useState(false);
   const [openingCV, setOpeningCV] = useState(false);
   const [downloadingCV, setDownloadingCV] = useState(false);
@@ -187,8 +237,11 @@ export function ProfilStudent() {
     setProfileForm({
       bio: user?.bio || '',
       avatar: user?.avatar || '',
+      nim: user?.nim || '',
+      major: user?.major || '',
+      gpa: user?.gpa ?? '',
       social_links: user?.social_links || {},
-      skills: user?.skills || [],
+      skills: normalizeSkillList(user?.skills || []),
     });
   }, [user]);
 
@@ -219,6 +272,7 @@ export function ProfilStudent() {
   };
 
   const handleSocialChange = (field) => (e) => {
+    setSocialErrors((current) => ({ ...current, [field]: undefined }));
     setProfileForm((current) => ({
       ...current,
       social_links: { ...current.social_links, [field]: e.target.value },
@@ -235,20 +289,37 @@ export function ProfilStudent() {
   };
 
   const addCustomSkill = () => {
-    const value = customSkill.trim();
-    if (!value || profileForm.skills.includes(value)) return;
+    const value = normalizeSkillLabel(customSkill);
+    if (!value || profileForm.skills.some((skill) => skill.toLowerCase() === value.toLowerCase())) return;
     setProfileForm((current) => ({ ...current, skills: [...current.skills, value] }));
     setCustomSkill('');
   };
 
   const saveProfile = async () => {
+    const { normalized, errors } = normalizeSocialLinks(profileForm.social_links, isId);
+    setSocialErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      addToast({
+        type: 'error',
+        title: isId ? 'Tautan tidak valid' : 'Invalid links',
+        message: isId
+          ? 'Periksa format tautan sosial Anda.'
+          : 'Please check your social link formats.',
+      });
+      return;
+    }
+
     setSavingProfile(true);
     try {
       await usersApi.update({
         bio: profileForm.bio,
-        social_links: profileForm.social_links,
-        skills: profileForm.skills,
+        nim: profileForm.nim || null,
+        major: profileForm.major || null,
+        gpa: profileForm.gpa === '' ? null : Number(profileForm.gpa),
+        social_links: normalized,
+        skills: normalizeSkillList(profileForm.skills),
       });
+      setProfileForm((current) => ({ ...current, social_links: normalized }));
       await refreshUser();
       setProfileEditOpen(false);
       addToast({
@@ -278,10 +349,20 @@ export function ProfilStudent() {
       });
       return;
     }
+    setAvatarCropFile(file);
+  };
+
+  const cancelAvatarCrop = () => {
+    setAvatarCropFile(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const uploadCroppedAvatar = async (file) => {
     setUploadingAvatar(true);
     try {
       await usersApi.uploadAvatar(file);
       await refreshUser();
+      setAvatarCropFile(null);
       addToast({
         type: 'success',
         title: isId ? 'Berhasil' : 'Success',
@@ -295,7 +376,7 @@ export function ProfilStudent() {
       });
     } finally {
       setUploadingAvatar(false);
-      e.target.value = '';
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   };
 
@@ -415,12 +496,7 @@ export function ProfilStudent() {
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]"
-      >
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
         <aside className="space-y-6">
           <Card className="border-[#becabe]">
             <div className="h-24 bg-[#e6e8ea]" />
@@ -441,11 +517,10 @@ export function ProfilStudent() {
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
               <input ref={cvInputRef} type="file" accept=".pdf" className="hidden" onChange={handleCVSelect} />
 
-              <div className="mt-5 flex w-full gap-3 border-b border-surface-border pb-6">
-                <Button className="flex-1">{isId ? 'Pesan' : 'Message'}</Button>
+              <div className="mt-5 flex w-full border-b border-surface-border pb-6">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="w-full"
                   onClick={() => cvInputRef.current?.click()}
                   disabled={uploadingCV}
                 >
@@ -470,18 +545,18 @@ export function ProfilStudent() {
               </div>
 
               <div className="mt-5 flex gap-3">
-                {socialFields.map(({ key, label, icon: Icon }) => {
-                  const url = user?.social_links?.[key];
+                {socialFields.map((field) => {
+                  const url = user?.social_links?.[field.key];
                   return url ? (
                     <a
-                      key={key}
+                      key={field.key}
                       href={url}
                       target="_blank"
                       rel="noreferrer"
-                      title={label}
+                      title={field.label}
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-text-muted transition-colors hover:text-brand"
                     >
-                      <Icon size={18} />
+                      {React.createElement(field.icon, { size: 18 })}
                     </a>
                   ) : null;
                 })}
@@ -608,7 +683,7 @@ export function ProfilStudent() {
             </CardBody>
           </Card>
         </section>
-      </motion.div>
+      </div>
 
       <Modal
         isOpen={profileEditOpen}
@@ -617,12 +692,41 @@ export function ProfilStudent() {
         size="lg"
       >
         <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Input
+              label={isId ? 'NIM' : 'Student ID'}
+              value={profileForm.nim}
+              onChange={handleProfileChange('nim')}
+              className="border border-surface-border"
+              placeholder="G6401201001"
+            />
+            <Select
+              label={isId ? 'Jurusan' : 'Major'}
+              value={profileForm.major}
+              onChange={handleProfileChange('major')}
+              options={buildMajorOptions([profileForm.major])}
+              className="border border-surface-border"
+              placeholder={isId ? 'Pilih jurusan IPB' : 'Choose an IPB major'}
+            />
+            <Input
+              label="GPA"
+              type="number"
+              min="0"
+              max="4"
+              step="0.01"
+              value={profileForm.gpa}
+              onChange={handleProfileChange('gpa')}
+              className="border border-surface-border"
+              placeholder="3.85"
+            />
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               {isId ? 'Tentang Saya' : 'About Me'}
             </label>
             <textarea
-              className="min-h-[120px] w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+              className="min-h-[120px] w-full rounded-lg border border-surface-border px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               value={profileForm.bio}
               onChange={handleProfileChange('bio')}
             />
@@ -639,6 +743,7 @@ export function ProfilStudent() {
                   label={label}
                   value={profileForm.social_links[key] || ''}
                   onChange={handleSocialChange(key)}
+                  error={socialErrors[key]}
                   className="border border-surface-border"
                   placeholder={`https://${key}.com/...`}
                 />
@@ -698,6 +803,15 @@ export function ProfilStudent() {
           </div>
         </div>
       </Modal>
+
+      <AvatarCropModal
+        file={avatarCropFile}
+        isOpen={Boolean(avatarCropFile)}
+        onCancel={cancelAvatarCrop}
+        onConfirm={uploadCroppedAvatar}
+        isId={isId}
+        uploading={uploadingAvatar}
+      />
 
       <Modal
         isOpen={entryModalOpen}

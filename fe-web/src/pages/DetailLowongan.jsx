@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { opportunitiesApi } from '../api/opportunities';
 import { applicationsApi } from '../api/applications';
 import { usersApi } from '../api/users';
+import { bookmarksApi } from '../api/bookmarks';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, MapPin, Bookmark, Briefcase, Building2, Clock, Tag, Lock, CheckCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -27,6 +28,8 @@ export function DetailLowongan({ jobId, isEmbedded }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
   const [applyStep, setApplyStep] = useState(1);
   const [openingCV, setOpeningCV] = useState(false);
 
@@ -38,10 +41,69 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    setBookmarked(false);
+    if (!user || user.role !== 'student' || !id) return;
+
+    bookmarksApi
+      .check(id)
+      .then((data) => {
+        setBookmarked(Boolean(data?.bookmarked ?? data?.is_bookmarked ?? data?.exists));
+      })
+      .catch(() => {});
+  }, [id, user]);
+
   const handleApply = () => {
     if (!user) { setShowAuthModal(true); return; }
     setApplyStep(1);
     setShowApplyModal(true);
+  };
+
+  const handleToggleBookmark = async () => {
+    if (!user) { setShowAuthModal(true); return; }
+    if (user.role !== 'student') {
+      addToast({
+        title: lang === 'id' ? 'Khusus mahasiswa' : 'Student only',
+        message: lang === 'id' ? 'Hanya akun mahasiswa yang bisa menyimpan lowongan.' : 'Only student accounts can save opportunities.',
+        type: 'warning',
+      });
+      return;
+    }
+
+    setBookmarking(true);
+    try {
+      if (bookmarked) {
+        await bookmarksApi.remove(job.id);
+        setBookmarked(false);
+        window.dispatchEvent(new CustomEvent('opportunity-bookmark-change', {
+          detail: { opportunityId: job.id, bookmarked: false },
+        }));
+        addToast({
+          title: lang === 'id' ? 'Dihapus' : 'Removed',
+          message: lang === 'id' ? 'Lowongan dihapus dari simpanan.' : 'Opportunity removed from saved list.',
+          type: 'success',
+        });
+      } else {
+        await bookmarksApi.add(job.id);
+        setBookmarked(true);
+        window.dispatchEvent(new CustomEvent('opportunity-bookmark-change', {
+          detail: { opportunityId: job.id, bookmarked: true },
+        }));
+        addToast({
+          title: lang === 'id' ? 'Tersimpan' : 'Saved',
+          message: lang === 'id' ? 'Lowongan berhasil disimpan.' : 'Opportunity saved.',
+          type: 'success',
+        });
+      }
+    } catch (err) {
+      addToast({
+        title: 'Error',
+        message: err.message || (lang === 'id' ? 'Gagal memperbarui simpanan.' : 'Failed to update bookmark.'),
+        type: 'error',
+      });
+    } finally {
+      setBookmarking(false);
+    }
   };
 
   const handleSubmitApplication = async () => {
@@ -268,10 +330,17 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <button
+                    type="button"
+                    onClick={handleToggleBookmark}
+                    disabled={bookmarking}
                     aria-label="Simpan lowongan"
-                    className="hidden h-9 w-9 items-center justify-center rounded-lg border border-surface-border text-text-muted transition-colors hover:border-brand hover:text-brand sm:flex"
+                    className={`hidden h-9 w-9 items-center justify-center rounded-lg border transition-colors disabled:opacity-60 sm:flex ${
+                      bookmarked
+                        ? 'border-brand/20 bg-brand/10 text-brand'
+                        : 'border-surface-border text-text-muted hover:border-brand hover:text-brand'
+                    }`}
                   >
-                    <Bookmark size={18} />
+                    <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
                   </button>
                   {user?.role !== 'hr' && (
                     applied ? (
@@ -380,7 +449,22 @@ export function DetailLowongan({ jobId, isEmbedded }) {
           <div className="space-y-6">
             {/* Job info card */}
             <div className="rounded-2xl border border-surface-border bg-white p-5 shadow-sm">
-              <h3 className="text-base font-bold text-gray-900 mb-5">{t('det_overview')}</h3>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h3 className="text-base font-bold text-gray-900">{t('det_overview')}</h3>
+                <button
+                  type="button"
+                  onClick={handleToggleBookmark}
+                  disabled={bookmarking}
+                  aria-label={lang === 'id' ? 'Simpan lowongan' : 'Save opportunity'}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors disabled:opacity-60 ${
+                    bookmarked
+                      ? 'border-brand/20 bg-brand/10 text-brand'
+                      : 'border-surface-border text-text-muted hover:border-brand hover:text-brand'
+                  }`}
+                >
+                  <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+                </button>
+              </div>
               <ul className="space-y-4">
                 <li className="flex gap-3">
                   <Briefcase className="text-gray-400 shrink-0 mt-0.5" size={20} />

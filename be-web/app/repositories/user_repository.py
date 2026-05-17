@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.domain.models.user import User
+from app.domain.models.user import User, UserRole
 from app.repositories.base import BaseRepository
 
 
@@ -18,7 +18,7 @@ class UserRepository(BaseRepository[User]):
         """Retrieve all users with student role."""
         return (
             self._db.query(User)
-            .filter(User.role == "student")
+            .filter(User.role == UserRole.STUDENT, User.is_active == True)
             .offset(skip)
             .limit(limit)
             .all()
@@ -28,6 +28,6 @@ class UserRepository(BaseRepository[User]):
         """Retrieve all HR staff for a given company."""
         return (
             self._db.query(User)
-            .filter(User.role == "hr", User.company_id == company_id)
+            .filter(User.role == UserRole.HR, User.company_id == company_id, User.is_active == True)
             .all()
         )

@@ -1,5 +1,7 @@
 from typing import Generic, TypeVar, Type
 
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.database import Base
@@ -33,7 +35,18 @@ class BaseRepository(Generic[ModelType]):
         """Create a new record from a dictionary of attributes."""
         db_obj = self._model(**obj_data)
         self._db.add(db_obj)
-        self._db.commit()
+        try:
+            self._db.commit()
+        except IntegrityError as exc:
+            self._db.rollback()
+            if not self._should_retry_after_sequence_sync(exc):
+                raise
+
+            self._sync_primary_key_sequence()
+            db_obj = self._model(**obj_data)
+            self._db.add(db_obj)
+            self._db.commit()
+
         self._db.refresh(db_obj)
         return db_obj
 
@@ -53,3 +66,27 @@ class BaseRepository(Generic[ModelType]):
             self._db.commit()
             return True
         return False
+
+    def _should_retry_after_sequence_sync(self, exc: IntegrityError) -> bool:
+        if self._db.bind is None or self._db.bind.dialect.name != "postgresql":
+            return False
+
+        message = str(exc.orig).lower() if exc.orig else str(exc).lower()
+        return "duplicate key value violates unique constraint" in message and f"{self._model.__tablename__}_pkey" in message
+
+    def _sync_primary_key_sequence(self) -> None:
+        table_name = self._model.__tablename__
+        sequence_name = self._db.execute(
+            text("select pg_get_serial_sequence(:table_name, 'id')"),
+            {"table_name": table_name},
+        ).scalar()
+        if not sequence_name:
+            return
+
+        self._db.execute(
+            text(
+                f"select setval(:sequence_name, coalesce((select max(id) from {table_name}), 1), true)"
+            ),
+            {"sequence_name": sequence_name},
+        )
+        self._db.commit()

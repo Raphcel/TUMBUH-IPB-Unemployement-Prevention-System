@@ -2,7 +2,7 @@ import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, Enum, DateTime, ForeignKey
+    Column, Integer, String, Text, Boolean, Enum, DateTime, ForeignKey, JSON
 )
 from sqlalchemy.orm import relationship
 
@@ -32,6 +32,8 @@ class Opportunity(Base):
     salary: str = Column(String(100), nullable=True)
     description: str = Column(Text, nullable=True)
     requirements: str = Column(Text, nullable=True)  # Stored as JSON string
+    target_majors: list = Column(JSON, nullable=False, default=list)
+    skill_tags: list = Column(JSON, nullable=False, default=list)
     is_active: bool = Column(Boolean, default=True, nullable=False, index=True)
     posted_at: datetime = Column(DateTime, default=_utcnow)
     deadline: datetime = Column(DateTime, nullable=True)

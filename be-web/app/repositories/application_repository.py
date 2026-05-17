@@ -105,3 +105,12 @@ class ApplicationRepository(BaseRepository[Application]):
             .first()
             is not None
         )
+
+    def get_student_ids_by_opportunity(self, opportunity_id: int) -> set[int]:
+        """Return student IDs that already applied to an opportunity."""
+        rows = (
+            self._db.query(Application.student_id)
+            .filter(Application.opportunity_id == opportunity_id)
+            .all()
+        )
+        return {student_id for (student_id,) in rows}

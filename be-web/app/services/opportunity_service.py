@@ -1,14 +1,19 @@
 import json
+import re
 
 from fastapi import HTTPException, status
 
 from app.domain.models.opportunity import OpportunityType
+from app.repositories.notification_repository import NotificationRepository
 from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.application_repository import ApplicationRepository
+from app.repositories.company_follow_repository import CompanyFollowRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.opportunity import (
     OpportunityCreate, OpportunityUpdate, OpportunityResponse, OpportunityListResponse,
 )
 from app.services.audit_service import audit_log
+from app.services.opportunity_matcher import find_matching_students, normalize_text
 
 
 class OpportunityService:
@@ -18,9 +23,15 @@ class OpportunityService:
         self,
         opportunity_repo: OpportunityRepository,
         application_repo: ApplicationRepository | None = None,
+        notification_repo: NotificationRepository | None = None,
+        user_repo: UserRepository | None = None,
+        company_follow_repo: CompanyFollowRepository | None = None,
     ):
         self._opportunity_repo = opportunity_repo
         self._application_repo = application_repo
+        self._notification_repo = notification_repo
+        self._user_repo = user_repo
+        self._company_follow_repo = company_follow_repo
 
     def verify_ownership(self, opportunity_id: int, company_id: int | None) -> None:
         """Verify the opportunity belongs to the HR user's company."""
@@ -66,11 +77,13 @@ class OpportunityService:
     def create_opportunity(self, data: OpportunityCreate) -> OpportunityResponse:
         """Create a new opportunity."""
         opp_dict = data.model_dump()
-        if opp_dict.get("requirements"):
-            opp_dict["requirements"] = json.dumps(opp_dict["requirements"])
+        opp_dict["requirements"] = self._serialize_requirements(opp_dict.get("requirements"))
+        opp_dict["target_majors"] = self._clean_list(opp_dict.get("target_majors"))
+        opp_dict["skill_tags"] = self._clean_list(opp_dict.get("skill_tags"))
         opp = self._opportunity_repo.create(opp_dict)
         # Re-fetch with eager-loaded relationships to avoid lazy-load errors
         opp = self._opportunity_repo.get_by_id_with_company(opp.id)
+        self._notify_students_new_opportunity(opp)
 
         audit_log(
             "OPPORTUNITY_CREATE",
@@ -89,8 +102,12 @@ class OpportunityService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
 
         update_data = data.model_dump(exclude_unset=True)
-        if "requirements" in update_data and update_data["requirements"] is not None:
-            update_data["requirements"] = json.dumps(update_data["requirements"])
+        if "requirements" in update_data:
+            update_data["requirements"] = self._serialize_requirements(update_data.get("requirements"))
+        if "target_majors" in update_data:
+            update_data["target_majors"] = self._clean_list(update_data.get("target_majors"))
+        if "skill_tags" in update_data:
+            update_data["skill_tags"] = self._clean_list(update_data.get("skill_tags"))
 
         updated = self._opportunity_repo.update(opp, update_data)
         # Re-fetch with eager-loaded relationships
@@ -132,3 +149,158 @@ class OpportunityService:
         if hasattr(opp, "applications") and opp.applications is not None:
             data.applicants_count = len(opp.applications)
         return data
+
+    def _notify_students_new_opportunity(self, opportunity) -> None:
+        if not opportunity or not opportunity.is_active or not self._notification_repo or not self._user_repo:
+            return
+
+        students = self._user_repo.get_students(skip=0, limit=100000)
+        if not students:
+            return
+
+        excluded_student_ids = (
+            self._application_repo.get_student_ids_by_opportunity(opportunity.id)
+            if self._application_repo
+            else set()
+        )
+        followed_notified_student_ids = self._notify_followed_company_matches(
+            opportunity,
+            excluded_student_ids,
+        )
+
+        matches = find_matching_students(
+            students,
+            opportunity,
+            excluded_student_ids | followed_notified_student_ids,
+        )
+        if not matches:
+            return
+
+        company_name = opportunity.company.name if getattr(opportunity, "company", None) else "A company"
+        title = "Recommended opportunities for you"
+        created = 0
+        updated = 0
+        for match in matches:
+            existing = self._notification_repo.get_latest_unread_by_user_and_title_today(
+                match.student.id,
+                title,
+            )
+            if existing:
+                next_count = self._extract_opportunity_digest_count(existing.message) + 1
+                self._notification_repo.update(existing, {
+                    "message": self._build_opportunity_digest_message(
+                        count=next_count,
+                        opportunity_title=opportunity.title,
+                        company_name=company_name,
+                        reason=match.reason,
+                    ),
+                    "action_label": "View latest match",
+                    "action_url": f"/lowongan/{opportunity.id}",
+                })
+                updated += 1
+                continue
+
+            self._notification_repo.create({
+                "user_id": match.student.id,
+                "title": title,
+                "message": self._build_opportunity_digest_message(
+                    count=1,
+                    opportunity_title=opportunity.title,
+                    company_name=company_name,
+                    reason=match.reason,
+                ),
+                "type": "info",
+                "action_label": "View latest match",
+                "action_url": f"/lowongan/{opportunity.id}",
+            })
+            created += 1
+
+        audit_log(
+            "NOTIFICATION_CREATE",
+            resource="opportunity",
+            resource_id=opportunity.id,
+            detail=f"Created {created} and updated {updated} fit opportunity digest notification(s) for opportunity {opportunity.id}",
+            success=True,
+        )
+
+    def _notify_followed_company_matches(self, opportunity, excluded_student_ids: set[int]) -> set[int]:
+        if not self._company_follow_repo or not self._notification_repo:
+            return set()
+
+        target_majors = {normalize_text(major) for major in getattr(opportunity, "target_majors", []) if normalize_text(major)}
+        if not target_majors:
+            return set()
+
+        followers = self._company_follow_repo.get_active_student_followers_by_company(opportunity.company_id)
+        if not followers:
+            return set()
+
+        company_name = opportunity.company.name if getattr(opportunity, "company", None) else "A company"
+        notifications = []
+        notified_student_ids = set()
+        for student in followers:
+            if student.id in excluded_student_ids:
+                continue
+            if normalize_text(student.major) not in target_majors:
+                continue
+
+            notifications.append({
+                "user_id": student.id,
+                "title": f"New opportunity from {company_name}",
+                "message": f"{company_name} posted {opportunity.title}, and it matches your major.",
+                "type": "info",
+                "action_label": "View opportunity",
+                "action_url": f"/lowongan/{opportunity.id}",
+            })
+            notified_student_ids.add(student.id)
+
+        self._notification_repo.create_many(notifications)
+        if notifications:
+            audit_log(
+                "NOTIFICATION_CREATE",
+                resource="opportunity",
+                resource_id=opportunity.id,
+                detail=f"Notified {len(notifications)} followed-company student(s) for opportunity {opportunity.id}",
+                success=True,
+            )
+        return notified_student_ids
+
+    @staticmethod
+    def _serialize_requirements(values) -> str | None:
+        if values is None:
+            return None
+        return json.dumps(OpportunityService._clean_list(values))
+
+    @staticmethod
+    def _clean_list(values) -> list[str]:
+        if not isinstance(values, list):
+            return []
+
+        seen = set()
+        cleaned = []
+        for value in values:
+            display_value = str(value or "").strip()
+            normalized = normalize_text(display_value)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                cleaned.append(display_value)
+        return cleaned
+
+    @staticmethod
+    def _extract_opportunity_digest_count(message: str) -> int:
+        match = re.match(r"(\d+)\s+new opportunit", message or "")
+        return int(match.group(1)) if match else 1
+
+    @staticmethod
+    def _build_opportunity_digest_message(
+        count: int,
+        opportunity_title: str,
+        company_name: str,
+        reason: str,
+    ) -> str:
+        prefix = (
+            f"1 new opportunity matches your profile. Latest: {opportunity_title} at {company_name}."
+            if count <= 1
+            else f"{count} new opportunities match your profile today. Latest: {opportunity_title} at {company_name}."
+        )
+        return f"{prefix} Matched {reason}." if reason else prefix

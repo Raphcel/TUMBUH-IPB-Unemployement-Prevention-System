@@ -13,6 +13,9 @@ from app.schemas.application import (
 from app.schemas.bookmark import (
     BookmarkCreate, BookmarkResponse, BookmarkListResponse,
 )
+from app.schemas.company_follow import (
+    CompanyFollowResponse, CompanyFollowListResponse, CompanyFollowStatusResponse,
+)
 from app.schemas.externship import (
     ExternshipCreate, ExternshipUpdate, ExternshipResponse, ExternshipListResponse,
 )
@@ -26,6 +29,7 @@ __all__ = [
     "OpportunityCreate", "OpportunityUpdate", "OpportunityResponse", "OpportunityListResponse",
     "ApplicationCreate", "ApplicationStatusUpdate", "ApplicationResponse", "ApplicationListResponse",
     "BookmarkCreate", "BookmarkResponse", "BookmarkListResponse",
+    "CompanyFollowResponse", "CompanyFollowListResponse", "CompanyFollowStatusResponse",
     "ExternshipCreate", "ExternshipUpdate", "ExternshipResponse", "ExternshipListResponse",
     "ResumeProfileCreate", "ResumeProfileUpdate", "ResumeProfileResponse",
 ]

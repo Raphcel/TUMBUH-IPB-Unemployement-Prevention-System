@@ -10,11 +10,11 @@ from app.config.database import get_db
 from app.domain.models.user import User
 from app.repositories import (
     UserRepository, CompanyRepository, OpportunityRepository, ApplicationRepository,
-    BookmarkRepository, ExternshipRepository, NotificationRepository, ResumeRepository,
+    BookmarkRepository, CompanyFollowRepository, ExternshipRepository, NotificationRepository, ResumeRepository,
 )
 from app.services import (
     AuthService, UserService, CompanyService, OpportunityService, ApplicationService,
-    BookmarkService, ExternshipService, NotificationService, AdminService, ResumeService,
+    BookmarkService, CompanyFollowService, ExternshipService, NotificationService, AdminService, ResumeService,
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -42,6 +42,10 @@ def get_bookmark_repo(db: Session = Depends(get_db)) -> BookmarkRepository:
     return BookmarkRepository(db)
 
 
+def get_company_follow_repo(db: Session = Depends(get_db)) -> CompanyFollowRepository:
+    return CompanyFollowRepository(db)
+
+
 def get_externship_repo(db: Session = Depends(get_db)) -> ExternshipRepository:
     return ExternshipRepository(db)
 
@@ -56,8 +60,11 @@ def get_resume_repo(db: Session = Depends(get_db)) -> ResumeRepository:
 
 # ── Service Factories ────────────────────────────────────────
 
-def get_auth_service(user_repo: UserRepository = Depends(get_user_repo)) -> AuthService:
-    return AuthService(user_repo)
+def get_auth_service(
+    user_repo: UserRepository = Depends(get_user_repo),
+    notification_repo: NotificationRepository = Depends(get_notification_repo),
+) -> AuthService:
+    return AuthService(user_repo, notification_repo)
 
 
 def get_user_service(user_repo: UserRepository = Depends(get_user_repo)) -> UserService:
@@ -71,21 +78,33 @@ def get_company_service(company_repo: CompanyRepository = Depends(get_company_re
 def get_opportunity_service(
     opportunity_repo: OpportunityRepository = Depends(get_opportunity_repo),
     application_repo: ApplicationRepository = Depends(get_application_repo),
+    notification_repo: NotificationRepository = Depends(get_notification_repo),
+    user_repo: UserRepository = Depends(get_user_repo),
+    company_follow_repo: CompanyFollowRepository = Depends(get_company_follow_repo),
 ) -> OpportunityService:
-    return OpportunityService(opportunity_repo, application_repo)
+    return OpportunityService(opportunity_repo, application_repo, notification_repo, user_repo, company_follow_repo)
 
 
 def get_application_service(
     application_repo: ApplicationRepository = Depends(get_application_repo),
     opportunity_repo: OpportunityRepository = Depends(get_opportunity_repo),
+    notification_repo: NotificationRepository = Depends(get_notification_repo),
+    user_repo: UserRepository = Depends(get_user_repo),
 ) -> ApplicationService:
-    return ApplicationService(application_repo, opportunity_repo)
+    return ApplicationService(application_repo, opportunity_repo, notification_repo, user_repo)
 
 
 def get_bookmark_service(
     bookmark_repo: BookmarkRepository = Depends(get_bookmark_repo),
 ) -> BookmarkService:
     return BookmarkService(bookmark_repo)
+
+
+def get_company_follow_service(
+    company_follow_repo: CompanyFollowRepository = Depends(get_company_follow_repo),
+    company_repo: CompanyRepository = Depends(get_company_repo),
+) -> CompanyFollowService:
+    return CompanyFollowService(company_follow_repo, company_repo)
 
 
 def get_externship_service(

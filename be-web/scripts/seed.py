@@ -17,6 +17,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import bcrypt
+from sqlalchemy import text
 
 from sqlalchemy.orm import Session
 
@@ -26,10 +27,25 @@ from app.domain.models.company import Company
 from app.domain.models.opportunity import Opportunity, OpportunityType
 from app.domain.models.application import Application, ApplicationStatus
 from app.domain.models.bookmark import Bookmark
+from app.domain.models.company_follow import CompanyFollow
 from app.domain.models.externship import Externship, ExternshipStatus, ExternshipType
 
 def hash_pw(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def reset_postgres_sequence(db: Session, table_name: str) -> None:
+    sequence_name = db.execute(
+        text("select pg_get_serial_sequence(:table_name, 'id')"),
+        {"table_name": table_name},
+    ).scalar()
+    if not sequence_name:
+        return
+
+    db.execute(
+        text(f"select setval(:sequence_name, coalesce((select max(id) from {table_name}), 1), true)"),
+        {"sequence_name": sequence_name},
+    )
 
 
 def seed():
@@ -38,11 +54,16 @@ def seed():
     try:
         # ── Clear existing data (in dependency order) ────────────
         db.query(Bookmark).delete()
+        db.query(CompanyFollow).delete()
         db.query(Externship).delete()
         db.query(Application).delete()
         db.query(Opportunity).delete()
         db.query(User).delete()
         db.query(Company).delete()
+        for table_name in ("companies", "users", "opportunities", "applications", "company_follows"):
+            reset_postgres_sequence(db, table_name)
+        print("âœ“ Reset PostgreSQL sequences")
+
         db.commit()
         print("✓ Cleared existing data")
 
@@ -258,6 +279,8 @@ def seed():
                     "Familiar with React and Go",
                     "Strong problem solving skills",
                 ]),
+                target_majors=["Ilmu Komputer", "Teknik Komputer"],
+                skill_tags=["React", "Python", "Software Engineering"],
                 is_active=True,
                 posted_at=datetime(2026, 2, 1),
                 deadline=datetime(2026, 3, 1),
@@ -276,6 +299,8 @@ def seed():
                     "Proficient in SQL and Python",
                     "Experience with Tableau/PowerBI",
                 ]),
+                target_majors=["Statistika dan Sains Data", "Ilmu Komputer"],
+                skill_tags=["Python", "Data Analysis", "Machine Learning"],
                 is_active=True,
                 posted_at=datetime(2026, 1, 28),
                 deadline=datetime(2026, 2, 28),
@@ -294,6 +319,8 @@ def seed():
                     "Min GPA 3.50",
                     "Active in student organizations",
                 ]),
+                target_majors=[],
+                skill_tags=["Leadership"],
                 is_active=True,
                 posted_at=datetime(2026, 2, 2),
                 deadline=datetime(2026, 3, 15),
@@ -312,6 +339,8 @@ def seed():
                     "Familiar with PostgreSQL and Redis",
                     "Understanding of microservices architecture",
                 ]),
+                target_majors=["Ilmu Komputer", "Teknik Komputer"],
+                skill_tags=["Python", "PostgreSQL", "Backend Development"],
                 is_active=True,
                 posted_at=datetime(2026, 1, 15),
                 deadline=datetime(2026, 3, 10),
@@ -329,6 +358,8 @@ def seed():
                     "Proficient in Figma",
                     "Portfolio showcasing UI/UX projects",
                 ]),
+                target_majors=["Ilmu Komputer"],
+                skill_tags=["Figma", "UI/UX"],
                 is_active=True,
                 posted_at=datetime(2026, 2, 5),
                 deadline=datetime(2026, 3, 5),
@@ -346,6 +377,8 @@ def seed():
                     "Knowledge of TCP/IP, routing protocols",
                     "CCNA certification is a plus",
                 ]),
+                target_majors=["Teknik Komputer", "Ilmu Komputer"],
+                skill_tags=["IoT", "Networking", "TCP/IP"],
                 is_active=True,
                 posted_at=datetime(2026, 2, 10),
                 deadline=datetime(2026, 3, 20),
@@ -447,6 +480,15 @@ def seed():
         print(f"✓ Seeded {len(bookmarks)} bookmarks")
 
         # ── Externships ──────────────────────────────────────────
+        company_follows = [
+            CompanyFollow(student_id=1, company_id=101),
+            CompanyFollow(student_id=3, company_id=102),
+            CompanyFollow(student_id=4, company_id=105),
+        ]
+        db.add_all(company_follows)
+        db.flush()
+        print(f"Seeded {len(company_follows)} company follows")
+
         externships = [
             Externship(
                 student_id=1,

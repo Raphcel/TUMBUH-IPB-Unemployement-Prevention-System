@@ -20,6 +20,8 @@ class Notification(Base):
     title: str = Column(String(255), nullable=False)
     message: str = Column(Text, nullable=False)
     type: str = Column(String(20), nullable=False, default="info")  # info, success, warning
+    action_label: str = Column(String(100), nullable=True)
+    action_url: str = Column(String(255), nullable=True)
     is_read: bool = Column(Boolean, default=False, nullable=False)
     created_at: datetime = Column(DateTime, default=_utcnow)
 

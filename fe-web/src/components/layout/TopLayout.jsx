@@ -1,43 +1,87 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../context/LanguageContext';
 import {
     Bell,
-    User,
-    Settings,
-    LogOut,
     CheckCircle,
     Info,
     AlertTriangle,
-    X
+    Menu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { UserMenu } from './UserMenu';
-import { Menu } from 'lucide-react';
+import { notificationsApi } from '../../api/notifications';
+
+const MotionButton = motion.button;
+const MotionSpan = motion.span;
+const MotionDiv = motion.div;
+
+function formatNotificationDate(value) {
+    if (!value) return '-';
+    return new Date(value).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+}
 
 export function TopLayout({ onMenuClick }) {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
-
-    // No notifications API — show empty state until backend supports it
     const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const loadNotifications = useCallback(async () => {
+        if (!user) {
+            setNotifications([]);
+            setUnreadCount(0);
+            return;
+        }
 
-    const handleNotificationClick = (notification) => {
+        setLoadingNotifications(true);
+        try {
+            const data = await notificationsApi.list(0, 5);
+            setNotifications(data.items || []);
+            setUnreadCount(data.unread_count || 0);
+        } catch (err) {
+            console.error('Failed to load notifications', err);
+        } finally {
+            setLoadingNotifications(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        loadNotifications();
+    }, [loadNotifications]);
+
+    const handleNotificationClick = async (notification) => {
         setSelectedNotification(notification);
-        // Mark as read mock
-        setNotifications(notifications.map(n =>
-            n.id === notification.id ? { ...n, read: true } : n
-        ));
         setShowNotifications(false);
+
+        if (!notification.is_read) {
+            try {
+                await notificationsApi.markRead(notification.id);
+                setNotifications((items) =>
+                    items.map((n) => n.id === notification.id ? { ...n, is_read: true } : n)
+                );
+                setUnreadCount((count) => Math.max(0, count - 1));
+            } catch (err) {
+                console.error('Failed to mark notification as read', err);
+            }
+        }
+    };
+
+    const handleNotificationAction = (notification) => {
+        if (!notification?.action_url) return;
+        setSelectedNotification(null);
+        navigate(notification.action_url);
     };
 
     const getIcon = (type) => {
@@ -51,8 +95,6 @@ export function TopLayout({ onMenuClick }) {
     return (
         <>
             <div className="h-16 bg-surface border-b border-surface-border flex items-center justify-between lg:justify-end px-4 sm:px-6 lg:px-8 sticky top-0 z-30 shadow-sm">
-
-                {/* Mobile Menu Toggle */}
                 <button
                     onClick={onMenuClick}
                     className="lg:hidden p-2 -ml-2 text-text-muted hover:text-text hover:bg-surface-muted rounded-lg transition-colors"
@@ -61,28 +103,28 @@ export function TopLayout({ onMenuClick }) {
                 </button>
 
                 <div className="flex items-center gap-4 sm:gap-6">
-                    {/* Notifications */}
                     <div className="relative">
-                        <motion.button
+                        <MotionButton
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="text-text-muted hover:text-text transition-colors relative p-1.5 rounded-lg hover:bg-surface-muted"
                             onClick={() => {
-                                setShowNotifications(!showNotifications);
-                                setShowProfileMenu(false);
+                                const nextOpen = !showNotifications;
+                                setShowNotifications(nextOpen);
+                                if (nextOpen) loadNotifications();
                             }}
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
-                                <motion.span
+                                <MotionSpan
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white"
+                                    className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white"
                                 >
-                                    {unreadCount}
-                                </motion.span>
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </MotionSpan>
                             )}
-                        </motion.button>
+                        </MotionButton>
 
                         <AnimatePresence>
                             {showNotifications && (
@@ -91,7 +133,7 @@ export function TopLayout({ onMenuClick }) {
                                         className="fixed inset-0 z-40"
                                         onClick={() => setShowNotifications(false)}
                                     />
-                                    <motion.div
+                                    <MotionDiv
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -105,25 +147,25 @@ export function TopLayout({ onMenuClick }) {
                                         </div>
                                         <div className="max-h-[300px] overflow-y-auto">
                                             {notifications.length > 0 ? (
-                                                notifications.slice(0, 5).map(notification => (
+                                                notifications.map(notification => (
                                                     <div
                                                         key={notification.id}
                                                         onClick={() => handleNotificationClick(notification)}
-                                                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 ${!notification.read ? 'bg-blue-50/30' : ''}`}
+                                                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 ${!notification.is_read ? 'bg-blue-50/30' : ''}`}
                                                     >
                                                         <div className="flex gap-3">
                                                             <div className="mt-1 flex-shrink-0">
                                                                 {getIcon(notification.type)}
                                                             </div>
                                                             <div>
-                                                                <h4 className={`text-sm ${!notification.read ? 'font-semibold text-primary' : 'font-medium text-gray-700'}`}>
+                                                                <h4 className={`text-sm ${!notification.is_read ? 'font-semibold text-primary' : 'font-medium text-gray-700'}`}>
                                                                     {notification.title}
                                                                 </h4>
                                                                 <p className="text-xs text-secondary mt-1 line-clamp-2">
                                                                     {notification.message}
                                                                 </p>
                                                                 <p className="text-[10px] text-gray-400 mt-2">
-                                                                    {notification.date}
+                                                                    {formatNotificationDate(notification.created_at)}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -131,22 +173,20 @@ export function TopLayout({ onMenuClick }) {
                                                 ))
                                             ) : (
                                                 <div className="px-4 py-8 text-center text-sm text-text-muted">
-                                                    {t('no_notifications')}
+                                                    {loadingNotifications ? 'Loading...' : t('no_notifications')}
                                                 </div>
                                             )}
                                         </div>
-                                    </motion.div>
+                                    </MotionDiv>
                                 </>
                             )}
                         </AnimatePresence>
                     </div>
 
-                    {/* Unified Profile Menu */}
                     <UserMenu />
                 </div>
             </div>
 
-            {/* Notification Modal */}
             <Modal
                 isOpen={!!selectedNotification}
                 onClose={() => setSelectedNotification(null)}
@@ -164,11 +204,19 @@ export function TopLayout({ onMenuClick }) {
                                     {selectedNotification.message}
                                 </p>
                                 <p className="text-xs text-secondary mt-3 font-medium">
-                                    Received {selectedNotification.date}
+                                    Received {formatNotificationDate(selectedNotification.created_at)}
                                 </p>
                             </div>
                         </div>
                         <div className="flex justify-end pt-2">
+                            {selectedNotification.action_url && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleNotificationAction(selectedNotification)}
+                                >
+                                    {selectedNotification.action_label || 'Open'}
+                                </Button>
+                            )}
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -179,7 +227,7 @@ export function TopLayout({ onMenuClick }) {
                         </div>
                     </div>
                 )}
-            </Modal >
+            </Modal>
         </>
     );
 }
