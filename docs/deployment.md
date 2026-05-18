@@ -1,4 +1,4 @@
-# DEPLOYMENT.md
+# Deployment
 
 Deployment guidance for TUMBUH with Supabase as managed PostgreSQL while keeping FastAPI, SQLAlchemy, Alembic, and JWT auth in place.
 
