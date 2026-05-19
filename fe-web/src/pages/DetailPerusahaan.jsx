@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { companiesApi } from '../api/companies';
+import { companyFollowsApi } from '../api/companyFollows';
 import { opportunitiesApi } from '../api/opportunities';
 import { MapPin, Globe, Users, Star, Bookmark, ChevronRight, Building2 } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const TAB_KEYS = ['about', 'positions', 'reviews'];
 
 export function DetailPerusahaan() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { addToast } = useToast();
   const [company, setCompany] = useState(null);
   const [companyJobs, setCompanyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('about');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([companiesApi.get(id), opportunitiesApi.listByCompany(id)])
@@ -24,6 +32,57 @@ export function DetailPerusahaan() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'student') {
+      setIsFollowing(false);
+      return;
+    }
+
+    companyFollowsApi
+      .status(id)
+      .then((data) => setIsFollowing(Boolean(data.is_following)))
+      .catch(console.error);
+  }, [id, user]);
+
+  const handleToggleFollow = async () => {
+    if (!user) {
+      addToast({
+        type: 'info',
+        title: 'Login required',
+        message: 'Please log in as a student to follow companies.',
+      });
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'student') {
+      addToast({
+        type: 'warning',
+        title: 'Student only',
+        message: 'Only student accounts can follow companies.',
+      });
+      return;
+    }
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await companyFollowsApi.unfollow(id);
+        setIsFollowing(false);
+      } else {
+        await companyFollowsApi.follow(id);
+        setIsFollowing(true);
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Failed',
+        message: err.message || 'Could not update company follow.',
+      });
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -92,8 +151,16 @@ export function DetailPerusahaan() {
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <button className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-brand hover:text-brand transition-colors">
-                    Ikuti
+                  <button
+                    onClick={handleToggleFollow}
+                    disabled={followLoading}
+                    className={`px-4 py-1.5 border rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
+                      isFollowing
+                        ? 'border-brand bg-brand text-white hover:bg-brand-dark'
+                        : 'border-gray-300 text-gray-700 hover:border-brand hover:text-brand'
+                    }`}
+                  >
+                    {isFollowing ? 'Mengikuti' : 'Ikuti'}
                   </button>
                   {company.rating && (
                     <div className="text-right">

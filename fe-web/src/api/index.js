@@ -5,6 +5,7 @@
 export { default as api, setToken, getToken } from './client';
 export { default as authApi } from './auth';
 export { default as companiesApi } from './companies';
+export { default as companyFollowsApi } from './companyFollows';
 export { default as opportunitiesApi } from './opportunities';
 export { default as applicationsApi } from './applications';
 export { default as bookmarksApi } from './bookmarks';

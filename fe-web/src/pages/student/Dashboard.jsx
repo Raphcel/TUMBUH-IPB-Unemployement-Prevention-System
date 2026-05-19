@@ -12,6 +12,7 @@ import {
   X,
   Building,
   Calendar,
+  BookmarkCheck,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -19,10 +20,14 @@ import { useAuth } from '../../context/AuthContext';
 import { applicationsApi } from '../../api/applications';
 import { externshipsApi } from '../../api/externships';
 import { opportunitiesApi } from '../../api/opportunities';
+import { companyFollowsApi } from '../../api/companyFollows';
+import { resolveUploadUrl } from '../../api/client';
 import { CalendarWidget } from '../../components/dashboard/CalendarWidget';
 
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../context/LanguageContext';
+
+const MotionDiv = motion.div;
 
 export function StudentDashboard() {
   const { user } = useAuth();
@@ -30,7 +35,9 @@ export function StudentDashboard() {
   const { t, lang } = useTranslation();
   const [myApplications, setMyApplications] = useState([]);
   const [latestOpportunities, setLatestOpportunities] = useState([]);
+  const [followedCompanies, setFollowedCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
 
   const [showExternshipModal, setShowExternshipModal] = useState(false);
   const [externships, setExternships] = useState([]);
@@ -44,15 +51,18 @@ export function StudentDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [appsData, extData, oppsData] = await Promise.all([
+        const [appsData, extData, oppsData, followsData] = await Promise.all([
           applicationsApi.mine(),
           externshipsApi.mine(),
           opportunitiesApi.list(0, 3),
+          companyFollowsApi.mine(0, 100),
         ]);
         setMyApplications(appsData.items || []);
         setExternships(extData.items || []);
         const opps = Array.isArray(oppsData) ? oppsData : oppsData.items || [];
         setLatestOpportunities(opps.slice(0, 3));
+        const follows = Array.isArray(followsData) ? followsData : followsData.items || [];
+        setFollowedCompanies(follows.map((follow) => follow.company).filter(Boolean));
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -75,6 +85,7 @@ export function StudentDashboard() {
   const activeApplications = myApplications.filter((app) =>
     ['Applied', 'Interview', 'Screening'].includes(app.status)
   );
+  const previewFollowedCompanies = followedCompanies.slice(0, 4);
 
   const handleAddExternship = async (e) => {
     // ... (keep logic)
@@ -127,7 +138,7 @@ export function StudentDashboard() {
   };
 
   return (
-    <motion.div
+    <MotionDiv
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -372,6 +383,59 @@ export function StudentDashboard() {
 
         {/* Right Column - Secondary Context */}
         <motion.div variants={itemVariants} className="space-y-8">
+          <div className="rounded-xl border border-surface-border bg-surface p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-text flex items-center gap-2">
+                <BookmarkCheck size={18} className="text-brand" />
+                {lang === 'id' ? 'Perusahaan Diikuti' : 'Following'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowFollowingModal(true)}
+                className="text-sm font-medium text-brand hover:text-brand-light transition-colors"
+              >
+                {t('sdash_view_all')}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {previewFollowedCompanies.map((company) => (
+                <Link
+                  key={company.id}
+                  to={`/perusahaan/${company.id}`}
+                  className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-muted/40 p-3 transition-colors hover:border-brand/30 hover:bg-brand-muted/30"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-surface-border bg-white p-1">
+                    {company.logo ? (
+                      <img src={resolveUploadUrl(company.logo)} alt="" className="h-full w-full object-contain" />
+                    ) : (
+                      <Building size={18} className="text-text-muted" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-text">{company.name}</p>
+                    <p className="truncate text-xs text-text-muted">{company.industry || '-'}</p>
+                  </div>
+                </Link>
+              ))}
+              {followedCompanies.length === 0 && (
+                <div className="rounded-lg border border-dashed border-surface-border bg-surface-muted/30 p-4 text-sm text-text-muted">
+                  {lang === 'id' ? 'Belum ada perusahaan yang diikuti.' : 'You are not following any companies yet.'}
+                </div>
+              )}
+              {followedCompanies.length > previewFollowedCompanies.length && (
+                <button
+                  type="button"
+                  onClick={() => setShowFollowingModal(true)}
+                  className="w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm font-medium text-brand transition-colors hover:border-brand/30 hover:bg-brand-muted/30"
+                >
+                  {lang === 'id'
+                    ? `Lihat ${followedCompanies.length - previewFollowedCompanies.length} lainnya`
+                    : `View ${followedCompanies.length - previewFollowedCompanies.length} more`}
+                </button>
+              )}
+            </div>
+          </div>
           <CalendarWidget applications={myApplications} />
         </motion.div>
       </div>
@@ -470,6 +534,44 @@ export function StudentDashboard() {
           </div>
         </form>
       </Modal>
-    </motion.div>
+
+      <Modal
+        isOpen={showFollowingModal}
+        onClose={() => setShowFollowingModal(false)}
+        title={lang === 'id' ? 'Perusahaan Diikuti' : 'Following'}
+        size="lg"
+      >
+        <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+          {followedCompanies.map((company) => (
+            <Link
+              key={company.id}
+              to={`/perusahaan/${company.id}`}
+              onClick={() => setShowFollowingModal(false)}
+              className="flex items-center gap-4 rounded-lg border border-surface-border bg-white p-4 transition-colors hover:border-brand/30 hover:bg-brand-muted/30"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-surface-border bg-white p-1.5">
+                {company.logo ? (
+                  <img src={resolveUploadUrl(company.logo)} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <Building size={20} className="text-text-muted" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-text">{company.name}</p>
+                <p className="truncate text-xs text-text-muted">{company.industry || '-'}</p>
+                {company.location && (
+                  <p className="mt-1 truncate text-xs text-text-light">{company.location}</p>
+                )}
+              </div>
+            </Link>
+          ))}
+          {followedCompanies.length === 0 && (
+            <div className="rounded-lg border border-dashed border-surface-border bg-surface-muted/30 p-6 text-center text-sm text-text-muted">
+              {lang === 'id' ? 'Belum ada perusahaan yang diikuti.' : 'You are not following any companies yet.'}
+            </div>
+          )}
+        </div>
+      </Modal>
+    </MotionDiv>
   );
 }

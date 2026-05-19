@@ -306,6 +306,7 @@ function ApplicantPanel({ applicants, loading, onStatusChange, onBulkStatusChang
   const [exceptNames, setExceptNames]           = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const exceptInputRef = useRef(null);
+  const allSelected = applicants.length > 0 && applicants.every((app) => selectedApps.has(app.id));
 
   const toggleAppSelection = useCallback((appId) => {
     setSelectedApps((prev) => {

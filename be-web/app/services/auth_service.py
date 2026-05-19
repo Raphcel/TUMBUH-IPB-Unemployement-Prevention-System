@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 
 from app.config.settings import get_settings
 from app.domain.models.user import User
+from app.domain.models.user import UserRole
+from app.repositories.notification_repository import NotificationRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserResponse, TokenResponse
 from app.services.audit_service import audit_log
@@ -24,8 +26,13 @@ settings = get_settings()
 class AuthService:
     """Service handling authentication and authorization logic."""
 
-    def __init__(self, user_repo: UserRepository):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        notification_repo: NotificationRepository | None = None,
+    ):
         self._user_repo = user_repo
+        self._notification_repo = notification_repo
 
     # ── Password Utilities ───────────────────────────────────
 
@@ -93,6 +100,7 @@ class AuthService:
         refresh_token = self.create_refresh_token(token_data)
 
         logger.info("User registered: %s (role=%s)", user.email, user.role.value)
+        self._create_onboarding_notification(user)
         audit_log(
             "AUTH_REGISTER",
             user_id=user.id,
@@ -229,3 +237,16 @@ class AuthService:
             user = self._user_repo.update(user, updates)
 
         return UserResponse.model_validate(user)
+
+    def _create_onboarding_notification(self, user: User) -> None:
+        if not self._notification_repo or user.role != UserRole.STUDENT:
+            return
+
+        self._notification_repo.create({
+            "user_id": user.id,
+            "title": "Welcome to TUMBUH",
+            "message": "Complete your profile, upload your CV, and start applying to opportunities.",
+            "type": "info",
+            "action_label": "Open profile",
+            "action_url": "/student/profile",
+        })

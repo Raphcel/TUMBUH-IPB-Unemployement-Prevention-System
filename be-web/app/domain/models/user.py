@@ -54,6 +54,7 @@ class User(Base):
     company = relationship("Company", back_populates="staff")
     applications = relationship("Application", back_populates="student", cascade="all, delete-orphan")
     bookmarks = relationship("Bookmark", back_populates="user", cascade="all, delete-orphan")
+    company_follows = relationship("CompanyFollow", back_populates="student", cascade="all, delete-orphan")
     externships = relationship("Externship", back_populates="student", cascade="all, delete-orphan")
     resume_profiles = relationship("ResumeProfile", back_populates="user", cascade="all, delete-orphan")
 

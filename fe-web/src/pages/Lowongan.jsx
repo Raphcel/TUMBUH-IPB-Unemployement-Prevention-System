@@ -73,6 +73,7 @@ export function Lowongan() {
   const [totalOpportunities, setTotalOpportunities] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [currentTimeMs] = useState(() => Date.now());
 
   // Debounce search
   useEffect(() => {
@@ -110,13 +111,15 @@ export function Lowongan() {
 
   // Auto-select first job
   useEffect(() => {
-    if (allOpportunities.length > 0) {
-      if (!selectedJobId || !allOpportunities.find(j => j.id === selectedJobId)) {
-        setSelectedJobId(allOpportunities[0].id);
+    setSelectedJobId((current) => {
+      if (allOpportunities.length > 0) {
+        if (!current || !allOpportunities.find(j => j.id === current)) {
+          return allOpportunities[0].id;
+        }
+        return current;
       }
-    } else {
-      setSelectedJobId(null);
-    }
+      return null;
+    });
   }, [allOpportunities]);
 
   useEffect(() => { setPage(0); }, [debouncedSearch, filterType, filterLocation, sortBy]);
@@ -130,6 +133,22 @@ export function Lowongan() {
       })
       .catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    function handleBookmarkChange(event) {
+      const { opportunityId, bookmarked } = event.detail || {};
+      if (!opportunityId) return;
+      setSavedJobs((current) => {
+        if (bookmarked) {
+          return current.includes(opportunityId) ? current : [...current, opportunityId];
+        }
+        return current.filter((id) => id !== opportunityId);
+      });
+    }
+
+    window.addEventListener('opportunity-bookmark-change', handleBookmarkChange);
+    return () => window.removeEventListener('opportunity-bookmark-change', handleBookmarkChange);
+  }, []);
 
   const totalPages = Math.ceil(totalOpportunities / PAGE_SIZE);
 
@@ -163,13 +182,13 @@ export function Lowongan() {
   // Is a listing "new" (posted within 7 days)?
   const isNew = (job) => {
     if (!job.created_at) return false;
-    const diff = (Date.now() - new Date(job.created_at)) / 86400000;
+    const diff = (currentTimeMs - new Date(job.created_at)) / 86400000;
     return diff <= 7;
   };
 
   const timeAgo = (dateStr) => {
     if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = currentTimeMs - new Date(dateStr).getTime();
     const days = Math.floor(diff / 86400000);
     if (days <= 0) return t('low_today', 'Today');
     return `${days}d ago`;

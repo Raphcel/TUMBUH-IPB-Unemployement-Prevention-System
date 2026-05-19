@@ -22,13 +22,15 @@ import {
 
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
+import { AvatarCropModal } from '../../components/profile/AvatarCropModal';
 import { resumesApi } from '../../api/resumes';
 import { usersApi } from '../../api/users';
 import { resolveUploadUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTranslation } from '../../context/LanguageContext';
+import { buildMajorOptions } from '../../data/ipbMajors';
 
 function createBlankDraft(user, title = 'CV Draft 1') {
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim();
@@ -507,9 +509,9 @@ function CVPreview({ draft, user, locale }) {
                 </div>
 
                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-slate-600">
-                  {contactItems.map(({ key, value, icon: Icon }) => (
+                  {contactItems.map(({ key, value, icon }) => (
                     <span key={key} className="inline-flex items-center gap-2">
-                      <Icon size={15} className="text-slate-400" />
+                      {React.createElement(icon, { size: 15, className: 'text-slate-400' })}
                       {value}
                     </span>
                   ))}
@@ -836,6 +838,7 @@ export function CVBuilder() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarCropFile, setAvatarCropFile] = useState(null);
   const [expandedExperiences, setExpandedExperiences] = useState({});
   const [actionsOpen, setActionsOpen] = useState(false);
   const [previewPageCount, setPreviewPageCount] = useState(1);
@@ -1125,10 +1128,20 @@ export function CVBuilder() {
       return;
     }
 
+    setAvatarCropFile(file);
+  };
+
+  const cancelAvatarCrop = () => {
+    setAvatarCropFile(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const uploadCroppedAvatar = async (file) => {
     setUploadingAvatar(true);
     try {
       await usersApi.uploadAvatar(file);
       await refreshUser();
+      setAvatarCropFile(null);
       setPersonalField('show_photo', true);
       addToast({
         type: 'success',
@@ -1143,7 +1156,7 @@ export function CVBuilder() {
       });
     } finally {
       setUploadingAvatar(false);
-      event.target.value = '';
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   };
 
@@ -1682,7 +1695,7 @@ export function CVBuilder() {
                       </FieldGroup>
 
                       <FieldGroup columns="four">
-                        <Input label={isId ? 'Jurusan' : 'Major'} value={item.major} onChange={(event) => setEducationInfo({ educations: updateAtIndex(draftForm.education_info.educations, index, { ...item, major: event.target.value }) })} className="rounded-xl border border-slate-200 px-4 py-2.5" />
+                        <Select label={isId ? 'Jurusan' : 'Major'} value={item.major} onChange={(event) => setEducationInfo({ educations: updateAtIndex(draftForm.education_info.educations, index, { ...item, major: event.target.value }) })} options={buildMajorOptions([item.major])} placeholder={isId ? 'Pilih jurusan IPB' : 'Choose an IPB major'} className="rounded-xl border border-slate-200 px-4 py-2.5" />
                         <Input type="month" label={isId ? 'Mulai' : 'Start'} value={item.start_date} onChange={(event) => setEducationInfo({ educations: updateAtIndex(draftForm.education_info.educations, index, { ...item, start_date: event.target.value }) })} className="rounded-xl border border-slate-200 px-4 py-2.5" />
                         <Input type="month" label={isId ? 'Selesai' : 'End'} value={item.end_date} onChange={(event) => setEducationInfo({ educations: updateAtIndex(draftForm.education_info.educations, index, { ...item, end_date: event.target.value }) })} className="rounded-xl border border-slate-200 px-4 py-2.5" />
                         <Input label="GPA" value={item.gpa} onChange={(event) => setEducationInfo({ educations: updateAtIndex(draftForm.education_info.educations, index, { ...item, gpa: event.target.value }) })} className="rounded-xl border border-slate-200 px-4 py-2.5" />
@@ -2019,6 +2032,15 @@ export function CVBuilder() {
           <CVPreview draft={draftForm} user={user} locale={locale} />
         </div>
       </div>
+
+      <AvatarCropModal
+        file={avatarCropFile}
+        isOpen={Boolean(avatarCropFile)}
+        onCancel={cancelAvatarCrop}
+        onConfirm={uploadCroppedAvatar}
+        isId={isId}
+        uploading={uploadingAvatar}
+      />
     </div>
   );
 }

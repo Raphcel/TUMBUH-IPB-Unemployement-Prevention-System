@@ -5,9 +5,28 @@ import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { opportunitiesApi } from '../../api/opportunities';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from '../../context/LanguageContext';
+import { buildMajorOptions } from '../../data/ipbMajors';
+import { getSkillSuggestions, normalizeSkillLabel, normalizeSkillList } from '../../data/skills';
+
+function formatRupiah(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return `Rp ${new Intl.NumberFormat('id-ID').format(Number(digits))}`;
+}
+
+function formatSalaryInput(value) {
+  const parts = String(value || '').match(/\d[\d.,]*/g) || [];
+  if (!parts.length) return value;
+  const amounts = parts
+    .map((part) => formatRupiah(part))
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (amounts.length === 1) return amounts[0];
+  return `${amounts[0]} - ${amounts[1]}`;
+}
 
 export function FormLowongan() {
   const { id } = useParams();
@@ -24,11 +43,14 @@ export function FormLowongan() {
     salary: '',
     description: '',
     requirements: [''],
+    target_majors: [''],
+    skill_tags: [],
     deadline: '',
     is_active: true,
   });
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
+  const [skillInput, setSkillInput] = useState('');
 
   useEffect(() => {
     if (!isEdit) return;
@@ -45,6 +67,14 @@ export function FormLowongan() {
             Array.isArray(data.requirements) && data.requirements.length > 0
               ? data.requirements
               : [''],
+          target_majors:
+            Array.isArray(data.target_majors) && data.target_majors.length > 0
+              ? data.target_majors
+              : [''],
+          skill_tags:
+            Array.isArray(data.skill_tags) && data.skill_tags.length > 0
+              ? normalizeSkillList(data.skill_tags)
+              : [],
           deadline: data.deadline ? data.deadline.split('T')[0] : '',
           is_active: data.is_active !== false,
         });
@@ -54,11 +84,15 @@ export function FormLowongan() {
         navigate('/hr/opportunities');
       })
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  }, [addToast, id, isEdit, isId, navigate]);
 
   const handleChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm({ ...form, [field]: value });
+  };
+
+  const handleSalaryChange = (e) => {
+    setForm({ ...form, salary: formatSalaryInput(e.target.value) });
   };
 
   const handleReqChange = (index) => (e) => {
@@ -76,6 +110,58 @@ export function FormLowongan() {
     setForm({ ...form, requirements: reqs.length > 0 ? reqs : [''] });
   };
 
+  const handleListChange = (field, index) => (e) => {
+    const values = [...form[field]];
+    values[index] = e.target.value;
+    setForm({ ...form, [field]: values });
+  };
+
+  const addListItem = (field) => {
+    setForm({ ...form, [field]: [...form[field], ''] });
+  };
+
+  const removeListItem = (field, index) => {
+    const values = form[field].filter((_, i) => i !== index);
+    setForm({ ...form, [field]: values.length > 0 ? values : [''] });
+  };
+
+  const cleanList = (values) => {
+    const seen = new Set();
+    return values
+      .map((value) => value.trim())
+      .filter((value) => {
+        const key = value.toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
+
+  const addSkillTag = (value) => {
+    const skill = normalizeSkillLabel(value);
+    if (!skill) return;
+
+    setForm((current) => ({
+      ...current,
+      skill_tags: normalizeSkillList([...current.skill_tags, skill]),
+    }));
+    setSkillInput('');
+  };
+
+  const removeSkillTag = (skill) => {
+    setForm((current) => ({
+      ...current,
+      skill_tags: current.skill_tags.filter((item) => item.toLowerCase() !== skill.toLowerCase()),
+    }));
+  };
+
+  const handleSkillInputKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addSkillTag(skillInput);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title || !form.type || !form.location) {
@@ -84,11 +170,14 @@ export function FormLowongan() {
     }
 
     setSubmitting(true);
+    const formattedSalary = formatSalaryInput(form.salary);
     const payload = {
       ...form,
       requirements: form.requirements.filter((r) => r.trim() !== ''),
+      target_majors: cleanList(form.target_majors),
+      skill_tags: normalizeSkillList(form.skill_tags),
       deadline: form.deadline || null,
-      salary: form.salary || null,
+      salary: formattedSalary || null,
       description: form.description || null,
     };
 
@@ -116,13 +205,11 @@ export function FormLowongan() {
     );
   }
 
+  const selectedSkillTags = normalizeSkillList(form.skill_tags);
+  const skillSuggestions = getSkillSuggestions(selectedSkillTags, skillInput, 8);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/hr/opportunities')}
@@ -172,7 +259,8 @@ export function FormLowongan() {
               <Input
                 label={isId ? 'Gaji (opsional)' : 'Salary (optional)'}
                 value={form.salary}
-                onChange={handleChange('salary')}
+                onChange={handleSalaryChange}
+                onBlur={() => setForm((current) => ({ ...current, salary: formatSalaryInput(current.salary) }))}
                 placeholder="Contoh: Rp 3.000.000 - Rp 5.000.000"
               />
               <Input
@@ -191,6 +279,94 @@ export function FormLowongan() {
                 onChange={handleChange('description')}
                 placeholder={isId ? 'Deskripsikan lowongan ini...' : 'Describe this opportunity...'}
               />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{isId ? 'Target jurusan' : 'Target majors'}</label>
+                <div className="space-y-2">
+                  {form.target_majors.map((major, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Select
+                        value={major}
+                        onChange={handleListChange('target_majors', index)}
+                        placeholder={isId ? 'Pilih jurusan IPB' : 'Choose an IPB major'}
+                        options={buildMajorOptions(form.target_majors)}
+                        className="flex-1"
+                      />
+                      {form.target_majors.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeListItem('target_majors', index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addListItem('target_majors')}
+                  className="mt-2 text-sm text-primary hover:text-accent flex items-center gap-1 font-medium"
+                >
+                  <Plus size={14} /> {isId ? 'Tambah jurusan' : 'Add major'}
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{isId ? 'Tag keahlian' : 'Skill tags'}</label>
+                <div className="rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                  {selectedSkillTags.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {selectedSkillTags.map((skill) => (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => removeSkillTag(skill)}
+                          className="inline-flex items-center gap-1 rounded-full border border-brand/15 bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand-dark transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                        >
+                          {skill}
+                          <X size={13} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      value={skillInput}
+                      onChange={(event) => setSkillInput(event.target.value)}
+                      onKeyDown={handleSkillInputKeyDown}
+                      placeholder={isId ? 'Cari atau ketik skill' : 'Search or type a skill'}
+                      className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSkillTag(skillInput)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-primary transition-colors hover:border-primary hover:bg-primary/5"
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {skillSuggestions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {skillSuggestions.map((skill) => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => addSkillTag(skill)}
+                        className="rounded-full border border-surface-border bg-white px-2.5 py-1 text-xs font-medium text-text-muted transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
@@ -253,6 +429,6 @@ export function FormLowongan() {
           </form>
         </CardBody>
       </Card>
-    </motion.div>
+    </div>
   );
 }

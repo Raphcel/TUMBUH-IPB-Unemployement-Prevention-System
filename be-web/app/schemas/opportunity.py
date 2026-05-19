@@ -17,6 +17,8 @@ class OpportunityCreate(BaseModel):
     salary: str | None = None
     description: str | None = None
     requirements: list[str] | None = None
+    target_majors: list[str] = Field(default_factory=list)
+    skill_tags: list[str] = Field(default_factory=list)
     deadline: datetime | None = None
     is_active: bool = True
 
@@ -29,6 +31,8 @@ class OpportunityUpdate(BaseModel):
     salary: str | None = None
     description: str | None = None
     requirements: list[str] | None = None
+    target_majors: list[str] | None = None
+    skill_tags: list[str] | None = None
     deadline: datetime | None = None
     is_active: bool | None = None
 
@@ -45,6 +49,8 @@ class OpportunityResponse(BaseModel):
     salary: str | None = None
     description: str | None = None
     requirements: list[str] | None = None
+    target_majors: list[str] = Field(default_factory=list)
+    skill_tags: list[str] = Field(default_factory=list)
     is_active: bool = True
     posted_at: datetime | None = None
     deadline: datetime | None = None
@@ -56,9 +62,23 @@ class OpportunityResponse(BaseModel):
     def parse_requirements(cls, v):
         if isinstance(v, str):
             try:
-                return json.loads(v)
+                parsed = json.loads(v)
             except json.JSONDecodeError:
                 return []
+            return parsed if isinstance(parsed, list) else []
+        return v
+
+    @field_validator("target_majors", "skill_tags", mode="before")
+    @classmethod
+    def parse_json_list(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+            except json.JSONDecodeError:
+                return []
+            return parsed if isinstance(parsed, list) else []
         return v
 
     class Config:

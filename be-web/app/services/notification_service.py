@@ -37,12 +37,20 @@ class NotificationService:
         return {"message": f"Marked {count} notifications as read"}
 
     def create_notification(
-        self, user_id: int, title: str, message: str, notif_type: str = "info"
+        self,
+        user_id: int,
+        title: str,
+        message: str,
+        notif_type: str = "info",
+        action_label: str | None = None,
+        action_url: str | None = None,
     ) -> NotificationResponse:
         notif = self._repo.create({
             "user_id": user_id,
             "title": title,
             "message": message,
             "type": notif_type,
+            "action_label": action_label,
+            "action_url": action_url,
         })
         return NotificationResponse.model_validate(notif)
