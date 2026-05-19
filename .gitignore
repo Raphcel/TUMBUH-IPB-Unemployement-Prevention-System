@@ -59,3 +59,7 @@ skills-lock.json
 # Local app environments
 be-web/venv/
 be-web/myenv/
+
+# Local Dokploy deployment metadata/secrets
+.dokploy-admin-credentials
+.dokploy-tumbuh

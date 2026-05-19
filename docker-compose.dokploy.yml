@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-career_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-career_tracker}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./be-web
+    restart: unless-stopped
+    expose:
+      - 8000
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-career_tracker}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://tumbuh.me,https://www.tumbuh.me}
+      AUDIT_LOG_URL: http://audit-log:3001/log
+      PORT: 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      audit-log:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./fe-web
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    restart: unless-stopped
+    expose:
+      - 80
+    depends_on:
+      - backend
+
+  audit-log:
+    build:
+      context: ./audit-log
+    restart: unless-stopped
+    expose:
+      - 3001
+    environment:
+      AUDIT_PORT: 3001
+    volumes:
+      - audit_logs:/app/logs
+
+volumes:
+  postgres_data:
+  audit_logs:

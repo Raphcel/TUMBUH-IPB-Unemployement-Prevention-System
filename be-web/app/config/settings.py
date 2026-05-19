@@ -2,16 +2,24 @@ from functools import lru_cache
 import json
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, DotEnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, DotEnvSettingsSource, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
 
-class SettingsDotEnvSource(DotEnvSettingsSource):
+class CorsOriginsSourceMixin:
     """Disable eager JSON decoding for env fields that we parse manually."""
 
     def prepare_field_value(self, field_name, field, value, value_is_complex):
         if field_name == "CORS_ORIGINS":
             return value
         return super().prepare_field_value(field_name, field, value, value_is_complex)
+
+
+class SettingsEnvSource(CorsOriginsSourceMixin, EnvSettingsSource):
+    pass
+
+
+class SettingsDotEnvSource(CorsOriginsSourceMixin, DotEnvSettingsSource):
+    pass
 
 
 class Settings(BaseSettings):
@@ -62,7 +70,7 @@ class Settings(BaseSettings):
     ):
         return (
             init_settings,
-            env_settings,
+            SettingsEnvSource(settings_cls),
             SettingsDotEnvSource(settings_cls),
             file_secret_settings,
         )

@@ -209,6 +209,50 @@ Dokploy is a valid deployment target for this repository. The current repository
 - `fe-web/`
 - `audit-log/`
 
+The repository also includes a ready-to-use Docker Compose definition for Dokploy:
+
+```text
+docker-compose.dokploy.yml
+```
+
+Use this when you want Dokploy to run the full stack: PostgreSQL, FastAPI backend, React frontend, and audit-log service.
+
+### Recommended Dokploy Compose Setup
+
+1. Create a new **Docker Compose** application in Dokploy.
+2. Set the compose file path to:
+
+```text
+docker-compose.dokploy.yml
+```
+
+3. Add environment variables in Dokploy from `.env.dokploy.example`, replacing secrets with strong values.
+4. Deploy the compose application.
+5. In the Dokploy **Domains** tab, add:
+
+| Domain | Service | Port |
+| --- | --- | --- |
+| `tumbuh.me` | `frontend` | `80` |
+| `www.tumbuh.me` | `frontend` | `80` |
+| `api.tumbuh.me` | `backend` | `8000` |
+| `tumbuh.me/api` | `backend` | `8000` |
+| `www.tumbuh.me/api` | `backend` | `8000` |
+| `tumbuh.me/uploads` | `backend` | `8000` |
+
+The frontend build arg should be:
+
+```env
+VITE_API_URL=/api/v1
+```
+
+Backend CORS should include:
+
+```env
+CORS_ORIGINS=https://tumbuh.me,https://www.tumbuh.me
+```
+
+The backend container waits for PostgreSQL, runs Alembic migrations, then starts Uvicorn.
+
 Recommended Dokploy layout:
 
 1. Create a backend application from `be-web/Dockerfile`.
