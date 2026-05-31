@@ -44,6 +44,7 @@ fe-web/dist/
 be-web/app/uploads/
 be-web/uploads/
 be-web/private_uploads/
+audit-log/logs/
 
 # Agent tooling
 skills-lock.json

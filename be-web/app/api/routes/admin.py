@@ -120,3 +120,34 @@ def delete_opportunity(
 ):
     """Delete an opportunity permanently."""
     return service.delete_opportunity(opportunity_id)
+
+
+# â”€â”€ Security Verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@router.get("/security/applications/{application_id}/signature")
+def verify_application_signature(
+    application_id: int,
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Verify a stored application digital signature. Admin-only."""
+    return service.verify_application_signature(application_id)
+
+
+@router.get("/security/audit/events")
+def get_audit_events(
+    limit: int = Query(200, ge=1, le=500),
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Read recent audit events through the admin dashboard. Admin-only."""
+    return service.get_audit_events(limit)
+
+
+@router.get("/security/audit/verify-chain")
+def verify_audit_chain(
+    _: User = Depends(require_role("admin")),
+    service: AdminService = Depends(get_admin_service),
+):
+    """Verify audit log hash-chain integrity. Admin-only."""
+    return service.verify_audit_chain()

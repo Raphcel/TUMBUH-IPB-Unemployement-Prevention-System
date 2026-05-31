@@ -2,13 +2,21 @@
 Admin service — aggregates data from all repositories for platform-wide oversight.
 """
 
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config.audit import AUDIT_LOG_TIMEOUT, AUDIT_LOG_URL
+from app.config.settings import get_settings
 from app.repositories.user_repository import UserRepository
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.application_repository import ApplicationRepository
+from app.services.security_service import security_service
 
 
 class AdminService:
@@ -142,3 +150,68 @@ class AdminService:
         if not deleted:
             raise HTTPException(status_code=404, detail="Opportunity not found")
         return {"deleted": True}
+
+    def verify_application_signature(self, application_id: int) -> dict:
+        """Verify the stored non-repudiation signature for an application event."""
+        application = self._application_repo.get_by_id(application_id)
+        if not application:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        if not application.signature_payload or not application.digital_signature:
+            return {
+                "application_id": application_id,
+                "valid": False,
+                "reason": "Application has no stored signature payload/signature yet.",
+                "algorithm": application.signature_algorithm,
+            }
+
+        try:
+            payload = json.loads(application.signature_payload)
+        except json.JSONDecodeError:
+            return {
+                "application_id": application_id,
+                "valid": False,
+                "reason": "Stored signature payload is not valid JSON.",
+                "algorithm": application.signature_algorithm,
+            }
+
+        valid = security_service.verify_signature(payload, application.digital_signature)
+        return {
+            "application_id": application_id,
+            "valid": valid,
+            "reason": "Signature matches stored payload." if valid else "Signature does not match stored payload.",
+            "algorithm": application.signature_algorithm,
+            "payload": payload,
+            "public_key": security_service.public_key_pem(),
+        }
+
+    def get_audit_events(self, limit: int = 200) -> dict:
+        """Fetch recent audit events through the admin backend boundary."""
+        return self._request_audit_service(f"/logs/recent?limit={limit}")
+
+    def verify_audit_chain(self) -> dict:
+        """Verify the audit service hash chain through the admin backend boundary."""
+        return self._request_audit_service("/audit/verify-chain")
+
+    def _request_audit_service(self, path: str) -> dict:
+        base_url = AUDIT_LOG_URL.rsplit("/log", 1)[0]
+        url = f"{base_url}{path}"
+        headers = {"Accept": "application/json"}
+        dashboard_key = get_settings().AUDIT_DASHBOARD_KEY
+        if dashboard_key:
+            headers["X-Audit-Dashboard-Key"] = dashboard_key
+
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=AUDIT_LOG_TIMEOUT) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raise HTTPException(
+                status_code=exc.code,
+                detail=f"Audit service rejected request: {exc.reason}",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Audit service unavailable: {exc}",
+            ) from exc

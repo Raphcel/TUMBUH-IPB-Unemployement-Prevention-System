@@ -45,6 +45,9 @@ class ApplicationResponse(BaseModel):
     applied_at: datetime
     cover_letter: str | None = None
     history: list[StatusHistoryItem] | None = None
+    signature_payload: str | None = None
+    digital_signature: str | None = None
+    signature_algorithm: str | None = None
     opportunity: OpportunityResponse | None = None
     student: UserResponse | None = None
 

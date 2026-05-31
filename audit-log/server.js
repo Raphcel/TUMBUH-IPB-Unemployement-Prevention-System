@@ -12,8 +12,101 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const logsDir = path.join(__dirname, 'logs');
+const chainStateFile = path.join(logsDir, 'audit-chain-state.json');
+const DASHBOARD_KEY = process.env.AUDIT_DASHBOARD_KEY || '';
+const DASHBOARD_COOKIE = 'tumbuh_audit_auth';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000/api/v1';
+
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+function loadLastHash() {
+  try {
+    const state = JSON.parse(fs.readFileSync(chainStateFile, 'utf-8'));
+    return state.lastHash || 'GENESIS';
+  } catch (_err) {
+    return 'GENESIS';
+  }
+}
+
+function canonicalJson(value) {
+  return JSON.stringify(value, Object.keys(value).sort());
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((acc, part) => {
+      const index = part.indexOf('=');
+      if (index === -1) return acc;
+      acc[part.slice(0, index)] = decodeURIComponent(part.slice(index + 1));
+      return acc;
+    }, {});
+}
+
+function isDashboardAuthorized(req) {
+  if (!DASHBOARD_KEY) return true;
+  const cookies = parseCookies(req);
+  return cookies[DASHBOARD_COOKIE] === DASHBOARD_KEY || req.get('x-audit-dashboard-key') === DASHBOARD_KEY;
+}
+
+function requireDashboardAuth(req, res, next) {
+  if (isDashboardAuthorized(req)) return next();
+  if (req.path === '/' && req.method === 'GET') return renderLogin(res, Boolean(req.query.failed));
+  return res.status(401).json({ error: 'Audit dashboard authorization required' });
+}
+
+function renderLogin(res, failed = false) {
+  res.status(401).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TUMBUH Audit Access</title>
+  <style>
+    body { min-height:100vh; margin:0; display:grid; place-items:center; font-family:Inter,system-ui,sans-serif; background:#eef4f0; color:#111827; }
+    .card { width:min(420px, calc(100% - 32px)); padding:28px; border:1px solid #dfe8e3; border-radius:24px; background:#fff; box-shadow:0 20px 60px rgba(11,28,45,.12); }
+    .mark { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:#1a8754; color:white; font-weight:900; font-size:24px; }
+    h1 { margin:18px 0 8px; font-size:28px; letter-spacing:-.04em; }
+    p { margin:0 0 18px; color:#667085; line-height:1.5; }
+    input { width:100%; box-sizing:border-box; border:1px solid #dfe8e3; border-radius:14px; padding:13px 14px; font:600 14px Inter,system-ui,sans-serif; }
+    button { width:100%; margin-top:12px; border:0; border-radius:14px; padding:13px 14px; color:white; background:#1a8754; font-weight:800; cursor:pointer; }
+    .error { margin-bottom:12px; padding:10px 12px; border-radius:12px; color:#991b1b; background:#fef2f2; font-size:13px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/dashboard-login">
+    <div class="mark">T</div>
+    <h1>Audit access</h1>
+    <p>Enter the audit dashboard key to view security operations.</p>
+    ${failed ? '<div class="error">Invalid dashboard key.</div>' : ''}
+    <input name="key" type="password" placeholder="Audit dashboard key" autocomplete="current-password" autofocus />
+    <button type="submit">Open dashboard</button>
+  </form>
+</body>
+</html>`);
+}
+
+function chainAuditEvent(event) {
+  const previousHash = loadLastHash();
+  const eventHash = crypto
+    .createHash('sha256')
+    .update(`${previousHash}:${canonicalJson(event)}`)
+    .digest('hex');
+
+  fs.writeFileSync(
+    chainStateFile,
+    JSON.stringify({ lastHash: eventHash, updatedAt: new Date().toISOString() }, null, 2)
+  );
+
+  return { ...event, previousHash, eventHash, integrityAlgorithm: 'SHA-256 hash chain' };
+}
 
 const auditFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
@@ -62,6 +155,15 @@ const PORT = process.env.AUDIT_PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.post('/dashboard-login', (req, res) => {
+  if (!DASHBOARD_KEY || req.body.key === DASHBOARD_KEY) {
+    res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE}=${encodeURIComponent(req.body.key || '')}; HttpOnly; SameSite=Lax; Path=/; Max-Age=43200`);
+    return res.redirect('/');
+  }
+  return res.redirect('/?failed=1');
+});
 
 app.post('/log', (req, res) => {
   const {
@@ -80,7 +182,7 @@ app.post('/log', (req, res) => {
   const validLevels = ['error', 'warn', 'info', 'debug'];
   const logLevel = validLevels.includes(level) ? level : 'info';
 
-  logger.log(logLevel, detail, {
+  const chainedEvent = chainAuditEvent({
     action,
     userId,
     userRole,
@@ -91,10 +193,12 @@ app.post('/log', (req, res) => {
     success,
   });
 
-  res.status(201).json({ status: 'logged' });
+  logger.log(logLevel, detail, chainedEvent);
+
+  res.status(201).json({ status: 'logged', eventHash: chainedEvent.eventHash });
 });
 
-app.get('/', (_req, res) => {
+app.get('/', requireDashboardAuth, (_req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -243,7 +347,29 @@ app.get('/', (_req, res) => {
       cursor: pointer;
     }
     .filter-btn.active { background: var(--brand-muted); color: var(--brand-dark); border-color: rgba(26,135,84,.35); }
+    .nav-links { display: grid; gap: 8px; margin-bottom: 18px; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 14px; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 800; }
+    .nav-link.active, .nav-link:hover { background: var(--brand-muted); color: var(--brand-dark); }
     .main { overflow: hidden; }
+    .security-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; padding: 16px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg,#fff,#fbfdfc); }
+    .verify-card { border: 1px solid var(--border); border-radius: 18px; background: white; padding: 16px; }
+    .verify-card h2 { margin: 0 0 6px; font-size: 16px; letter-spacing: -.02em; }
+    .verify-card p { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .form-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; margin-bottom: 10px; }
+    .input {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 12px;
+      background: var(--surface-2);
+      font: 600 13px Inter, sans-serif;
+      outline: none;
+    }
+    .input:focus { border-color: rgba(26,135,84,.5); box-shadow: 0 0 0 4px rgba(34,169,106,.12); }
+    .small-btn { border: 0; border-radius: 13px; padding: 11px 13px; color: white; background: var(--brand); font: 800 13px Inter, sans-serif; cursor: pointer; }
+    .result-box { min-height: 46px; border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: var(--surface-2); color: var(--muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+    .result-box.ok { border-color: rgba(22,163,74,.25); background: #ecfdf3; color: #166534; }
+    .result-box.fail { border-color: rgba(220,38,38,.25); background: #fef2f2; color: #991b1b; }
     .toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
     .search-input {
       width: min(520px, 100%);
@@ -278,6 +404,7 @@ app.get('/', (_req, res) => {
     .footer a { color: var(--brand-dark); font-weight: 800; text-decoration: none; }
     @media (max-width: 980px) {
       .topbar-grid, .layout { grid-template-columns: 1fr; }
+      .security-grid { grid-template-columns: 1fr; }
       .side { position: static; }
       .status-panel { min-width: 0; }
     }
@@ -319,6 +446,13 @@ app.get('/', (_req, res) => {
 
     <div class="layout">
       <aside class="card side">
+        <div class="section-title">Operations</div>
+        <nav class="nav-links">
+          <a class="nav-link active" href="#events">Event stream</a>
+          <a class="nav-link" href="#signature-check">Signature check</a>
+          <a class="nav-link" href="#chain-check">Chain integrity</a>
+          <a class="nav-link" href="/health">Service health</a>
+        </nav>
         <div class="section-title">Traffic summary</div>
         <div class="stat-list">
           <div class="metric"><strong id="stat-total">0</strong><span>Total events</span></div>
@@ -339,8 +473,32 @@ app.get('/', (_req, res) => {
       </aside>
 
       <main class="card main">
+        <section class="security-grid">
+          <div class="verify-card" id="signature-check">
+            <h2>Application signature</h2>
+            <p>Admin-only verification for signed application events.</p>
+            <input class="input" id="admin-token" type="password" placeholder="Paste admin access token" style="width:100%;margin-bottom:10px" />
+            <div class="form-row">
+              <input class="input" id="application-id" type="number" min="1" placeholder="Application ID" />
+              <button class="small-btn" onclick="verifyApplicationSignature()">Verify</button>
+            </div>
+            <div class="result-box" id="signature-result">Waiting for an application ID.</div>
+          </div>
+
+          <div class="verify-card" id="chain-check">
+            <h2>Audit chain integrity</h2>
+            <p>Checks every audit event hash against the previous event.</p>
+            <div class="form-row">
+              <div class="input" style="color:var(--muted)">SHA-256 hash chain</div>
+              <button class="small-btn" onclick="verifyAuditChain()">Verify</button>
+            </div>
+            <div class="result-box" id="chain-result">Waiting for chain verification.</div>
+          </div>
+        </section>
+
         <div class="toolbar">
           <div>
+            <span id="events"></span>
             <div class="section-title" style="margin:0">Event stream</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px">Refreshes every 5s</div>
           </div>
@@ -371,6 +529,7 @@ app.get('/', (_req, res) => {
   </div>
 
   <script>
+    const BACKEND_API_URL = ${JSON.stringify(BACKEND_API_URL)};
     let allEntries = [];
     let activeFilter = 'all';
 
@@ -419,6 +578,55 @@ app.get('/', (_req, res) => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       applyFilters();
+    }
+
+    async function verifyApplicationSignature() {
+      const result = document.getElementById('signature-result');
+      const token = document.getElementById('admin-token').value.trim();
+      const applicationId = document.getElementById('application-id').value.trim();
+      if (!token || !applicationId) {
+        setResult(result, false, 'Admin token and application ID are required.');
+        return;
+      }
+      result.className = 'result-box';
+      result.textContent = 'Checking signature...';
+      try {
+        const res = await fetch(BACKEND_API_URL + '/admin/security/applications/' + encodeURIComponent(applicationId) + '/signature', {
+          headers: { Authorization: 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.error || 'Signature check failed');
+        const status = data.valid ? 'VALID' : 'INVALID';
+        setResult(
+          result,
+          data.valid,
+          status + ' - ' + data.reason + '\\nAlgorithm: ' + (data.algorithm || '-') + '\\nPayload: ' + JSON.stringify(data.payload || {}, null, 2)
+        );
+      } catch (err) {
+        setResult(result, false, err.message || 'Signature check failed.');
+      }
+    }
+
+    async function verifyAuditChain() {
+      const result = document.getElementById('chain-result');
+      result.className = 'result-box';
+      result.textContent = 'Checking audit chain...';
+      try {
+        const res = await fetch('/audit/verify-chain');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Chain verification failed');
+        const detail = data.valid
+          ? 'VALID - ' + data.total + ' events checked. Legacy skipped: ' + data.legacySkipped + '. Latest hash: ' + data.latestHash
+          : 'INVALID - first failure: ' + JSON.stringify(data.firstFailure);
+        setResult(result, data.valid, detail);
+      } catch (err) {
+        setResult(result, false, err.message || 'Chain verification failed.');
+      }
+    }
+
+    function setResult(el, ok, text) {
+      el.className = 'result-box ' + (ok ? 'ok' : 'fail');
+      el.textContent = text;
     }
 
     function applyFilters() {
@@ -521,7 +729,101 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'healthy', service: 'tumbuh-audit-log' });
 });
 
-app.get('/logs/recent', (req, res) => {
+function getAuditLogFiles() {
+  return fs.readdirSync(logsDir)
+    .filter((name) => /^audit-\d{4}-\d{2}-\d{2}\.log$/.test(name))
+    .sort()
+    .map((name) => path.join(logsDir, name));
+}
+
+function computeEventHash(entry) {
+  const event = {
+    action: entry.action,
+    userId: entry.userId ?? null,
+    userRole: entry.userRole ?? 'anonymous',
+    userEmail: entry.userEmail ?? null,
+    ip: entry.ip ?? null,
+    resource: entry.resource ?? null,
+    resourceId: entry.resourceId ?? null,
+    success: entry.success ?? true,
+  };
+  return crypto
+    .createHash('sha256')
+    .update(`${entry.previousHash}:${canonicalJson(event)}`)
+    .digest('hex');
+}
+
+function verifyAuditChain() {
+  const files = getAuditLogFiles();
+  let expectedPreviousHash = 'GENESIS';
+  let total = 0;
+  let legacySkipped = 0;
+  let firstFailure = null;
+  let latestHash = expectedPreviousHash;
+
+  for (const file of files) {
+    const lines = fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean);
+    for (const [index, line] of lines.entries()) {
+      total += 1;
+      let entry;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        firstFailure = firstFailure || { file: path.basename(file), line: index + 1, reason: 'Invalid JSON log line' };
+        continue;
+      }
+
+      if (!entry.eventHash || !entry.previousHash) {
+        if (latestHash === 'GENESIS') {
+          legacySkipped += 1;
+          continue;
+        }
+        firstFailure = firstFailure || { file: path.basename(file), line: index + 1, reason: 'Missing hash-chain fields after hash chain started' };
+        continue;
+      }
+
+      if (entry.previousHash !== expectedPreviousHash) {
+        firstFailure = firstFailure || {
+          file: path.basename(file),
+          line: index + 1,
+          reason: 'previousHash does not match the previous eventHash',
+          expectedPreviousHash,
+          actualPreviousHash: entry.previousHash,
+        };
+      }
+
+      const recomputedHash = computeEventHash(entry);
+      if (recomputedHash !== entry.eventHash) {
+        firstFailure = firstFailure || {
+          file: path.basename(file),
+          line: index + 1,
+          reason: 'eventHash does not match log contents',
+          expectedEventHash: recomputedHash,
+          actualEventHash: entry.eventHash,
+        };
+      }
+
+      expectedPreviousHash = entry.eventHash;
+      latestHash = entry.eventHash;
+    }
+  }
+
+  return {
+    valid: !firstFailure,
+    total,
+    legacySkipped,
+    files: files.map((file) => path.basename(file)),
+    latestHash,
+    firstFailure,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+app.get('/audit/verify-chain', requireDashboardAuth, (_req, res) => {
+  res.json(verifyAuditChain());
+});
+
+app.get('/logs/recent', requireDashboardAuth, (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const logFile = path.join(logsDir, `audit-${today}.log`);
   const requestedLimit = Number.parseInt(req.query.limit, 10);
@@ -549,12 +851,15 @@ app.get('/logs/recent', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  logger.info('Audit log server started', {
+  logger.info('Audit log server started', chainAuditEvent({
     action: 'AUDIT_SERVER_START',
     userId: null,
     userRole: 'system',
-    detail: `Listening on port ${PORT}`,
+    userEmail: null,
+    ip: null,
+    resource: 'audit-log',
+    resourceId: null,
     success: true,
-  });
+  }));
   console.log(`\nTUMBUH Audit Log Server running on http://localhost:${PORT}\n`);
 });

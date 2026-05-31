@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileBadge2,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,6 +44,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_users'), path: '/admin/users', icon: Users },
     { name: t('nav_companies'), path: '/admin/companies', icon: Building },
     { name: t('nav_opportunities'), path: '/admin/opportunities', icon: Briefcase },
+    { name: t('nav_audit'), path: '/admin/audit', icon: ShieldCheck },
   ];
 
   const links = role === 'admin' ? adminLinks : role === 'hr' ? hrLinks : studentLinks;

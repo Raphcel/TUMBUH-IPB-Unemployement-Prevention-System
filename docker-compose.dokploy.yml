@@ -25,6 +25,8 @@ services:
       DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
       DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
       SECRET_KEY: ${SECRET_KEY}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      DIGITAL_SIGNATURE_PRIVATE_KEY: ${DIGITAL_SIGNATURE_PRIVATE_KEY:-}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://tumbuh.me,https://www.tumbuh.me}
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
@@ -34,6 +36,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-https://tumbuh.me}
       EMAIL_VERIFICATION_EXPIRE_HOURS: ${EMAIL_VERIFICATION_EXPIRE_HOURS:-24}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      AUDIT_DASHBOARD_KEY: ${AUDIT_DASHBOARD_KEY:-}
       AUDIT_LOG_URL: http://audit-log:3001/log
       PORT: 8000
     depends_on:
@@ -62,6 +65,8 @@ services:
       - 3001
     environment:
       AUDIT_PORT: 3001
+      AUDIT_DASHBOARD_KEY: ${AUDIT_DASHBOARD_KEY:-}
+      BACKEND_API_URL: ${BACKEND_API_URL:-https://tumbuh.me/api/v1}
     volumes:
       - audit_logs:/app/logs
 
