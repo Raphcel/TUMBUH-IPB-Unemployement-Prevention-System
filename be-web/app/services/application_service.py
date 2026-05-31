@@ -15,6 +15,7 @@ from app.schemas.application import (
     ApplicationResponse, ApplicationDraftResponse, ApplicationListResponse,
 )
 from app.services.audit_service import audit_log
+from app.services.email_service import EmailService
 
 
 class ApplicationService:
@@ -26,11 +27,13 @@ class ApplicationService:
         opportunity_repo: OpportunityRepository | None = None,
         notification_repo: NotificationRepository | None = None,
         user_repo: UserRepository | None = None,
+        email_service: EmailService | None = None,
     ):
         self._application_repo = application_repo
         self._opportunity_repo = opportunity_repo
         self._notification_repo = notification_repo
         self._user_repo = user_repo
+        self._email_service = email_service
 
     def verify_opportunity_ownership(self, opportunity_id: int, company_id: int | None) -> None:
         """Verify the opportunity belongs to the HR user's company."""
@@ -375,38 +378,49 @@ class ApplicationService:
         student_name = student.full_name if student else f"Student {student_id}"
         company_name = opportunity.company.name if getattr(opportunity, "company", None) else "your company"
         title = f"New applicants for {opportunity.title}"
+        action_label = "Review applicants"
+        action_url = "/hr/opportunities"
 
         created = 0
         updated = 0
         for hr in hr_users:
+            message = self._build_hr_notification_message(
+                count=1,
+                opportunity_title=opportunity.title,
+                company_name=company_name,
+                latest_applicant_name=student_name,
+            )
             existing = self._notification_repo.get_latest_unread_by_user_and_title_today(
                 hr.id,
                 title,
             )
             if existing:
                 next_count = self._extract_notification_count(existing.message) + 1
-                summary = self._build_hr_notification_message(
+                message = self._build_hr_notification_message(
                     count=next_count,
                     opportunity_title=opportunity.title,
                     company_name=company_name,
                     latest_applicant_name=student_name,
                 )
-                self._notification_repo.update(existing, {"message": summary})
+                self._notification_repo.update(existing, {
+                    "message": message,
+                    "action_label": action_label,
+                    "action_url": action_url,
+                })
                 updated += 1
+                self._send_notification_email(hr, title, message, action_label, action_url)
                 continue
 
             self._notification_repo.create({
                 "user_id": hr.id,
                 "title": title,
-                "message": self._build_hr_notification_message(
-                    count=1,
-                    opportunity_title=opportunity.title,
-                    company_name=company_name,
-                    latest_applicant_name=student_name,
-                ),
+                "message": message,
                 "type": "info",
+                "action_label": action_label,
+                "action_url": action_url,
             })
             created += 1
+            self._send_notification_email(hr, title, message, action_label, action_url)
 
         audit_log(
             "NOTIFICATION_CREATE",
@@ -431,13 +445,27 @@ class ApplicationService:
             else "the company"
         )
         notification_type = "success" if new_status == ApplicationStatus.ACCEPTED else "info"
+        message = f"Your application for {title} at {company_name} is now {new_status.value}."
+        action_label = "View applications"
+        action_url = "/student/applications"
 
         notification = self._notification_repo.create({
             "user_id": application.student_id,
             "title": "Application status updated",
-            "message": f"Your application for {title} at {company_name} is now {new_status.value}.",
+            "message": message,
             "type": notification_type,
+            "action_label": action_label,
+            "action_url": action_url,
         })
+        if self._user_repo:
+            student = self._user_repo.get_by_id(application.student_id)
+            self._send_notification_email(
+                student,
+                "Application status updated",
+                message,
+                action_label,
+                action_url,
+            )
 
         audit_log(
             "NOTIFICATION_CREATE",
@@ -445,6 +473,25 @@ class ApplicationService:
             resource_id=notification.id,
             detail=f"Notified student {application.student_id} about application {application.id} status {new_status.value}",
             success=True,
+        )
+
+    def _send_notification_email(
+        self,
+        user,
+        subject: str,
+        message: str,
+        action_label: str | None = None,
+        action_url: str | None = None,
+    ) -> None:
+        if not user or not self._email_service:
+            return
+        self._email_service.send_notification_email(
+            user.email,
+            subject,
+            message,
+            to_name=user.full_name,
+            action_label=action_label,
+            action_url=action_url,
         )
 
     @staticmethod

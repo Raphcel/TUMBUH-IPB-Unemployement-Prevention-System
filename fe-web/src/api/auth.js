@@ -19,6 +19,15 @@ export const authApi = {
    */
   async register(payload) {
     const data = await api.post('/auth/register', payload);
+    return data;
+  },
+
+  async verifyEmail(token) {
+    return api.post('/auth/verify-email', { token });
+  },
+
+  async google(payload) {
+    const data = await api.post('/auth/google', payload);
     setToken(data.access_token);
     setRefreshToken(data.refresh_token);
     return data;

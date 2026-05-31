@@ -29,6 +29,8 @@ from app.domain.models.application import Application, ApplicationStatus
 from app.domain.models.bookmark import Bookmark
 from app.domain.models.company_follow import CompanyFollow
 from app.domain.models.externship import Externship, ExternshipStatus, ExternshipType
+from app.domain.models.notification import Notification
+from app.domain.models.resume import ResumeProfile
 
 def hash_pw(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -56,16 +58,18 @@ def seed():
         db.query(Bookmark).delete()
         db.query(CompanyFollow).delete()
         db.query(Externship).delete()
+        db.query(Notification).delete()
+        db.query(ResumeProfile).delete()
         db.query(Application).delete()
         db.query(Opportunity).delete()
         db.query(User).delete()
         db.query(Company).delete()
         for table_name in ("companies", "users", "opportunities", "applications", "company_follows"):
             reset_postgres_sequence(db, table_name)
-        print("âœ“ Reset PostgreSQL sequences")
+        print("Reset PostgreSQL sequences")
 
         db.commit()
-        print("✓ Cleared existing data")
+        print("Cleared existing data")
 
         # ── Companies ────────────────────────────────────────────
         companies = [
@@ -151,7 +155,7 @@ def seed():
         ]
         db.add_all(companies)
         db.flush()
-        print(f"✓ Seeded {len(companies)} companies")
+        print(f"Seeded {len(companies)} companies")
 
         # ── Users ────────────────────────────────────────────────
         default_pw = hash_pw("password123")
@@ -261,7 +265,7 @@ def seed():
         ]
         db.add_all(users)
         db.flush()
-        print(f"✓ Seeded {len(users)} users (password: password123)")
+        print(f"Seeded {len(users)} users (password: password123)")
 
         # ── Opportunities ────────────────────────────────────────
         opportunities = [
@@ -386,7 +390,7 @@ def seed():
         ]
         db.add_all(opportunities)
         db.flush()
-        print(f"✓ Seeded {len(opportunities)} opportunities")
+        print(f"Seeded {len(opportunities)} opportunities")
 
         # ── Applications (matching frontend mockData) ────────────
         applications = [
@@ -465,7 +469,7 @@ def seed():
         ]
         db.add_all(applications)
         db.flush()
-        print(f"✓ Seeded {len(applications)} applications")
+        print(f"Seeded {len(applications)} applications")
 
         # ── Bookmarks ───────────────────────────────────────────
         bookmarks = [
@@ -477,7 +481,7 @@ def seed():
         ]
         db.add_all(bookmarks)
         db.flush()
-        print(f"✓ Seeded {len(bookmarks)} bookmarks")
+        print(f"Seeded {len(bookmarks)} bookmarks")
 
         # ── Externships ──────────────────────────────────────────
         company_follows = [
@@ -520,15 +524,15 @@ def seed():
         ]
         db.add_all(externships)
         db.flush()
-        print(f"✓ Seeded {len(externships)} externships")
+        print(f"Seeded {len(externships)} externships")
 
         db.commit()
-        print("\n✅ Database seeded successfully!")
+        print("\nDatabase seeded successfully!")
         print("   Login credentials:  any email above / password123")
 
     except Exception as e:
         db.rollback()
-        print(f"\n❌ Seeding failed: {e}")
+        print(f"\nSeeding failed: {e}")
         raise
     finally:
         db.close()

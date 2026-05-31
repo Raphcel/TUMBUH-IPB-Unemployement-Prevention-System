@@ -1,5 +1,6 @@
 from app.schemas.user import (
-    UserCreate, UserUpdate, UserLogin, UserResponse, TokenResponse,
+    UserCreate, UserUpdate, UserLogin, UserResponse, TokenResponse, RegistrationResponse,
+    GoogleAuthRequest, VerifyEmailRequest,
 )
 from app.schemas.company import (
     CompanyCreate, CompanyUpdate, CompanyResponse, CompanyListResponse,
@@ -26,7 +27,8 @@ from app.schemas.resume import (
 )
 
 __all__ = [
-    "UserCreate", "UserUpdate", "UserLogin", "UserResponse", "TokenResponse",
+    "UserCreate", "UserUpdate", "UserLogin", "UserResponse", "TokenResponse", "RegistrationResponse",
+    "GoogleAuthRequest", "VerifyEmailRequest",
     "CompanyCreate", "CompanyUpdate", "CompanyResponse", "CompanyListResponse",
     "OpportunityCreate", "OpportunityUpdate", "OpportunityResponse", "OpportunityListResponse",
     "ApplicationCreate", "ApplicationSubmissionUpdate",

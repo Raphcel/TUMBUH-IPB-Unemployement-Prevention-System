@@ -20,6 +20,7 @@ const DetailPerusahaan = lazyNamed(() => import('./pages/DetailPerusahaan'), 'De
 const Panduan         = lazyNamed(() => import('./pages/Panduan'),           'Panduan');
 const Login           = lazyNamed(() => import('./pages/Login'),             'Login');
 const Register        = lazyNamed(() => import('./pages/Register'),          'Register');
+const VerifyEmail     = lazyNamed(() => import('./pages/VerifyEmail'),       'VerifyEmail');
 const Notifications   = lazyNamed(() => import('./pages/Notifications'),     'Notifications');
 const Calendar        = lazyNamed(() => import('./pages/Calendar'),          'Calendar');
 
@@ -188,6 +189,7 @@ function AppRoutes() {
       {/* Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route
         path="/lowongan/:id/apply"
