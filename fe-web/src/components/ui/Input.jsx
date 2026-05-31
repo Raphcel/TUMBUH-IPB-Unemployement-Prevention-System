@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCloseOnScroll } from '../../hooks/useCloseOnScroll';
 
 const MotionDiv = motion.div;
 
@@ -47,31 +48,7 @@ export function Select({ label, error, options = [], className = '', value, onCh
     }
   }, [isOpen]);
 
-  // Handle window resize and page scroll to close dropdown, but allow option-list scrolling.
-  useEffect(() => {
-    function handleResize() {
-      if (isOpen) setIsOpen(false);
-    }
-
-    function handleScroll(event) {
-      if (
-        dropdownRef.current &&
-        event.target instanceof Node &&
-        dropdownRef.current.contains(event.target)
-      ) {
-        return;
-      }
-      if (isOpen) setIsOpen(false);
-    }
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleScroll, true);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [isOpen]);
+  useCloseOnScroll(isOpen, () => setIsOpen(false), dropdownRef);
 
   // Close dropdown when clicking outside
   useEffect(() => {

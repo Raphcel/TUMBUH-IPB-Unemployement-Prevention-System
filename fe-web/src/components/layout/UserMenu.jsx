@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../context/LanguageContext';
 import { resolveUploadUrl } from '../../api/client';
+import { useCloseOnScroll } from '../../hooks/useCloseOnScroll';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LogOut,
@@ -18,12 +19,19 @@ import {
     FileBadge2,
 } from 'lucide-react';
 
+const MotionButton = motion.button;
+const MotionDiv = motion.div;
+
 export function UserMenu({ isTransparent = false, isMobile = false }) {
     const { user, logout } = useAuth();
     const { t, lang, setLang } = useTranslation();
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLangMenu, setShowLangMenu] = useState(false);
+    useCloseOnScroll(dropdownOpen, () => {
+        setDropdownOpen(false);
+        setShowLangMenu(false);
+    });
 
     const handleLogout = () => {
         logout();
@@ -53,7 +61,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
 
     return (
         <div className="relative">
-            <motion.button
+            <MotionButton
                 onClick={() => { setDropdownOpen(!dropdownOpen); setShowLangMenu(false); }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -83,13 +91,13 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                         className={`transition-transform duration-300 ease-[0.22,1,0.36,1] ${dropdownOpen ? 'rotate-180' : ''}`}
                     />
                 )}
-            </motion.button>
+            </MotionButton>
 
             <AnimatePresence>
                 {dropdownOpen && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => { setDropdownOpen(false); setShowLangMenu(false); }} />
-                        <motion.div
+                        <MotionDiv
                             initial={{ opacity: 0, y: 4, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 4, scale: 0.98 }}
@@ -183,7 +191,7 @@ export function UserMenu({ isTransparent = false, isMobile = false }) {
                                     {t('nav_logout')}
                                 </button>
                             </div>
-                        </motion.div>
+                        </MotionDiv>
                     </>
                 )}
             </AnimatePresence>

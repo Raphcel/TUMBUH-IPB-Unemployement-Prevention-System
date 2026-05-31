@@ -19,6 +19,7 @@ class OpportunityCreate(BaseModel):
     requirements: list[str] | None = None
     target_majors: list[str] = Field(default_factory=list)
     skill_tags: list[str] = Field(default_factory=list)
+    application_questions: list[dict] = Field(default_factory=list)
     deadline: datetime | None = None
     is_active: bool = True
 
@@ -33,6 +34,7 @@ class OpportunityUpdate(BaseModel):
     requirements: list[str] | None = None
     target_majors: list[str] | None = None
     skill_tags: list[str] | None = None
+    application_questions: list[dict] | None = None
     deadline: datetime | None = None
     is_active: bool | None = None
 
@@ -51,6 +53,7 @@ class OpportunityResponse(BaseModel):
     requirements: list[str] | None = None
     target_majors: list[str] = Field(default_factory=list)
     skill_tags: list[str] = Field(default_factory=list)
+    application_questions: list[dict] = Field(default_factory=list)
     is_active: bool = True
     posted_at: datetime | None = None
     deadline: datetime | None = None
@@ -68,7 +71,7 @@ class OpportunityResponse(BaseModel):
             return parsed if isinstance(parsed, list) else []
         return v
 
-    @field_validator("target_majors", "skill_tags", mode="before")
+    @field_validator("target_majors", "skill_tags", "application_questions", mode="before")
     @classmethod
     def parse_json_list(cls, v):
         if v is None:

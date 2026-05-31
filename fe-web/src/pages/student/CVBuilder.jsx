@@ -31,6 +31,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTranslation } from '../../context/LanguageContext';
 import { buildMajorOptions } from '../../data/ipbMajors';
+import { useCloseOnScroll } from '../../hooks/useCloseOnScroll';
 
 function createBlankDraft(user, title = 'CV Draft 1') {
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim();
@@ -843,6 +844,7 @@ export function CVBuilder() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [previewPageCount, setPreviewPageCount] = useState(1);
   const [previewScale, setPreviewScale] = useState(1);
+  useCloseOnScroll(actionsOpen, () => setActionsOpen(false));
 
   const isDirty = useMemo(
     () => draftForm && JSON.stringify(draftForm) !== savedSnapshot,

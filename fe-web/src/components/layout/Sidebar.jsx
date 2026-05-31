@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
   FileText,
@@ -7,7 +7,6 @@ import {
   Briefcase,
   Users,
   Building,
-  LogOut,
   Calendar,
   Bookmark,
   ChevronLeft,
@@ -15,9 +14,10 @@ import {
   FileBadge2,
   ShieldCheck,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from '../../context/LanguageContext';
+
+const MotionDiv = motion.div;
 
 export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSidebar, closeMobile }) {
   const location = useLocation();
@@ -36,7 +36,6 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_dashboard'), path: '/hr/dashboard', icon: Home },
     { name: t('nav_calendar'), path: '/calendar', icon: Calendar },
     { name: t('nav_opportunities'), path: '/hr/opportunities', icon: Briefcase },
-    { name: t('nav_applicants'), path: '/hr/applicants', icon: Users },
     { name: t('nav_company_profile'), path: '/hr/company', icon: Building },
   ];
   const adminLinks = [
@@ -51,7 +50,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
 
   return (
     <>
-      <motion.div
+      <MotionDiv
         initial={false}
         animate={{
           width: isCollapsed ? 80 : 256,
@@ -101,7 +100,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
                     title={isCollapsed ? link.name : ''}
                   >
                     {isLinkActive && (
-                      <motion.div
+                      <MotionDiv
                         layoutId="activeTabSidebar"
                         className="absolute inset-0 bg-brand-muted/50 rounded-lg"
                         initial={false}
@@ -126,7 +125,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
             })}
           </ul>
         </div>
-      </motion.div>
+      </MotionDiv>
     </>
   );
 }

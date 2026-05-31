@@ -83,6 +83,7 @@ class OpportunityService:
         opp_dict["requirements"] = self._serialize_requirements(opp_dict.get("requirements"))
         opp_dict["target_majors"] = self._clean_list(opp_dict.get("target_majors"))
         opp_dict["skill_tags"] = self._clean_list(opp_dict.get("skill_tags"))
+        opp_dict["application_questions"] = self._clean_application_questions(opp_dict.get("application_questions"))
         opp = self._opportunity_repo.create(opp_dict)
         # Re-fetch with eager-loaded relationships to avoid lazy-load errors
         opp = self._opportunity_repo.get_by_id_with_company(opp.id)
@@ -111,6 +112,8 @@ class OpportunityService:
             update_data["target_majors"] = self._clean_list(update_data.get("target_majors"))
         if "skill_tags" in update_data:
             update_data["skill_tags"] = self._clean_list(update_data.get("skill_tags"))
+        if "application_questions" in update_data:
+            update_data["application_questions"] = self._clean_application_questions(update_data.get("application_questions"))
 
         updated = self._opportunity_repo.update(opp, update_data)
         # Re-fetch with eager-loaded relationships
@@ -152,6 +155,39 @@ class OpportunityService:
         if hasattr(opp, "applications") and opp.applications is not None:
             data.applicants_count = len(opp.applications)
         return data
+
+    @staticmethod
+    def _clean_application_questions(questions: list[dict] | None) -> list[dict]:
+        cleaned = []
+        seen_ids = set()
+        for index, raw in enumerate(questions or []):
+            if not isinstance(raw, dict):
+                continue
+            label = str(raw.get("label") or "").strip()
+            if not label:
+                continue
+            question_id = str(raw.get("id") or f"q_{index + 1}").strip()
+            if question_id in seen_ids:
+                question_id = f"{question_id}_{index + 1}"
+            seen_ids.add(question_id)
+            question_type = str(raw.get("type") or "short_text").strip()
+            if question_type not in {"short_text", "long_text", "single_choice"}:
+                question_type = "short_text"
+            options = [
+                str(option).strip()
+                for option in raw.get("options", [])
+                if str(option).strip()
+            ]
+            if question_type == "single_choice" and not options:
+                question_type = "short_text"
+            cleaned.append({
+                "id": question_id,
+                "label": label,
+                "type": question_type,
+                "required": bool(raw.get("required", False)),
+                "options": options,
+            })
+        return cleaned
 
     def _notify_students_new_opportunity(self, opportunity) -> None:
         if not opportunity or not opportunity.is_active or not self._notification_repo or not self._user_repo:

@@ -1,3 +1,4 @@
+import base64
 import re
 import time
 
@@ -53,6 +54,14 @@ def _resolve_cv_file_or_404(user: User):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV file is missing")
 
     return file_path
+
+
+def _build_cv_preview_payload(user: User, file_path):
+    return {
+        "filename": _build_cv_download_name(user),
+        "content_type": "application/pdf",
+        "data": base64.b64encode(file_path.read_bytes()).decode("ascii"),
+    }
 
 
 def _assert_cv_access(
@@ -172,6 +181,15 @@ def get_my_cv(
     )
 
 
+@router.get("/me/cv/preview")
+def preview_my_cv(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the authenticated user's CV as JSON-safe bytes for in-app preview."""
+    file_path = _resolve_cv_file_or_404(current_user)
+    return _build_cv_preview_payload(current_user, file_path)
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: int,
@@ -204,3 +222,20 @@ def get_user_cv(
         filename=_build_cv_download_name(target_user),
         content_disposition_type="attachment" if download else "inline",
     )
+
+
+@router.get("/{user_id}/cv/preview")
+def preview_user_cv(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    user_repo: UserRepository = Depends(get_user_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+):
+    """Return a student's CV as JSON-safe bytes when the requester is authorized."""
+    target_user = user_repo.get_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    _assert_cv_access(current_user, target_user, application_repo)
+    file_path = _resolve_cv_file_or_404(target_user)
+    return _build_cv_preview_payload(target_user, file_path)

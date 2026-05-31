@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { opportunitiesApi } from '../api/opportunities';
 import { applicationsApi } from '../api/applications';
-import { usersApi } from '../api/users';
 import { bookmarksApi } from '../api/bookmarks';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, MapPin, Bookmark, Briefcase, Building2, Clock, Tag, Lock, CheckCircle } from 'lucide-react';
@@ -16,22 +15,18 @@ const TAB_KEYS = ['desc', 'qualif', 'benefits', 'company'];
 export function DetailLowongan({ jobId, isEmbedded }) {
   const { id: paramId } = useParams();
   const id = jobId || paramId;
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
   const { t, lang } = useTranslation();
 
   const [activeTab, setActiveTab] = useState('desc');
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [coverLetter, setCoverLetter] = useState('');
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
-  const [applyStep, setApplyStep] = useState(1);
-  const [openingCV, setOpeningCV] = useState(false);
 
   useEffect(() => {
     opportunitiesApi
@@ -53,10 +48,26 @@ export function DetailLowongan({ jobId, isEmbedded }) {
       .catch(() => {});
   }, [id, user]);
 
+  useEffect(() => {
+    setApplied(false);
+    if (!user || user.role !== 'student' || !id) return;
+
+    applicationsApi
+      .mine()
+      .then((data) => {
+        const exists = (data.items || []).some((app) => Number(app.opportunity_id) === Number(id));
+        setApplied(exists);
+      })
+      .catch(() => {});
+  }, [id, user]);
+
   const handleApply = () => {
-    if (!user) { setShowAuthModal(true); return; }
-    setApplyStep(1);
-    setShowApplyModal(true);
+    const applyPath = `/student/applications/apply/${id}`;
+    if (!user) {
+      navigate('/login', { state: { from: { pathname: applyPath, search: '' } } });
+      return;
+    }
+    navigate(applyPath);
   };
 
   const handleToggleBookmark = async () => {
@@ -106,31 +117,6 @@ export function DetailLowongan({ jobId, isEmbedded }) {
     }
   };
 
-  const handleSubmitApplication = async () => {
-    setApplying(true);
-    try {
-      await applicationsApi.apply(job.id, { cover_letter: coverLetter || null });
-      setApplied(true);
-      setShowApplyModal(false);
-      addToast({ title: t('det_applied'), message: `${job.title}`, type: 'success' });
-    } catch (err) {
-      addToast({ title: 'Error', message: err.message, type: 'error' });
-    } finally {
-      setApplying(false);
-    }
-  };
-
-  const handleViewCV = async () => {
-    setOpeningCV(true);
-    try {
-      await usersApi.viewMyCV();
-    } catch (err) {
-      addToast({ title: 'Error', message: err.message || 'Failed to open CV', type: 'error' });
-    } finally {
-      setOpeningCV(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -163,118 +149,6 @@ export function DetailLowongan({ jobId, isEmbedded }) {
         <div className="space-y-3">
           <Button to="/login" variant="primary" className="w-full justify-center">Masuk</Button>
           <Button to="/register" variant="outline" className="w-full justify-center">Buat Akun</Button>
-        </div>
-      </Modal>
-
-      {/* ── Apply Modal ── */}
-      <Modal
-        isOpen={showApplyModal}
-        onClose={() => { setShowApplyModal(false); setApplyStep(1); }}
-        title={t('det_apply')}
-        size="md"
-      >
-        {/* Stepper */}
-        <div className="flex items-center justify-center gap-6 mb-6">
-          {[{ n: 1, label: 'Data Diri' }, { n: 2, label: 'Dokumen' }, { n: 3, label: 'Review' }].map(({ n, label }) => (
-            <div key={n} className="flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors ${
-                applyStep === n
-                  ? 'bg-brand border-brand text-white'
-                  : applyStep > n
-                    ? 'bg-brand/20 border-brand text-brand'
-                    : 'bg-white border-gray-300 text-gray-400'
-              }`}>
-                {n}
-              </div>
-              <span className={`text-xs font-medium ${applyStep === n ? 'text-brand' : 'text-gray-400'}`}>{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Job summary */}
-        <div className="flex items-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
-          <div className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center bg-white shrink-0">
-            {company.logo
-              ? <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-1" />
-              : <span className="font-bold text-gray-400 text-sm">{company.name?.[0]}</span>
-            }
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">{job.title}</p>
-            <p className="text-xs text-gray-500">{company.name}</p>
-          </div>
-        </div>
-
-        {applyStep === 1 && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">Surat Lamaran (opsional)</p>
-            <textarea
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand min-h-[120px] resize-y"
-              value={coverLetter}
-              onChange={(e) => setCoverLetter(e.target.value)}
-              placeholder="Tulis surat lamaran Anda..."
-            />
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm text-gray-500">
-                {user?.has_cv ? (
-                  <>
-                    CV Anda:{' '}
-                    <button
-                      type="button"
-                      onClick={handleViewCV}
-                      disabled={openingCV}
-                      className="text-brand font-medium hover:underline disabled:no-underline disabled:text-gray-400"
-                    >
-                      {openingCV ? 'Membuka...' : 'Lihat CV'}
-                    </button>
-                  </>
-                ) : (
-                  <>Belum ada CV. <Link to="/student/profile" className="text-brand font-medium hover:underline">Upload di halaman profil</Link>.</>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {applyStep === 2 && (
-          <div className="py-4 text-center text-gray-500 text-sm">
-            Periksa kembali dokumen-dokumen Anda sebelum mengirimkan lamaran.
-          </div>
-        )}
-
-        {applyStep === 3 && (
-          <div className="py-4 space-y-3">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-700">Posisi: <span className="text-gray-900">{job.title}</span></p>
-              <p className="text-sm font-medium text-gray-700 mt-1">Perusahaan: <span className="text-gray-900">{company.name}</span></p>
-            </div>
-            <p className="text-xs text-gray-400 text-center">Dengan menekan Kirim, kamu menyetujui syarat dan ketentuan Tumbuh.</p>
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-4">
-          <button
-            onClick={() => applyStep > 1 ? setApplyStep(applyStep - 1) : setShowApplyModal(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            {applyStep > 1 ? 'Kembali' : 'Batal'}
-          </button>
-          {applyStep < 3 ? (
-            <button
-              onClick={() => setApplyStep(applyStep + 1)}
-              className="px-6 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Lanjutkan
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmitApplication}
-              disabled={applying}
-              className="px-6 py-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
-            >
-              {applying ? 'Mengirim...' : 'Kirim Lamaran'}
-            </button>
-          )}
         </div>
       </Modal>
 
@@ -350,7 +224,6 @@ export function DetailLowongan({ jobId, isEmbedded }) {
                     ) : (
                       <button
                         onClick={handleApply}
-                        disabled={applying}
                         className="h-10 rounded-lg bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
                       >
                         {t('det_apply')}

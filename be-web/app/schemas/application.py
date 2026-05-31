@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain.models.application import ApplicationStatus
 from app.schemas.opportunity import OpportunityResponse
@@ -21,6 +21,19 @@ class ApplicationCreate(BaseModel):
     """Schema for submitting a new application."""
     opportunity_id: int
     cover_letter: str | None = None
+    question_answers: dict[str, str] = Field(default_factory=dict)
+
+
+class ApplicationSubmissionUpdate(BaseModel):
+    """Schema for student-owned updates before the opportunity deadline."""
+    cover_letter: str | None = None
+    question_answers: dict[str, str] = Field(default_factory=dict)
+
+
+class ApplicationDraftSave(BaseModel):
+    """Schema for saving an in-progress application draft."""
+    cover_letter: str | None = None
+    question_answers: dict[str, str] = Field(default_factory=dict)
 
 
 class ApplicationStatusUpdate(BaseModel):
@@ -44,6 +57,7 @@ class ApplicationResponse(BaseModel):
     status: ApplicationStatus
     applied_at: datetime
     cover_letter: str | None = None
+    question_answers: dict[str, str] = Field(default_factory=dict)
     history: list[StatusHistoryItem] | None = None
     signature_payload: str | None = None
     digital_signature: str | None = None
@@ -62,6 +76,21 @@ class ApplicationResponse(BaseModel):
             except (json.JSONDecodeError, TypeError):
                 return []
         return v
+
+    class Config:
+        from_attributes = True
+
+
+class ApplicationDraftResponse(BaseModel):
+    """Schema for a student's draft application."""
+    id: int
+    student_id: int
+    opportunity_id: int
+    cover_letter: str | None = None
+    question_answers: dict[str, str] = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+    opportunity: OpportunityResponse | None = None
 
     class Config:
         from_attributes = True
