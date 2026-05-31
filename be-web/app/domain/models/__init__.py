@@ -1,7 +1,7 @@
 from app.domain.models.user import User, UserRole
 from app.domain.models.company import Company
 from app.domain.models.opportunity import Opportunity, OpportunityType
-from app.domain.models.application import Application, ApplicationStatus
+from app.domain.models.application import Application, ApplicationDraft, ApplicationStatus
 from app.domain.models.bookmark import Bookmark
 from app.domain.models.company_follow import CompanyFollow
 from app.domain.models.externship import Externship, ExternshipStatus, ExternshipType
@@ -12,7 +12,7 @@ __all__ = [
     "User", "UserRole",
     "Company",
     "Opportunity", "OpportunityType",
-    "Application", "ApplicationStatus",
+    "Application", "ApplicationDraft", "ApplicationStatus",
     "Bookmark",
     "CompanyFollow",
     "Externship", "ExternshipStatus", "ExternshipType",

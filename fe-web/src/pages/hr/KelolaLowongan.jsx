@@ -22,6 +22,7 @@ import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { opportunitiesApi } from '../../api/opportunities';
+import { useCloseOnScroll } from '../../hooks/useCloseOnScroll';
 
 const MotionDiv = motion.div;
 
@@ -175,6 +176,7 @@ export function KelolaLowongan() {
   const [sortBy, setSortBy] = useState('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  useCloseOnScroll(showSortMenu, () => setShowSortMenu(false));
 
   useEffect(() => {
     if (!companyId) {

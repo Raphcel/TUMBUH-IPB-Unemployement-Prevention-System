@@ -34,6 +34,7 @@ class Opportunity(Base):
     requirements: str = Column(Text, nullable=True)  # Stored as JSON string
     target_majors: list = Column(JSON, nullable=False, default=list)
     skill_tags: list = Column(JSON, nullable=False, default=list)
+    application_questions: list = Column(JSON, nullable=False, default=list)
     is_active: bool = Column(Boolean, default=True, nullable=False, index=True)
     posted_at: datetime = Column(DateTime, default=_utcnow)
     deadline: datetime = Column(DateTime, nullable=True)

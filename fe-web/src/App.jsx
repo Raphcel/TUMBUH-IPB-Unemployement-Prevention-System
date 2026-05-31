@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
@@ -14,6 +14,7 @@ const lazyNamed = (factory, name) =>
 const Beranda         = lazyNamed(() => import('./pages/Beranda'),           'Beranda');
 const Lowongan        = lazyNamed(() => import('./pages/Lowongan'),          'Lowongan');
 const DetailLowongan  = lazyNamed(() => import('./pages/DetailLowongan'),    'DetailLowongan');
+const ApplyLowongan   = lazyNamed(() => import('./pages/ApplyLowongan'),     'ApplyLowongan');
 const Perusahaan      = lazyNamed(() => import('./pages/Perusahaan'),        'Perusahaan');
 const DetailPerusahaan = lazyNamed(() => import('./pages/DetailPerusahaan'), 'DetailPerusahaan');
 const Panduan         = lazyNamed(() => import('./pages/Panduan'),           'Panduan');
@@ -146,6 +147,7 @@ function NotFound() {
  */
 function ProtectedRoute({ allowedRole, children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -155,7 +157,7 @@ function ProtectedRoute({ allowedRole, children }) {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
 
   if (allowedRole && user.role !== allowedRole) {
     const dest = user.role === 'admin' ? '/admin/dashboard' : user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard';
@@ -163,6 +165,11 @@ function ProtectedRoute({ allowedRole, children }) {
   }
 
   return children;
+}
+
+function LegacyApplyRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/student/applications/apply/${id}`} replace />;
 }
 
 function AppRoutes() {
@@ -181,6 +188,15 @@ function AppRoutes() {
       {/* Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route
+        path="/lowongan/:id/apply"
+        element={
+          <ProtectedRoute allowedRole="student">
+            <LegacyApplyRedirect />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Shared Protected Routes */}
       <Route
@@ -205,6 +221,7 @@ function AppRoutes() {
       >
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="applications" element={<LamaranSaya />} />
+        <Route path="applications/apply/:id" element={<ApplyLowongan />} />
         <Route path="bookmarks" element={<Bookmarks />} />
         <Route path="cv-builder" element={<CVBuilder />} />
         <Route path="profile" element={<ProfilStudent />} />

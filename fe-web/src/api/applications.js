@@ -9,6 +9,31 @@ export const applicationsApi = {
     return api.post('/applications/', { opportunity_id: opportunityId, ...data });
   },
 
+  /** Student: get an in-progress draft for one opportunity */
+  getDraft(opportunityId) {
+    return api.get(`/applications/drafts/${opportunityId}`);
+  },
+
+  /** Student: list in-progress drafts */
+  listDrafts() {
+    return api.get('/applications/drafts');
+  },
+
+  /** Student: save an in-progress draft for one opportunity */
+  saveDraft(opportunityId, data = {}) {
+    return api.put(`/applications/drafts/${opportunityId}`, data);
+  },
+
+  /** Student: delete an in-progress draft for one opportunity */
+  deleteDraft(opportunityId) {
+    return api.delete(`/applications/drafts/${opportunityId}`);
+  },
+
+  /** Student: update a submitted application before the deadline */
+  updateMine(applicationId, data = {}) {
+    return api.patch(`/applications/me/${applicationId}`, data);
+  },
+
   /** Student: list my applications */
   mine(skip = 0, limit = 100) {
     return api.get(`/applications/me?skip=${skip}&limit=${limit}`);

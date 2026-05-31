@@ -10,8 +10,9 @@ from app.repositories.notification_repository import NotificationRepository
 from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.application import (
-    ApplicationCreate, ApplicationStatusUpdate,
-    ApplicationResponse, ApplicationListResponse,
+    ApplicationCreate, ApplicationDraftSave, ApplicationSubmissionUpdate,
+    ApplicationStatusUpdate,
+    ApplicationResponse, ApplicationDraftResponse, ApplicationListResponse,
 )
 from app.services.audit_service import audit_log
 
@@ -59,6 +60,12 @@ class ApplicationService:
                 detail="You already applied to this opportunity",
             )
 
+        question_answers = self._validate_question_answers(
+            getattr(opportunity, "application_questions", []),
+            data.question_answers,
+            require_required=True,
+        )
+
         now = datetime.now(timezone.utc).isoformat()
         initial_history = json.dumps([{"status": "Applied", "date": now}])
 
@@ -67,9 +74,11 @@ class ApplicationService:
             "opportunity_id": data.opportunity_id,
             "status": ApplicationStatus.APPLIED,
             "cover_letter": data.cover_letter,
+            "question_answers": question_answers,
             "history": initial_history,
         }
         application = self._application_repo.create(app_dict)
+        self._application_repo.delete_draft(student_id, data.opportunity_id)
         self._notify_hr_new_application(student_id, opportunity, application.id)
 
         audit_log(
@@ -83,6 +92,108 @@ class ApplicationService:
         )
 
         return self._to_response(application)
+
+    def get_student_draft(self, student_id: int, opportunity_id: int) -> ApplicationDraftResponse | None:
+        """Return the student's draft for one opportunity, if it exists."""
+        self._ensure_opportunity_exists(opportunity_id)
+        draft = self._application_repo.get_draft(student_id, opportunity_id)
+        return ApplicationDraftResponse.model_validate(draft) if draft else None
+
+    def get_student_drafts(self, student_id: int) -> list[ApplicationDraftResponse]:
+        """Return all in-progress drafts for a student."""
+        drafts = self._application_repo.get_drafts_by_student(student_id)
+        return [
+            ApplicationDraftResponse.model_validate(draft)
+            for draft in drafts
+            if not self._application_repo.get_by_student_and_opportunity(student_id, draft.opportunity_id)
+        ]
+
+    def save_student_draft(
+        self,
+        student_id: int,
+        opportunity_id: int,
+        data: ApplicationDraftSave,
+    ) -> ApplicationDraftResponse:
+        """Save an in-progress application draft."""
+        opportunity = self._ensure_opportunity_exists(opportunity_id)
+        existing_application = self._application_repo.get_by_student_and_opportunity(
+            student_id, opportunity_id
+        )
+        if existing_application:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already applied to this opportunity",
+            )
+
+        draft = self._application_repo.save_draft(
+            student_id,
+            opportunity_id,
+            data.cover_letter,
+            self._validate_question_answers(
+                getattr(opportunity, "application_questions", []),
+                data.question_answers,
+                require_required=False,
+            ),
+        )
+        return ApplicationDraftResponse.model_validate(draft)
+
+    def delete_student_draft(self, student_id: int, opportunity_id: int) -> None:
+        """Delete the student's draft for one opportunity."""
+        self._application_repo.delete_draft(student_id, opportunity_id)
+
+    def update_student_submission(
+        self,
+        student_id: int,
+        application_id: int,
+        data: ApplicationSubmissionUpdate,
+    ) -> ApplicationResponse:
+        """Allow students to edit their submitted application before the deadline."""
+        application = self._application_repo.get_by_id(application_id)
+        if not application or application.student_id != student_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Application not found",
+            )
+
+        opportunity = self._ensure_opportunity_exists(application.opportunity_id)
+        if opportunity.deadline:
+            deadline = opportunity.deadline
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > deadline:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The application deadline has passed",
+                )
+
+        if opportunity.is_active is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This opportunity is no longer accepting changes",
+            )
+
+        question_answers = self._validate_question_answers(
+            getattr(opportunity, "application_questions", []),
+            data.question_answers,
+            require_required=True,
+        )
+
+        updated = self._application_repo.update(
+            application,
+            {"cover_letter": data.cover_letter, "question_answers": question_answers},
+        )
+
+        audit_log(
+            "APPLICATION_UPDATE",
+            user_id=student_id,
+            user_role="student",
+            resource="application",
+            resource_id=application_id,
+            detail=f"Student {student_id} updated application {application_id}",
+            success=True,
+        )
+
+        return self._to_response(updated)
 
     def get_student_applications(
         self, student_id: int, skip: int = 0, limit: int = 100
@@ -207,6 +318,45 @@ class ApplicationService:
         return results
 
     # ── Helper ───────────────────────────────────────────────
+
+    def _ensure_opportunity_exists(self, opportunity_id: int):
+        opportunity = self._opportunity_repo.get_by_id(opportunity_id) if self._opportunity_repo else None
+        if not opportunity:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Opportunity not found",
+            )
+        return opportunity
+
+    @staticmethod
+    def _validate_question_answers(
+        questions: list[dict],
+        answers: dict[str, str] | None,
+        require_required: bool,
+    ) -> dict[str, str]:
+        cleaned_answers = {
+            str(key): str(value).strip()
+            for key, value in (answers or {}).items()
+            if value is not None and str(value).strip()
+        }
+        question_ids = {str(question.get("id")) for question in questions or [] if question.get("id")}
+        cleaned_answers = {
+            key: value
+            for key, value in cleaned_answers.items()
+            if key in question_ids
+        }
+        if require_required:
+            missing = [
+                str(question.get("label") or "Required question")
+                for question in questions or []
+                if question.get("required") and not cleaned_answers.get(str(question.get("id")))
+            ]
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Please answer required questions: {', '.join(missing)}",
+                )
+        return cleaned_answers
 
     @staticmethod
     def _to_response(app) -> ApplicationResponse:
