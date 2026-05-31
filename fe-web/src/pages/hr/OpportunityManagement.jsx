@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 import {
   ArrowLeft,
   BarChart3,
@@ -47,7 +47,9 @@ const MotionDiv = motion.div;
 const MotionSpan = motion.span;
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
 
-GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+if (typeof window !== 'undefined' && 'Worker' in window) {
+  GlobalWorkerOptions.workerPort = new PdfWorker();
+}
 
 const STATUS_OPTIONS = [
   { value: 'Applied', label: 'Applied' },
