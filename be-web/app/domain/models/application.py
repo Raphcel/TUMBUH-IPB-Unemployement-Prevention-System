@@ -2,7 +2,7 @@ import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, Integer, Enum, DateTime, ForeignKey, Text, UniqueConstraint, JSON
+    Column, Integer, Enum, DateTime, ForeignKey, Text, UniqueConstraint, JSON, String
 )
 from sqlalchemy.orm import relationship
 
