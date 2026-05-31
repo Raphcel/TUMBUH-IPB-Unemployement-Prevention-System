@@ -37,4 +37,14 @@ export const adminApi = {
 
   /** Delete an opportunity */
   deleteOpportunity: (oppId) => api.delete(`/admin/opportunities/${oppId}`),
+
+  /** Recent audit events for admin security dashboard */
+  auditEvents: (limit = 200) => api.get(`/admin/security/audit/events?limit=${limit}`),
+
+  /** Verify audit log hash-chain integrity */
+  verifyAuditChain: () => api.get('/admin/security/audit/verify-chain'),
+
+  /** Verify one application's stored digital signature */
+  verifyApplicationSignature: (applicationId) =>
+    api.get(`/admin/security/applications/${applicationId}/signature`),
 };

@@ -17,6 +17,7 @@ export const id = {
   no_notifications:     'Tidak ada notifikasi',
   nav_users:            'Pengguna',
   nav_companies:        'Perusahaan',
+  nav_audit:            'Audit Log',
 
   // ── Language toggle ──────────────────────────────────────────────────────
   language:             'Bahasa',

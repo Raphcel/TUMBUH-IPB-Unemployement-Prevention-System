@@ -17,6 +17,7 @@ export const en = {
   no_notifications:     'No notifications',
   nav_users:            'Users',
   nav_companies:        'Companies',
+  nav_audit:            'Audit Log',
 
   // ── Language toggle ──────────────────────────────────────────────────────
   language:             'Language',

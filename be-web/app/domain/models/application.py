@@ -41,6 +41,9 @@ class Application(Base):
 
     # JSON string storing status history: [{"status": "...", "date": "..."}]
     history: str = Column(Text, nullable=True)
+    signature_payload: str = Column(Text, nullable=True)
+    digital_signature: str = Column(Text, nullable=True)
+    signature_algorithm: str = Column(String(50), nullable=True)
 
     created_at: datetime = Column(DateTime, default=_utcnow)
     updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)

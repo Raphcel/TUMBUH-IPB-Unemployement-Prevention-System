@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    FIELD_ENCRYPTION_KEY: str | None = None
+    DIGITAL_SIGNATURE_PRIVATE_KEY: str | None = None
+
+    EMAIL_ENABLED: bool = False
+    RESEND_API_KEY: str | None = None
+    EMAIL_FROM: str | None = None
+    EMAIL_REPLY_TO: str | None = None
+    FRONTEND_URL: str = "http://localhost:5173"
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 24
+    GOOGLE_CLIENT_ID: str | None = None
+    AUDIT_DASHBOARD_KEY: str | None = None
 
     EMAIL_ENABLED: bool = False
     RESEND_API_KEY: str | None = None

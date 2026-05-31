@@ -43,6 +43,7 @@ const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),   
 const AdminDashboard      = lazyNamed(() => import('./pages/admin/Dashboard'),        'AdminDashboard');
 const UserManagement      = lazyNamed(() => import('./pages/admin/UserManagement'),   'UserManagement');
 const CompanyManagement   = lazyNamed(() => import('./pages/admin/CompanyManagement'),'CompanyManagement');
+const AuditLog            = lazyNamed(() => import('./pages/admin/AuditLog'),         'AuditLog');
 
 // ── Suspense fallback ──────────────────────────────────────────────────────
 function PageSpinner() {
@@ -262,6 +263,7 @@ function AppRoutes() {
         <Route path="users" element={<UserManagement />} />
         <Route path="companies" element={<CompanyManagement />} />
         <Route path="opportunities" element={<AdminDashboard />} />
+        <Route path="audit" element={<AuditLog />} />
       </Route>
 
       {/* 404 Catch-All */}

@@ -16,6 +16,7 @@ from app.schemas.application import (
 )
 from app.services.audit_service import audit_log
 from app.services.email_service import EmailService
+from app.services.security_service import SIGNATURE_ALGORITHM, security_service
 
 
 class ApplicationService:
@@ -76,12 +77,18 @@ class ApplicationService:
             "student_id": student_id,
             "opportunity_id": data.opportunity_id,
             "status": ApplicationStatus.APPLIED,
-            "cover_letter": data.cover_letter,
+            "cover_letter": security_service.encrypt_text(data.cover_letter),
             "question_answers": question_answers,
             "history": initial_history,
         }
         application = self._application_repo.create(app_dict)
         self._application_repo.delete_draft(student_id, data.opportunity_id)
+        self._sign_application_event(
+            application,
+            action="APPLICATION_SUBMIT",
+            actor_id=student_id,
+            timestamp=now,
+        )
         self._notify_hr_new_application(student_id, opportunity, application.id)
 
         audit_log(
@@ -183,7 +190,10 @@ class ApplicationService:
 
         updated = self._application_repo.update(
             application,
-            {"cover_letter": data.cover_letter, "question_answers": question_answers},
+            {
+                "cover_letter": security_service.encrypt_text(data.cover_letter),
+                "question_answers": question_answers,
+            },
         )
 
         audit_log(
@@ -252,6 +262,12 @@ class ApplicationService:
             application,
             {"status": data.status, "history": json.dumps(history)},
         )
+        self._sign_application_event(
+            updated,
+            action="APPLICATION_STATUS_UPDATE",
+            actor_id=company_id,
+            timestamp=history[-1]["date"],
+        )
         self._notify_student_status_update(updated, data.status)
 
         audit_log(
@@ -305,6 +321,12 @@ class ApplicationService:
 
             updated = self._application_repo.update(
                 app, {"status": new_status, "history": json.dumps(history)}
+            )
+            self._sign_application_event(
+                updated,
+                action="APPLICATION_BULK_STATUS_UPDATE",
+                actor_id=company_id,
+                timestamp=now,
             )
             self._notify_student_status_update(updated, new_status)
             results.append(self._to_response(updated))
@@ -364,7 +386,37 @@ class ApplicationService:
     @staticmethod
     def _to_response(app) -> ApplicationResponse:
         """Convert ORM model to response — history JSON is parsed by the schema validator."""
-        return ApplicationResponse.model_validate(app)
+        encrypted_cover_letter = app.cover_letter
+        app.cover_letter = security_service.decrypt_text(encrypted_cover_letter)
+        response = ApplicationResponse.model_validate(app)
+        app.cover_letter = encrypted_cover_letter
+        return response
+
+    def _sign_application_event(
+        self,
+        application,
+        *,
+        action: str,
+        actor_id: int | None,
+        timestamp: str,
+    ) -> None:
+        payload = security_service.build_application_signature_payload(
+            action=action,
+            actor_id=actor_id,
+            student_id=application.student_id,
+            opportunity_id=application.opportunity_id,
+            status=application.status.value,
+            timestamp=timestamp,
+        )
+        signature = security_service.sign_payload(payload)
+        self._application_repo.update(
+            application,
+            {
+                "signature_payload": json.dumps(payload, sort_keys=True),
+                "digital_signature": signature,
+                "signature_algorithm": SIGNATURE_ALGORITHM,
+            },
+        )
 
     def _notify_hr_new_application(self, student_id: int, opportunity, application_id: int) -> None:
         if not self._notification_repo or not self._user_repo:
