@@ -1,46 +1,166 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Briefcase,
+  CalendarDays,
+  ChevronDown,
+  Filter,
+  MapPin,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  X,
+  XCircle,
+} from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import { Select } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { opportunitiesApi } from '../../api/opportunities';
-import { applicationsApi } from '../../api/applications';
-import { usersApi } from '../../api/users';
-import { resolveUploadUrl } from '../../api/client';
-import {
-  ChevronDown,
-  Plus,
-  Pencil,
-  Trash2,
-  XCircle,
-  Users,
-  FileDown,
-  GraduationCap,
-  Mail,
-  Building,
-  BookOpen,
-} from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 
-const STATUS_OPTIONS = [
-  { value: 'Applied', label: 'Applied' },
-  { value: 'Screening', label: 'Screening' },
-  { value: 'Interview', label: 'Interview' },
-  { value: 'Accepted', label: 'Accepted' },
-  { value: 'Rejected', label: 'Rejected' },
-];
+const MotionDiv = motion.div;
 
-const STATUS_COLORS = {
-  Applied: 'bg-blue-50 text-blue-700',
-  Screening: 'bg-yellow-50 text-yellow-700',
-  Interview: 'bg-purple-50 text-purple-700',
-  Accepted: 'bg-green-50 text-green-700',
-  Rejected: 'bg-red-50 text-red-700',
+const SORT_OPTIONS = ['newest', 'oldest', 'title', 'applicants'];
+const STATUS_FILTERS = ['All', 'Active', 'Closed'];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
+
+const itemVariants = {
+  hidden: { y: 14, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 130, damping: 16 },
+  },
+};
+
+function formatDate(value) {
+  if (!value) return 'Tidak ada deadline';
+  return new Date(value).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function getCreatedTime(job) {
+  return new Date(job.created_at || job.posted_at || job.updated_at || 0).getTime();
+}
+
+function StatCard({ icon: Icon, label, value, color }) {
+  return (
+    <MotionDiv
+      variants={itemVariants}
+      className="flex min-w-[150px] flex-1 items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm"
+    >
+      <div className={`rounded-xl p-2.5 ${color}`}>
+        {React.createElement(Icon, { size: 20, className: 'text-white' })}
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-text tabular-nums">{value}</p>
+        <p className="mt-0.5 text-xs text-text-muted">{label}</p>
+      </div>
+    </MotionDiv>
+  );
+}
+
+function OpportunityCard({ job, onOpen, onEdit, onClose, onDelete }) {
+  const isActive = job.is_active !== false;
+  const applicantsCount = job.applicants_count ?? 0;
+
+  return (
+    <MotionDiv variants={itemVariants} layout>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+      >
+        <Card className="rounded-2xl border-gray-100 p-5 transition-all duration-200 group-hover:border-brand/20 group-hover:shadow-md">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 gap-4">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-brand/10 bg-brand/10 text-brand">
+                <Briefcase size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="line-clamp-1 text-base font-semibold text-text transition-colors group-hover:text-brand">
+                    {job.title || 'Tanpa judul'}
+                  </h2>
+                  <Badge variant={isActive ? 'success' : 'error'}>
+                    {isActive ? 'Aktif' : 'Ditutup'}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-text-muted">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin size={13} />
+                    {job.location || '-'}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Briefcase size={13} />
+                    {job.type || '-'}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays size={13} />
+                    {formatDate(job.deadline)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-shrink-0">
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-2 text-sm">
+                <p className="text-xs text-text-muted">Pelamar</p>
+                <p className="font-semibold text-text tabular-nums">{applicantsCount}</p>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onEdit}
+                  className="gap-1"
+                >
+                  <Pencil size={14} />
+                  Edit
+                </Button>
+                {isActive && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className="gap-1 text-orange-600 hover:text-orange-700"
+                  >
+                    <XCircle size={14} />
+                    Tutup
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDelete}
+                  className="gap-1 text-red-600 hover:text-red-700"
+                >
+                  <Trash2 size={14} />
+                  Hapus
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </button>
+    </MotionDiv>
+  );
+}
 
 export function KelolaLowongan() {
   const navigate = useNavigate();
@@ -50,574 +170,297 @@ export function KelolaLowongan() {
 
   const [myJobs, setMyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Expand / applicant state
-  const [expandedJobId, setExpandedJobId] = useState(null);
-  const [applicantsByJob, setApplicantsByJob] = useState({});
-  const [loadingApplicants, setLoadingApplicants] = useState({});
-
-  // Modals
-  const [selectedApp, setSelectedApp] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  // ── Fetch jobs ──────────────────────────────────────────
   useEffect(() => {
-    if (!companyId) { setLoading(false); return; }
-    opportunitiesApi.listByCompany(companyId)
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+
+    opportunitiesApi
+      .listByCompany(companyId)
       .then((data) => setMyJobs(Array.isArray(data) ? data : data.items || []))
-      .catch(() => addToast({ type: 'error', title: 'Error', message: 'Gagal memuat lowongan.' }))
+      .catch(() => {
+        addToast({
+          type: 'error',
+          title: 'Gagal',
+          message: 'Gagal memuat lowongan.',
+        });
+      })
       .finally(() => setLoading(false));
-  }, [companyId]);
+  }, [addToast, companyId]);
 
-  // ── Fetch applicants for a job ──────────────────────────
-  const fetchApplicants = async (jobId) => {
-    if (applicantsByJob[jobId]) return;
-    setLoadingApplicants((p) => ({ ...p, [jobId]: true }));
-    try {
-      const data = await applicationsApi.listByOpportunity(jobId);
-      const apps = (data.items || []).map((app) => ({
-        ...app,
-        applicantName: app.student
-          ? `${app.student.first_name} ${app.student.last_name}`
-          : `Student #${app.student_id}`,
-      }));
-      setApplicantsByJob((p) => ({ ...p, [jobId]: apps }));
-    } catch {
-      addToast({ type: 'error', title: 'Error', message: 'Gagal memuat pelamar.' });
-    } finally {
-      setLoadingApplicants((p) => ({ ...p, [jobId]: false }));
-    }
+  const stats = useMemo(() => {
+    const active = myJobs.filter((job) => job.is_active !== false).length;
+    const applicants = myJobs.reduce((sum, job) => sum + (job.applicants_count ?? 0), 0);
+    return {
+      total: myJobs.length,
+      active,
+      closed: myJobs.length - active,
+      applicants,
+    };
+  }, [myJobs]);
+
+  const filteredJobs = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const jobs = myJobs.filter((job) => {
+      const matchesSearch =
+        !query ||
+        job.title?.toLowerCase().includes(query) ||
+        job.type?.toLowerCase().includes(query) ||
+        job.location?.toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === 'All' ||
+        (statusFilter === 'Active' && job.is_active !== false) ||
+        (statusFilter === 'Closed' && job.is_active === false);
+
+      return matchesSearch && matchesStatus;
+    });
+
+    return [...jobs].sort((a, b) => {
+      if (sortBy === 'oldest') return getCreatedTime(a) - getCreatedTime(b);
+      if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
+      if (sortBy === 'applicants') return (b.applicants_count ?? 0) - (a.applicants_count ?? 0);
+      return getCreatedTime(b) - getCreatedTime(a);
+    });
+  }, [myJobs, search, sortBy, statusFilter]);
+
+  const sortLabels = {
+    newest: 'Terbaru',
+    oldest: 'Terlama',
+    title: 'Nama lowongan',
+    applicants: 'Pelamar terbanyak',
   };
 
-  // ── Toggle expand ───────────────────────────────────────
-  const toggleExpand = (jobId) => {
-    // Collapsing the panel unmounts <ApplicantPanel>, which resets
-    // its own internal state automatically — no manual reset needed.
-    if (expandedJobId === jobId) {
-      setExpandedJobId(null);
-    } else {
-      setExpandedJobId(jobId);
-      fetchApplicants(jobId);
-    }
-  };
-
-  // ── Close opportunity ──────────────────────────────────
   const handleClose = async (jobId) => {
     try {
       await opportunitiesApi.update(jobId, { is_active: false });
-      setMyJobs(myJobs.map((j) => (j.id === jobId ? { ...j, is_active: false } : j)));
+      setMyJobs((jobs) => jobs.map((job) => (job.id === jobId ? { ...job, is_active: false } : job)));
       addToast({ type: 'success', title: 'Berhasil', message: 'Lowongan ditutup.' });
     } catch {
       addToast({ type: 'error', title: 'Gagal', message: 'Gagal menutup lowongan.' });
     }
   };
 
-  // ── Delete opportunity ─────────────────────────────────
   const handleDelete = async (jobId) => {
     try {
       await opportunitiesApi.delete(jobId);
-      setMyJobs(myJobs.filter((j) => j.id !== jobId));
-      if (expandedJobId === jobId) setExpandedJobId(null);
+      setMyJobs((jobs) => jobs.filter((job) => job.id !== jobId));
       addToast({ type: 'success', title: 'Berhasil', message: 'Lowongan berhasil dihapus.' });
     } catch {
       addToast({ type: 'error', title: 'Gagal', message: 'Gagal menghapus lowongan.' });
-    }
-    setDeleteConfirmId(null);
-  };
-
-  // ── Individual status update ───────────────────────────
-  const handleStatusChange = async (appId, newStatus) => {
-    try {
-      await applicationsApi.updateStatus(appId, newStatus);
-      setApplicantsByJob((prev) => ({
-        ...prev,
-        [expandedJobId]: prev[expandedJobId].map((a) =>
-          a.id === appId ? { ...a, status: newStatus } : a
-        ),
-      }));
-    } catch {
-      addToast({ type: 'error', title: 'Gagal', message: 'Gagal mengubah status.' });
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
-  // ── Bulk status update (called by ApplicantPanel) ──────
-  const handleBulkStatusChange = useCallback(
-    (ids, status) => {
-      setApplicantsByJob((prev) => ({
-        ...prev,
-        [expandedJobId]: prev[expandedJobId]?.map((a) =>
-          ids.has(a.id) ? { ...a, status } : a
-        ) ?? [],
-      }));
-    },
-    [expandedJobId]
-  );
-
-  // ── Loading state ──────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-brand" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Kelola Lowongan</h1>
-        <Button variant="primary" className="text-white flex items-center gap-2" onClick={() => navigate('/hr/lowongan/baru')}>
-          <Plus size={16} /> Buat Lowongan Baru
-        </Button>
-      </div>
-
-      {/* Opportunities table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-4 py-3 w-8"></th>
-                <th className="px-6 py-3">Posisi</th>
-                <th className="px-6 py-3">Tipe</th>
-                <th className="px-6 py-3">Lokasi</th>
-                <th className="px-6 py-3">Pelamar</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {myJobs.length === 0 && (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400">Belum ada lowongan. Buat lowongan baru untuk mulai.</td></tr>
-              )}
-              {myJobs.map((job) => (
-                <React.Fragment key={job.id}>
-                  {/* Opportunity row */}
-                  <tr
-                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${expandedJobId === job.id ? 'bg-blue-50/40' : 'bg-white'}`}
-                    onClick={() => toggleExpand(job.id)}
-                  >
-                    <td className="px-4 py-4">
-                      <ChevronDown
-                        size={16}
-                        className={`text-gray-400 transition-transform duration-200 ${expandedJobId === job.id ? 'rotate-180' : ''}`}
-                      />
-                    </td>
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      {job.title}
-                    </td>
-                    <td className="px-6 py-4">{job.type}</td>
-                    <td className="px-6 py-4">{job.location}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1">
-                        <Users size={14} className="text-gray-400" />
-                        {job.applicants_count ?? 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant={job.is_active ? 'success' : 'error'}>
-                        {job.is_active ? 'Aktif' : 'Ditutup'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => navigate(`/hr/opportunities/${job.id}/edit`)} className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium">
-                        <Pencil size={14} /> Edit
-                      </button>
-                      <button onClick={() => setDeleteConfirmId(job.id)} className="inline-flex items-center gap-1 text-red-600 hover:underline font-medium">
-                        <Trash2 size={14} /> Hapus
-                      </button>
-                      {job.is_active && (
-                        <button onClick={() => handleClose(job.id)} className="inline-flex items-center gap-1 text-orange-600 hover:underline font-medium">
-                          <XCircle size={14} /> Tutup
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Expanded applicant panel */}
-                  <AnimatePresence>
-                    {expandedJobId === job.id && (
-                      <motion.tr
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <td colSpan={7} className="p-0 bg-gray-50/60">
-                          <ApplicantPanel
-                            applicants={applicantsByJob[job.id] || []}
-                            loading={loadingApplicants[job.id]}
-                            onStatusChange={handleStatusChange}
-                            onBulkStatusChange={handleBulkStatusChange}
-                            onViewDetail={setSelectedApp}
-                          />
-                        </td>
-                      </motion.tr>
-                    )}
-                  </AnimatePresence>
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+    <MotionDiv
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-5xl space-y-6 pb-10"
+    >
+      <MotionDiv variants={itemVariants} className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-text">
+            <Briefcase size={23} className="text-brand" />
+            Kelola Lowongan
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Pilih satu lowongan untuk membuka dashboard rekrutmen dan mengelola pelamarnya.
+          </p>
         </div>
-      </Card>
+        <Button
+          variant="primary"
+          className="gap-2 text-white"
+          onClick={() => navigate('/hr/lowongan/baru')}
+        >
+          <Plus size={16} />
+          Buat Lowongan Baru
+        </Button>
+      </MotionDiv>
 
-      {/* Delete confirmation modal */}
+      <MotionDiv variants={itemVariants} className="flex flex-wrap gap-3">
+        <StatCard icon={Briefcase} label="Total lowongan" value={stats.total} color="bg-brand" />
+        <StatCard icon={CalendarDays} label="Aktif" value={stats.active} color="bg-emerald-500" />
+        <StatCard icon={XCircle} label="Ditutup" value={stats.closed} color="bg-red-500" />
+        <StatCard icon={Users} label="Total pelamar" value={stats.applicants} color="bg-amber-500" />
+      </MotionDiv>
+
+      <MotionDiv variants={itemVariants} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-light" />
+            <input
+              type="text"
+              placeholder="Cari posisi, tipe, atau lokasi..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm shadow-sm transition focus:border-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/20"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light transition-colors hover:text-text"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="relative">
+            <Button
+              variant="outline"
+              className="w-full gap-2 sm:w-auto"
+              onClick={() => setShowSortMenu((open) => !open)}
+            >
+              <Filter size={16} />
+              Urutkan
+              <ChevronDown size={14} className={`transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+            </Button>
+            {showSortMenu && (
+              <div className="absolute right-0 z-20 mt-2 min-w-[220px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setSortBy(option);
+                      setShowSortMenu(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                      sortBy === option
+                        ? 'bg-brand/5 font-semibold text-brand'
+                        : 'text-text-muted hover:bg-gray-50 hover:text-text'
+                    }`}
+                  >
+                    {sortLabels[option]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+              className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
+                statusFilter === status
+                  ? 'border-brand bg-brand text-white shadow-sm'
+                  : 'border-gray-200 bg-white text-text-muted hover:border-brand/30 hover:text-brand'
+              }`}
+            >
+              {status === 'All' ? 'Semua' : status === 'Active' ? 'Aktif' : 'Ditutup'}
+            </button>
+          ))}
+        </div>
+      </MotionDiv>
+
+      <AnimatePresence>
+        {filteredJobs.length > 0 ? (
+          <MotionDiv
+            key="list"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3"
+          >
+            {filteredJobs.map((job) => (
+              <OpportunityCard
+                key={job.id}
+                job={job}
+                onOpen={() => navigate(`/hr/opportunities/${job.id}`)}
+                onEdit={() => navigate(`/hr/opportunities/${job.id}/edit`)}
+                onClose={() => handleClose(job.id)}
+                onDelete={() => setDeleteConfirmId(job.id)}
+              />
+            ))}
+          </MotionDiv>
+        ) : myJobs.length === 0 ? (
+          <MotionDiv
+            key="empty"
+            variants={itemVariants}
+            className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-24 text-center"
+          >
+            <Briefcase size={40} className="mx-auto mb-4 text-gray-300" />
+            <p className="font-semibold text-text-muted">Belum ada lowongan</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-gray-400">
+              Buat lowongan pertama untuk mulai menerima dan mengelola pelamar.
+            </p>
+            <Button
+              variant="primary"
+              className="mt-6 gap-2 text-white"
+              onClick={() => navigate('/hr/lowongan/baru')}
+            >
+              <Plus size={16} />
+              Buat Lowongan
+            </Button>
+          </MotionDiv>
+        ) : (
+          <MotionDiv
+            key="no-results"
+            variants={itemVariants}
+            className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-16 text-center"
+          >
+            <Filter size={32} className="mx-auto mb-3 text-gray-300" />
+            <p className="font-medium text-text-muted">Tidak ada lowongan yang cocok.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3 text-brand"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('All');
+                setSortBy('newest');
+                setShowSortMenu(false);
+              }}
+            >
+              Hapus filter
+            </Button>
+          </MotionDiv>
+        )}
+      </AnimatePresence>
+
       <Modal
-        isOpen={!!deleteConfirmId}
+        isOpen={Boolean(deleteConfirmId)}
         onClose={() => setDeleteConfirmId(null)}
-        title="Konfirmasi Hapus"
+        title="Konfirmasi hapus"
         size="sm"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setDeleteConfirmId(null)}>Batal</Button>
-            <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => handleDelete(deleteConfirmId)}>Hapus</Button>
+            <Button variant="ghost" onClick={() => setDeleteConfirmId(null)}>
+              Batal
+            </Button>
+            <Button variant="danger" onClick={() => handleDelete(deleteConfirmId)}>
+              Hapus
+            </Button>
           </>
         }
       >
-        <p className="text-gray-600">Apakah Anda yakin ingin menghapus lowongan ini? Semua data pelamar terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.</p>
+        <p className="text-sm leading-relaxed text-text-muted">
+          Lowongan dan data pelamar terkait akan dihapus. Tindakan ini tidak dapat dibatalkan.
+        </p>
       </Modal>
-
-      {/* Applicant detail modal */}
-      <ApplicantDetailModal
-        app={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onStatusChange={(appId, newStatus) => {
-          handleStatusChange(appId, newStatus);
-          setSelectedApp((prev) => prev ? { ...prev, status: newStatus } : null);
-        }}
-      />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Applicant Panel (shown in expanded row)
-// Props: applicants, loading, onStatusChange, onBulkStatusChange, onViewDetail
-// All bulk-selection state lives here — parent only gets a callback on commit.
-// ─────────────────────────────────────────────────────────────────────────────
-function ApplicantPanel({ applicants, loading, onStatusChange, onBulkStatusChange, onViewDetail }) {
-  const { addToast } = useToast();
-
-  // ── Internal bulk-action state ─────────────────────────────────────────────
-  const [selectedApps, setSelectedApps]         = useState(new Set());
-  const [bulkStatus, setBulkStatus]             = useState('');
-  const [exceptNames, setExceptNames]           = useState('');
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const exceptInputRef = useRef(null);
-  const allSelected = applicants.length > 0 && applicants.every((app) => selectedApps.has(app.id));
-
-  const toggleAppSelection = useCallback((appId) => {
-    setSelectedApps((prev) => {
-      const next = new Set(prev);
-      if (next.has(appId)) next.delete(appId);
-      else next.add(appId);
-      return next;
-    });
-  }, []);
-
-  const handleSelectAll = useCallback(() => {
-    const exceptions = exceptNames
-      .split(',')
-      .map((n) => n.trim().toLowerCase())
-      .filter(Boolean);
-    const ids = applicants
-      .filter((a) => !exceptions.includes(a.applicantName.toLowerCase()))
-      .map((a) => a.id);
-    setSelectedApps(new Set(ids));
-  }, [applicants, exceptNames]);
-
-  const handleBulkUpdate = useCallback(async () => {
-    if (selectedApps.size === 0 || !bulkStatus) return;
-    try {
-      await applicationsApi.bulkUpdateStatus([...selectedApps], bulkStatus);
-      onBulkStatusChange(selectedApps, bulkStatus);
-      addToast({ type: 'success', title: 'Berhasil', message: `${selectedApps.size} pelamar diperbarui.` });
-      setSelectedApps(new Set());
-      setBulkStatus('');
-    } catch {
-      addToast({ type: 'error', title: 'Gagal', message: 'Bulk update gagal.' });
-    }
-  }, [selectedApps, bulkStatus, onBulkStatusChange, addToast]);
-
-  // ── Autocomplete ───────────────────────────────────────────────────────────
-  const currentFragment = exceptNames.split(',').pop().trim().toLowerCase();
-  const autocompleteSuggestions = currentFragment
-    ? applicants.filter((a) => a.applicantName.toLowerCase().includes(currentFragment)).slice(0, 5)
-    : [];
-
-  const selectSuggestion = (name) => {
-    const parts = exceptNames.split(',');
-    parts[parts.length - 1] = ` ${name}`;
-    setExceptNames(parts.join(','));
-    setShowAutocomplete(false);
-    exceptInputRef.current?.focus();
-  };
-
-
-  return (
-    <div className="p-4 space-y-3">
-      {/* Bulk action bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-white rounded-lg border border-gray-200 p-3">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={() => {
-              if (allSelected) setSelectedApps(new Set());
-              else handleSelectAll();
-            }}
-            className="rounded border-gray-300"
-          />
-          Pilih Semua
-        </label>
-
-        {/* Exception names input with autocomplete */}
-        <div className="relative flex-1 min-w-[200px]">
-          <input
-            ref={exceptInputRef}
-            type="text"
-            placeholder="Kecualikan nama (pisahkan koma)..."
-            value={exceptNames}
-            onChange={(e) => {
-              setExceptNames(e.target.value);
-              setShowAutocomplete(true);
-            }}
-            onFocus={() => setShowAutocomplete(true)}
-            onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-          {showAutocomplete && autocompleteSuggestions.length > 0 && (
-            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-              {autocompleteSuggestions.map((a) => (
-                <button
-                  key={a.id}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
-                  onMouseDown={() => selectSuggestion(a.applicantName)}
-                >
-                  {a.applicantName}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value)}
-            options={[{ value: '', label: 'Ubah status...' }, ...STATUS_OPTIONS]}
-            className="min-w-[140px]"
-          />
-          <Button
-            variant="primary"
-            className="text-white text-sm whitespace-nowrap"
-            disabled={selectedApps.size === 0 || !bulkStatus}
-            onClick={handleBulkUpdate}
-          >
-            Terapkan ({selectedApps.size})
-          </Button>
-        </div>
-      </div>
-
-      {/* Applicants sub-table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-2 w-10"></th>
-              <th className="px-4 py-2 text-left">Nama Pelamar</th>
-              <th className="px-4 py-2 text-left">Tanggal Melamar</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {applicants.map((app) => (
-              <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                <td className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedApps.has(app.id)}
-                    onChange={() => toggleAppSelection(app.id)}
-                    className="rounded border-gray-300"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    className="font-medium text-primary hover:text-accent hover:underline transition-colors flex items-center gap-2"
-                    onClick={() => onViewDetail(app)}
-                  >
-                    <img
-                      src={resolveUploadUrl(app.student?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.applicantName)}&background=0f2854&color=fff&size=32`}
-                      alt=""
-                      className="w-7 h-7 rounded-full object-cover"
-                    />
-                    {app.applicantName}
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-gray-500">
-                  {new Date(app.applied_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[app.status] || 'bg-gray-100 text-gray-600'}`}>
-                    {app.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Select
-                    value={app.status}
-                    onChange={(e) => onStatusChange(app.id, e.target.value)}
-                    options={STATUS_OPTIONS}
-                    className="text-xs w-32"
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// Applicant Detail Modal
-// ═══════════════════════════════════════════════════════════
-function ApplicantDetailModal({ app, onClose, onStatusChange }) {
-  const { addToast } = useToast();
-  const [openingCV, setOpeningCV] = useState(false);
-  const [downloadingCV, setDownloadingCV] = useState(false);
-  if (!app) return null;
-  const student = app.student || {};
-  const avatarUrl = resolveUploadUrl(student.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.applicantName || 'U')}&background=0f2854&color=fff`;
-  const history = app.history || [];
-
-  const handleViewCV = async () => {
-    setOpeningCV(true);
-    try {
-      await usersApi.viewUserCV(student.id);
-    } catch (err) {
-      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal membuka CV.' });
-    } finally {
-      setOpeningCV(false);
-    }
-  };
-
-  const handleDownloadCV = async () => {
-    setDownloadingCV(true);
-    try {
-      await usersApi.downloadUserCV(student.id);
-    } catch (err) {
-      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal mengunduh CV.' });
-    } finally {
-      setDownloadingCV(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={!!app} onClose={onClose} title="Detail Pelamar" size="lg">
-      <div className="space-y-6">
-        {/* Profile header */}
-        <div className="flex items-center gap-4">
-          <img src={avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover ring-2 ring-gray-100" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">{app.applicantName}</h3>
-            <p className="text-sm text-gray-500 flex items-center gap-1"><Mail size={14} /> {student.email || '-'}</p>
-          </div>
-          <div className="ml-auto">
-            <span className={`text-sm font-medium px-3 py-1.5 rounded-full ${STATUS_COLORS[app.status] || 'bg-gray-100 text-gray-600'}`}>
-              {app.status}
-            </span>
-          </div>
-        </div>
-
-        {/* Info grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <InfoItem icon={<Building size={14} />} label="Universitas" value={student.university || '-'} />
-          <InfoItem icon={<BookOpen size={14} />} label="Jurusan" value={student.major || '-'} />
-          <InfoItem icon={<GraduationCap size={14} />} label="IPK" value={student.gpa ? String(student.gpa) : '-'} />
-          <InfoItem icon={<Users size={14} />} label="NIM" value={student.nim || '-'} />
-        </div>
-
-        {/* Bio */}
-        {student.bio && (
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Bio</p>
-            <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{student.bio}</p>
-          </div>
-        )}
-
-        {/* Cover Letter */}
-        {app.cover_letter && (
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Cover Letter</p>
-            <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{app.cover_letter}</p>
-          </div>
-        )}
-
-        {/* CV download */}
-        {student.has_cv && (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleViewCV}
-              disabled={openingCV}
-            >
-              <FileDown size={16} /> {openingCV ? 'Opening...' : 'View CV'}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleDownloadCV}
-              disabled={downloadingCV}
-            >
-              {downloadingCV ? 'Downloading...' : 'Download CV'}
-            </Button>
-          </div>
-        )}
-
-        {/* Status history */}
-        {history.length > 0 && (
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Riwayat Status</p>
-            <div className="space-y-2">
-              {history.map((h, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className={`w-2 h-2 rounded-full ${h.status === 'Rejected' ? 'bg-red-400' : h.status === 'Accepted' ? 'bg-green-400' : 'bg-blue-400'}`} />
-                  <span className="font-medium text-gray-700">{h.status}</span>
-                  <span className="text-gray-400">{new Date(h.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Status changer */}
-        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-          <span className="text-sm font-medium text-gray-600">Ubah Status:</span>
-          <Select
-            value={app.status}
-            onChange={(e) => onStatusChange(app.id, e.target.value)}
-            options={STATUS_OPTIONS}
-            className="w-40"
-          />
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function InfoItem({ icon, label, value }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className="text-gray-400 mt-0.5">{icon}</span>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-sm font-medium text-gray-800">{value}</p>
-      </div>
-    </div>
+    </MotionDiv>
   );
 }

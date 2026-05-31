@@ -3,7 +3,9 @@
  * 401 auto-logout, and AbortController support.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+const API_BASE = import.meta.env.DEV
+  ? '/api/v1'
+  : import.meta.env.VITE_API_URL || '/api/v1';
 
 /** Base URL for the backend server (without /api/v1) */
 export const SERVER_BASE = API_BASE.replace(/\/api\/v1\/?$/, '');
