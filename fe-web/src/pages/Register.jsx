@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input, Select } from '../components/ui/Input';
@@ -9,7 +9,7 @@ import { useTranslation } from '../context/LanguageContext';
 
 export function Register() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, googleSignIn } = useAuth();
   const { lang } = useTranslation();
   const isId = lang === 'id';
 
@@ -22,8 +22,12 @@ export function Register() {
     confirm: '',
   });
   const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  const googleButtonRef = useRef(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const set = (key) => (e) => {
     setForm({ ...form, [key]: e.target.value });
@@ -40,7 +44,7 @@ export function Register() {
 
     if (!form.email) newErrors.email = isId ? 'Email wajib diisi' : 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = isId ? 'Format email tidak valid' : 'Invalid email format';
-    else if (!form.email.endsWith('ipb.ac.id')) newErrors.email = isId ? 'Gunakan email institusi IPB' : 'Use an IPB institutional email';
+    else if (form.role === 'student' && !form.email.endsWith('ipb.ac.id')) newErrors.email = isId ? 'Gunakan email institusi IPB' : 'Use an IPB institutional email';
 
     if (!form.password) newErrors.password = isId ? 'Password wajib diisi' : 'Password is required';
     else if (form.password.length < 8) newErrors.password = isId ? 'Password minimal 8 karakter' : 'Password must be at least 8 characters';
@@ -53,9 +57,79 @@ export function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return;
+
+    const renderButton = () => {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) return;
+      googleButtonRef.current.innerHTML = '';
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async ({ credential }) => {
+          setErrors({});
+          setSuccess('');
+
+          const nameErrors = {};
+          if (form.role === 'hr') {
+            if (!form.first_name.trim()) nameErrors.first_name = isId ? 'Nama depan wajib diisi untuk HR' : 'First name is required for HR';
+            if (!form.last_name.trim()) nameErrors.last_name = isId ? 'Nama belakang wajib diisi untuk HR' : 'Last name is required for HR';
+          }
+          if (Object.keys(nameErrors).length > 0) {
+            setErrors(nameErrors);
+            setShake(true);
+            setTimeout(() => setShake(false), 500);
+            return;
+          }
+
+          setGoogleLoading(true);
+          try {
+            const user = await googleSignIn({
+              credential,
+              role: form.role,
+              first_name: form.first_name.trim() || null,
+              last_name: form.last_name.trim() || null,
+            });
+            navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
+          } catch (err) {
+            setErrors({ global: err.message || (isId ? 'Pendaftaran Google gagal.' : 'Google sign-up failed.') });
+            setShake(true);
+            setTimeout(() => setShake(false), 500);
+          } finally {
+            setGoogleLoading(false);
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: googleButtonRef.current.offsetWidth || 360,
+        text: 'signup_with',
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderButton();
+      return;
+    }
+
+    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existing) {
+      existing.addEventListener('load', renderButton, { once: true });
+      return () => existing.removeEventListener('load', renderButton);
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderButton;
+    document.head.appendChild(script);
+  }, [form.first_name, form.last_name, form.role, googleClientId, googleSignIn, isId, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
+    setSuccess('');
 
     if (!validate()) {
       setShake(true);
@@ -65,14 +139,14 @@ export function Register() {
 
     setLoading(true);
     try {
-      const user = await register({
+      const data = await register({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         password: form.password,
         role: form.role,
       });
-      navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
+      setSuccess(data.message || (isId ? 'Pendaftaran berhasil. Periksa email untuk verifikasi.' : 'Registration successful. Check your email to verify your account.'));
     } catch (err) {
       setErrors({ global: err.message || (isId ? 'Pendaftaran gagal. Silakan coba lagi.' : 'Registration failed. Please try again.') });
       setShake(true);
@@ -119,6 +193,12 @@ export function Register() {
                 </div>
               )}
 
+              {success && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                  {success}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label={isId ? 'Nama Depan' : 'First Name'}
@@ -136,9 +216,9 @@ export function Register() {
                 />
               </div>
               <Input
-                label={isId ? 'Email Institusi (IPB)' : 'Institutional Email (IPB)'}
+                label={form.role === 'student' ? (isId ? 'Email Institusi (IPB)' : 'Institutional Email (IPB)') : 'Email'}
                 type="text"
-                placeholder="budi@apps.ipb.ac.id"
+                placeholder={form.role === 'student' ? 'budi@apps.ipb.ac.id' : 'hr@company.com'}
                 value={form.email}
                 onChange={set('email')}
                 error={errors.email}
@@ -184,6 +264,26 @@ export function Register() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (isId ? 'Memproses...' : 'Processing...') : (isId ? 'Daftar' : 'Register')}
               </Button>
+
+              {googleClientId && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-xs uppercase tracking-wide text-gray-400">
+                      {isId ? 'atau' : 'or'}
+                    </span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                  <div className={googleLoading ? 'pointer-events-none opacity-60' : ''} ref={googleButtonRef} />
+                  {form.role === 'hr' && (
+                    <p className="text-xs text-gray-500">
+                      {isId
+                        ? 'Untuk HR, isi nama depan dan belakang di atas sebelum daftar dengan Google.'
+                        : 'For HR, fill first and last name above before signing up with Google.'}
+                    </p>
+                  )}
+                </div>
+              )}
             </motion.form>
 
             <div className="mt-6 text-center text-sm">

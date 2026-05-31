@@ -76,6 +76,19 @@ class UserCreate(BaseModel):
     company_id: int | None = None
 
 
+class GoogleAuthRequest(BaseModel):
+    """Schema for Google sign-in/sign-up using a Google ID token."""
+    credential: str = Field(..., min_length=10)
+    role: UserRole = UserRole.STUDENT
+    first_name: str | None = Field(None, max_length=100)
+    last_name: str | None = Field(None, max_length=100)
+    company_id: int | None = None
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(..., min_length=20)
+
+
 class UserUpdate(BaseModel):
     """Schema for updating user profile."""
     first_name: str | None = None
@@ -130,6 +143,8 @@ class UserResponse(BaseModel):
     cv_filename: str | None = None
     company_id: int | None = None
     is_active: bool = True
+    is_email_verified: bool = True
+    auth_provider: str = "password"
     created_at: datetime
 
     @model_validator(mode="after")
@@ -148,3 +163,10 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RegistrationResponse(BaseModel):
+    """Response for email/password registration before verification."""
+    message: str
+    user: UserResponse
+    email_verification_required: bool = True

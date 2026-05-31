@@ -13,6 +13,7 @@ from app.schemas.opportunity import (
     OpportunityCreate, OpportunityUpdate, OpportunityResponse, OpportunityListResponse,
 )
 from app.services.audit_service import audit_log
+from app.services.email_service import EmailService
 from app.services.opportunity_matcher import find_matching_students, normalize_text
 
 
@@ -26,12 +27,14 @@ class OpportunityService:
         notification_repo: NotificationRepository | None = None,
         user_repo: UserRepository | None = None,
         company_follow_repo: CompanyFollowRepository | None = None,
+        email_service: EmailService | None = None,
     ):
         self._opportunity_repo = opportunity_repo
         self._application_repo = application_repo
         self._notification_repo = notification_repo
         self._user_repo = user_repo
         self._company_follow_repo = company_follow_repo
+        self._email_service = email_service
 
     def verify_ownership(self, opportunity_id: int, company_id: int | None) -> None:
         """Verify the opportunity belongs to the HR user's company."""
@@ -237,6 +240,7 @@ class OpportunityService:
 
         company_name = opportunity.company.name if getattr(opportunity, "company", None) else "A company"
         notifications = []
+        email_notifications = []
         notified_student_ids = set()
         for student in followers:
             if student.id in excluded_student_ids:
@@ -244,17 +248,24 @@ class OpportunityService:
             if normalize_text(student.major) not in target_majors:
                 continue
 
+            title = f"New opportunity from {company_name}"
+            message = f"{company_name} posted {opportunity.title}, and it matches your major."
+            action_label = "View opportunity"
+            action_url = f"/lowongan/{opportunity.id}"
             notifications.append({
                 "user_id": student.id,
-                "title": f"New opportunity from {company_name}",
-                "message": f"{company_name} posted {opportunity.title}, and it matches your major.",
+                "title": title,
+                "message": message,
                 "type": "info",
-                "action_label": "View opportunity",
-                "action_url": f"/lowongan/{opportunity.id}",
+                "action_label": action_label,
+                "action_url": action_url,
             })
+            email_notifications.append((student, title, message, action_label, action_url))
             notified_student_ids.add(student.id)
 
         self._notification_repo.create_many(notifications)
+        for student, title, message, action_label, action_url in email_notifications:
+            self._send_notification_email(student, title, message, action_label, action_url)
         if notifications:
             audit_log(
                 "NOTIFICATION_CREATE",
@@ -264,6 +275,25 @@ class OpportunityService:
                 success=True,
             )
         return notified_student_ids
+
+    def _send_notification_email(
+        self,
+        user,
+        subject: str,
+        message: str,
+        action_label: str | None = None,
+        action_url: str | None = None,
+    ) -> None:
+        if not user or not self._email_service:
+            return
+        self._email_service.send_notification_email(
+            user.email,
+            subject,
+            message,
+            to_name=user.full_name,
+            action_label=action_label,
+            action_url=action_url,
+        )
 
     @staticmethod
     def _serialize_requirements(values) -> str | None:

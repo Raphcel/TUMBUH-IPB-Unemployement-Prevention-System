@@ -14,6 +14,18 @@ class UserRepository(BaseRepository[User]):
         """Find a user by their email address."""
         return self._db.query(User).filter(User.email == email).first()
 
+    def get_by_google_sub(self, google_sub: str) -> User | None:
+        """Find a user by their Google subject identifier."""
+        return self._db.query(User).filter(User.google_sub == google_sub).first()
+
+    def get_by_email_verification_token_hash(self, token_hash: str) -> User | None:
+        """Find a user by email verification token hash."""
+        return (
+            self._db.query(User)
+            .filter(User.email_verification_token_hash == token_hash)
+            .first()
+        )
+
     def get_students(self, skip: int = 0, limit: int = 100) -> list[User]:
         """Retrieve all users with student role."""
         return (

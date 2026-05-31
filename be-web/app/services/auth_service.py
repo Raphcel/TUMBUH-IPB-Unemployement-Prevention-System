@@ -1,17 +1,22 @@
 import logging
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt as _bcrypt
 from jose import jwt, JWTError
 from fastapi import HTTPException, status
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 
 from app.config.settings import get_settings
 from app.domain.models.user import User
 from app.domain.models.user import UserRole
 from app.repositories.notification_repository import NotificationRepository
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserCreate, UserResponse, TokenResponse
+from app.schemas.user import GoogleAuthRequest, RegistrationResponse, UserCreate, UserResponse, TokenResponse
 from app.services.audit_service import audit_log
+from app.services.email_service import EmailService
 from app.services.user_asset_service import (
     ensure_asset_in_managed_location,
     is_managed_avatar_url,
@@ -30,9 +35,11 @@ class AuthService:
         self,
         user_repo: UserRepository,
         notification_repo: NotificationRepository | None = None,
+        email_service: EmailService | None = None,
     ):
         self._user_repo = user_repo
         self._notification_repo = notification_repo
+        self._email_service = email_service
 
     # ── Password Utilities ───────────────────────────────────
 
@@ -74,8 +81,9 @@ class AuthService:
 
     # ── Business Methods ─────────────────────────────────────
 
-    def register(self, data: UserCreate) -> TokenResponse:
-        """Register a new user and return access + refresh tokens."""
+    def register(self, data: UserCreate) -> RegistrationResponse:
+        """Register a password user and send an email verification link."""
+        self._validate_registration_identity(data.email, data.role)
         existing = self._user_repo.get_by_email(data.email)
         if existing:
             audit_log(
@@ -93,14 +101,21 @@ class AuthService:
 
         user_dict = data.model_dump(exclude={"password"})
         user_dict["hashed_password"] = self.hash_password(data.password)
+        verification_required = self._email_verification_required()
+        user_dict["auth_provider"] = "password"
+        user_dict["is_email_verified"] = not verification_required
+        if verification_required:
+            token, token_hash = self._make_verification_token()
+            user_dict["email_verification_token_hash"] = token_hash
+            user_dict["email_verification_sent_at"] = datetime.now(timezone.utc)
 
         user = self._user_repo.create(user_dict)
-        token_data = {"sub": str(user.id), "role": user.role.value}
-        access_token = self.create_access_token(token_data)
-        refresh_token = self.create_refresh_token(token_data)
 
         logger.info("User registered: %s (role=%s)", user.email, user.role.value)
-        self._create_onboarding_notification(user)
+        if verification_required:
+            self._send_verification_email(user, token)
+        else:
+            self._create_onboarding_notification(user)
         audit_log(
             "AUTH_REGISTER",
             user_id=user.id,
@@ -111,10 +126,15 @@ class AuthService:
             success=True,
         )
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
+        message = (
+            "Registration successful. Please check your email to verify your account."
+            if verification_required
+            else "Registration successful. Email verification is disabled."
+        )
+        return RegistrationResponse(
+            message=message,
             user=self._to_user_response(user),
+            email_verification_required=verification_required,
         )
 
     def login(self, email: str, password: str) -> TokenResponse:
@@ -133,6 +153,12 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
+            )
+
+        if not user.is_email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email before logging in.",
             )
 
         if not user.is_active:
@@ -172,6 +198,88 @@ class AuthService:
             refresh_token=refresh_token,
             user=self._to_user_response(user),
         )
+
+    def verify_email(self, token: str) -> dict:
+        """Verify an email address using a one-time token."""
+        token_hash = self._hash_token(token)
+        user = self._user_repo.get_by_email_verification_token_hash(token_hash)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token")
+
+        sent_at = user.email_verification_sent_at
+        if sent_at and sent_at.tzinfo is None:
+            sent_at = sent_at.replace(tzinfo=timezone.utc)
+        expires_at = sent_at + timedelta(hours=settings.EMAIL_VERIFICATION_EXPIRE_HOURS) if sent_at else None
+        if expires_at and datetime.now(timezone.utc) > expires_at:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification token expired")
+
+        self._user_repo.update(user, {
+            "is_email_verified": True,
+            "email_verification_token_hash": None,
+            "email_verification_sent_at": None,
+        })
+        self._create_onboarding_notification(user)
+
+        audit_log(
+            "AUTH_EMAIL_VERIFY",
+            user_id=user.id,
+            user_role=user.role.value,
+            user_email=user.email,
+            resource="auth",
+            detail=f"Email verified for: {user.email}",
+            success=True,
+        )
+        return {"message": "Email verified successfully"}
+
+    def google_auth(self, data: GoogleAuthRequest) -> TokenResponse:
+        """Sign in or sign up using a Google ID token."""
+        if not settings.GOOGLE_CLIENT_ID:
+            raise HTTPException(status_code=500, detail="Google authentication is not configured")
+
+        payload = self._verify_google_credential(data.credential)
+        email = str(payload.get("email") or "").lower()
+        google_sub = str(payload.get("sub") or "")
+        if not email or not google_sub:
+            raise HTTPException(status_code=400, detail="Google account did not provide email identity")
+        if not payload.get("email_verified"):
+            raise HTTPException(status_code=400, detail="Google email is not verified")
+
+        self._validate_registration_identity(email, data.role)
+
+        user = self._user_repo.get_by_google_sub(google_sub) or self._user_repo.get_by_email(email)
+        if user:
+            if user.google_sub != google_sub:
+                user = self._user_repo.update(user, {
+                    "google_sub": google_sub,
+                    "auth_provider": user.auth_provider if user.auth_provider == "password" else "google",
+                    "is_email_verified": True,
+                })
+            return self._issue_tokens(user)
+
+        first_name, last_name = self._resolve_google_names(data, payload)
+        user = self._user_repo.create({
+            "email": email,
+            "hashed_password": self.hash_password(secrets.token_urlsafe(32)),
+            "first_name": first_name,
+            "last_name": last_name,
+            "role": data.role,
+            "company_id": data.company_id,
+            "auth_provider": "google",
+            "google_sub": google_sub,
+            "is_email_verified": True,
+            "avatar": payload.get("picture"),
+        })
+        self._create_onboarding_notification(user)
+        audit_log(
+            "AUTH_GOOGLE_SIGNUP",
+            user_id=user.id,
+            user_role=user.role.value,
+            user_email=user.email,
+            resource="auth",
+            detail=f"Google account registered: {user.email}",
+            success=True,
+        )
+        return self._issue_tokens(user)
 
     def refresh(self, refresh_token: str) -> TokenResponse:
         """Issue new tokens using a valid refresh token."""
@@ -250,3 +358,87 @@ class AuthService:
             "action_label": "Open profile",
             "action_url": "/student/profile",
         })
+
+    def _issue_tokens(self, user: User) -> TokenResponse:
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated")
+
+        token_data = {"sub": str(user.id), "role": user.role.value}
+        access_token = self.create_access_token(token_data)
+        refresh_token = self.create_refresh_token(token_data)
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            user=self._to_user_response(user),
+        )
+
+    def _validate_registration_identity(self, email: str, role: UserRole) -> None:
+        if role == UserRole.STUDENT and not email.lower().endswith("ipb.ac.id"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Students must use an IPB institutional email.",
+            )
+
+    def _email_verification_required(self) -> bool:
+        return bool(self._email_service and self._email_service.is_configured)
+
+    def _send_verification_email(self, user: User, token: str) -> None:
+        if not self._email_service:
+            return
+
+        verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={token}"
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#17231b;max-width:560px;margin:0 auto;padding:24px">
+          <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4c7a5f;margin:0 0 12px">TUMBUH</p>
+          <h1 style="font-size:24px;line-height:1.25;margin:0 0 16px">Verify your email</h1>
+          <p style="font-size:16px;margin:0;color:#33453a">Confirm your email address to activate your TUMBUH account.</p>
+          <p style="margin:28px 0 0"><a href="{verify_url}" style="background:#1f6f43;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;display:inline-block">Verify email</a></p>
+          <p style="font-size:12px;color:#66756b;margin-top:32px">This link expires in {settings.EMAIL_VERIFICATION_EXPIRE_HOURS} hours.</p>
+        </div>
+        """
+        text_body = f"Verify your TUMBUH account: {verify_url}"
+        self._email_service.send_email(
+            user.email,
+            "Verify your TUMBUH email",
+            html_body=html_body,
+            text_body=text_body,
+            to_name=user.full_name,
+        )
+
+    @staticmethod
+    def _make_verification_token() -> tuple[str, str]:
+        token = secrets.token_urlsafe(32)
+        return token, AuthService._hash_token(token)
+
+    @staticmethod
+    def _hash_token(token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _verify_google_credential(credential: str) -> dict:
+        try:
+            return id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google credential")
+
+    @staticmethod
+    def _resolve_google_names(data: GoogleAuthRequest, payload: dict) -> tuple[str, str]:
+        first_name = (data.first_name or payload.get("given_name") or "").strip()
+        last_name = (data.last_name or payload.get("family_name") or "").strip()
+
+        if data.role == UserRole.HR and (not first_name or not last_name):
+            raise HTTPException(status_code=400, detail="HR registration requires first and last name.")
+
+        if not first_name:
+            name = str(payload.get("name") or payload.get("email") or "Google User").strip()
+            parts = name.split(maxsplit=1)
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else "User"
+        elif not last_name:
+            last_name = "User"
+
+        return first_name, last_name

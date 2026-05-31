@@ -15,6 +15,7 @@ from app.repositories import (
 from app.services import (
     AuthService, UserService, CompanyService, OpportunityService, ApplicationService,
     BookmarkService, CompanyFollowService, ExternshipService, NotificationService, AdminService, ResumeService,
+    EmailService,
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -58,13 +59,18 @@ def get_resume_repo(db: Session = Depends(get_db)) -> ResumeRepository:
     return ResumeRepository(db)
 
 
+def get_email_service() -> EmailService:
+    return EmailService()
+
+
 # ── Service Factories ────────────────────────────────────────
 
 def get_auth_service(
     user_repo: UserRepository = Depends(get_user_repo),
     notification_repo: NotificationRepository = Depends(get_notification_repo),
+    email_service: EmailService = Depends(get_email_service),
 ) -> AuthService:
-    return AuthService(user_repo, notification_repo)
+    return AuthService(user_repo, notification_repo, email_service)
 
 
 def get_user_service(user_repo: UserRepository = Depends(get_user_repo)) -> UserService:
@@ -81,8 +87,16 @@ def get_opportunity_service(
     notification_repo: NotificationRepository = Depends(get_notification_repo),
     user_repo: UserRepository = Depends(get_user_repo),
     company_follow_repo: CompanyFollowRepository = Depends(get_company_follow_repo),
+    email_service: EmailService = Depends(get_email_service),
 ) -> OpportunityService:
-    return OpportunityService(opportunity_repo, application_repo, notification_repo, user_repo, company_follow_repo)
+    return OpportunityService(
+        opportunity_repo,
+        application_repo,
+        notification_repo,
+        user_repo,
+        company_follow_repo,
+        email_service,
+    )
 
 
 def get_application_service(
@@ -90,8 +104,9 @@ def get_application_service(
     opportunity_repo: OpportunityRepository = Depends(get_opportunity_repo),
     notification_repo: NotificationRepository = Depends(get_notification_repo),
     user_repo: UserRepository = Depends(get_user_repo),
+    email_service: EmailService = Depends(get_email_service),
 ) -> ApplicationService:
-    return ApplicationService(application_repo, opportunity_repo, notification_repo, user_repo)
+    return ApplicationService(application_repo, opportunity_repo, notification_repo, user_repo, email_service)
 
 
 def get_bookmark_service(

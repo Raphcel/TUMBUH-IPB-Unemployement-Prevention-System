@@ -27,6 +27,13 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://tumbuh.me,https://www.tumbuh.me}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://tumbuh.me}
+      EMAIL_VERIFICATION_EXPIRE_HOURS: ${EMAIL_VERIFICATION_EXPIRE_HOURS:-24}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       AUDIT_LOG_URL: http://audit-log:3001/log
       PORT: 8000
     depends_on:
@@ -40,6 +47,7 @@ services:
       context: ./fe-web
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     restart: unless-stopped
     expose:
       - 80
