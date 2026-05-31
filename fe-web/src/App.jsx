@@ -33,7 +33,7 @@ const CVBuilder        = lazyNamed(() => import('./pages/student/CVBuilder'),   
 // ── HR pages ───────────────────────────────────────────────────────────────
 const HRDashboard        = lazyNamed(() => import('./pages/hr/Dashboard'),         'HRDashboard');
 const KelolaLowongan     = lazyNamed(() => import('./pages/hr/KelolaLowongan'),    'KelolaLowongan');
-const Pelamar            = lazyNamed(() => import('./pages/hr/Pelamar'),            'Pelamar');
+const OpportunityManagement = lazyNamed(() => import('./pages/hr/OpportunityManagement'), 'OpportunityManagement');
 const ProfilPerusahaanHR = lazyNamed(() => import('./pages/hr/ProfilPerusahaan'),  'ProfilPerusahaanHR');
 const FormLowongan       = lazyNamed(() => import('./pages/hr/FormLowongan'),      'FormLowongan');
 
@@ -224,6 +224,7 @@ function AppRoutes() {
         <Route path="opportunities" element={<KelolaLowongan />} />
         <Route path="lowongan/baru" element={<FormLowongan />} />
         <Route path="opportunities/:id/edit" element={<FormLowongan />} />
+        <Route path="opportunities/:id" element={<OpportunityManagement />} />
         <Route path="applicants" element={<Navigate to="/hr/opportunities" replace />} />
         <Route path="company" element={<ProfilPerusahaanHR />} />
         <Route path="calendar" element={<Calendar />} />

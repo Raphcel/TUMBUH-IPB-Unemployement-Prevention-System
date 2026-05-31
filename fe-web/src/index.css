@@ -65,3 +65,42 @@
 .animate-scroll:hover {
     animation-play-state: paused;
 }
+
+.applicant-card {
+    container-type: inline-size;
+}
+
+.applicant-card-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.applicant-card-secondary {
+    display: none;
+}
+
+.applicant-card-email {
+    display: -webkit-box;
+}
+
+.applicant-card-mobile-status {
+    flex-shrink: 0;
+}
+
+@container (min-width: 36rem) {
+    .applicant-card-layout {
+        grid-template-columns: minmax(0, 1fr) 330px;
+        align-items: center;
+    }
+
+    .applicant-card-secondary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .applicant-card-mobile-status {
+        display: none;
+    }
+}

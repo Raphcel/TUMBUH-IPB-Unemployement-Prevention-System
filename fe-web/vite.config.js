@@ -7,7 +7,22 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5174,
-    strictPort: false
+    strictPort: false,
+    allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/private_uploads': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     allowedHosts: ['tumbuh.me', 'www.tumbuh.me']
