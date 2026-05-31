@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 
-from app.domain.models.application import Application, ApplicationStatus
+from app.domain.models.application import Application, ApplicationDraft, ApplicationStatus
 from app.repositories.base import BaseRepository
 
 
@@ -51,6 +51,64 @@ class ApplicationRepository(BaseRepository[Application]):
             )
             .first()
         )
+
+    def get_draft(self, student_id: int, opportunity_id: int) -> ApplicationDraft | None:
+        """Retrieve one in-progress draft for a student and opportunity."""
+        return (
+            self._db.query(ApplicationDraft)
+            .options(joinedload(ApplicationDraft.opportunity))
+            .filter(
+                ApplicationDraft.student_id == student_id,
+                ApplicationDraft.opportunity_id == opportunity_id,
+            )
+            .first()
+        )
+
+    def get_drafts_by_student(self, student_id: int) -> list[ApplicationDraft]:
+        """Retrieve all in-progress drafts for a student."""
+        from app.domain.models.opportunity import Opportunity
+
+        return (
+            self._db.query(ApplicationDraft)
+            .options(joinedload(ApplicationDraft.opportunity).joinedload(Opportunity.company))
+            .filter(ApplicationDraft.student_id == student_id)
+            .order_by(ApplicationDraft.updated_at.desc())
+            .all()
+        )
+
+    def save_draft(
+        self,
+        student_id: int,
+        opportunity_id: int,
+        cover_letter: str | None,
+        question_answers: dict | None = None,
+    ) -> ApplicationDraft:
+        """Create or update the student's draft for an opportunity."""
+        draft = self.get_draft(student_id, opportunity_id)
+        if draft:
+            draft.cover_letter = cover_letter
+            draft.question_answers = question_answers or {}
+        else:
+            draft = ApplicationDraft(
+                student_id=student_id,
+                opportunity_id=opportunity_id,
+                cover_letter=cover_letter,
+                question_answers=question_answers or {},
+            )
+            self._db.add(draft)
+
+        self._db.commit()
+        self._db.refresh(draft)
+        return draft
+
+    def delete_draft(self, student_id: int, opportunity_id: int) -> bool:
+        """Delete an in-progress draft for a student and opportunity."""
+        draft = self.get_draft(student_id, opportunity_id)
+        if not draft:
+            return False
+        self._db.delete(draft)
+        self._db.commit()
+        return True
 
     def count_by_opportunity(self, opportunity_id: int) -> int:
         """Count applications for a given opportunity."""

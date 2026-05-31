@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardBody } from '../components/ui/Card';
@@ -10,6 +10,7 @@ import { useTranslation } from '../context/LanguageContext';
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { lang } = useTranslation();
   const copy = lang === 'id'
@@ -58,6 +59,9 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const redirectTo = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}`
+    : null;
 
   // Animation controls
   const [shake, setShake] = useState(false);
@@ -88,7 +92,7 @@ export function Login() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
+      navigate(redirectTo || (user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard'), { replace: Boolean(redirectTo) });
       addToast({
         title: 'Login Berhasil',
         message: `${copy.successMessage}, ${user.first_name}!`,
@@ -116,7 +120,7 @@ export function Login() {
     setLoading(true);
     try {
       const user = await login(demoEmail, 'password123');
-      navigate(user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard');
+      navigate(redirectTo || (user.role === 'hr' ? '/hr/dashboard' : '/student/dashboard'), { replace: Boolean(redirectTo) });
     } catch (err) {
       setErrors({ global: err.message || copy.demoFailed });
     } finally {

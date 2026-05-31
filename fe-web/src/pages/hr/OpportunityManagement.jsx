@@ -42,6 +42,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { buildMajorOptions } from '../../data/ipbMajors';
 import { getSkillSuggestions, normalizeSkillLabel, normalizeSkillList } from '../../data/skills';
+import { useCloseOnScroll } from '../../hooks/useCloseOnScroll';
 
 const MotionDiv = motion.div;
 const MotionSpan = motion.span;
@@ -67,6 +68,11 @@ const OPPORTUNITY_TYPES = [
   { value: 'Full-time', label: 'Full-time' },
   { value: 'Scholarship', label: 'Scholarship' },
 ];
+const QUESTION_TYPES = [
+  { value: 'short_text', label: 'Jawaban singkat' },
+  { value: 'long_text', label: 'Paragraf' },
+  { value: 'single_choice', label: 'Pilihan tunggal' },
+];
 
 const STATUS_STYLES = {
   Applied: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -79,6 +85,7 @@ const STATUS_STYLES = {
 const TABS = [
   { id: 'overview', label: 'Ringkasan', icon: BarChart3 },
   { id: 'applicants', label: 'Pelamar', icon: Users },
+  { id: 'questions', label: 'Pertanyaan', icon: BookOpen },
   { id: 'details', label: 'Detail Lowongan', icon: Briefcase },
 ];
 
@@ -446,6 +453,7 @@ function ApplicantsTab({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [downloadingCV, setDownloadingCV] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  useCloseOnScroll(showSortMenu, () => setShowSortMenu(false));
   const sortLabels = {
     newest: 'Terbaru',
     oldest: 'Terlama',
@@ -1173,6 +1181,220 @@ function DetailsTab({ opportunity, onOpportunityUpdated }) {
   );
 }
 
+function createQuestionId() {
+  return `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeApplicationQuestions(questions) {
+  return (Array.isArray(questions) ? questions : [])
+    .map((question, index) => ({
+      id: question.id || `q_${index + 1}`,
+      label: question.label || '',
+      type: question.type || 'short_text',
+      required: Boolean(question.required),
+      options: Array.isArray(question.options) ? question.options : [],
+    }));
+}
+
+function QuestionsTab({ opportunity, onOpportunityUpdated }) {
+  const { addToast } = useToast();
+  const [questions, setQuestions] = useState(() => normalizeApplicationQuestions(opportunity.application_questions));
+  const [saving, setSaving] = useState(false);
+
+  const addQuestion = () => {
+    setQuestions((current) => [
+      ...current,
+      {
+        id: createQuestionId(),
+        label: '',
+        type: 'short_text',
+        required: false,
+        options: [],
+      },
+    ]);
+  };
+
+  const updateQuestion = (id, patch) => {
+    setQuestions((current) => current.map((question) => (
+      question.id === id ? { ...question, ...patch } : question
+    )));
+  };
+
+  const removeQuestion = (id) => {
+    setQuestions((current) => current.filter((question) => question.id !== id));
+  };
+
+  const updateOption = (questionId, optionIndex, value) => {
+    setQuestions((current) => current.map((question) => {
+      if (question.id !== questionId) return question;
+      const options = [...question.options];
+      options[optionIndex] = value;
+      return { ...question, options };
+    }));
+  };
+
+  const addOption = (questionId) => {
+    setQuestions((current) => current.map((question) => (
+      question.id === questionId ? { ...question, options: [...question.options, ''] } : question
+    )));
+  };
+
+  const removeOption = (questionId, optionIndex) => {
+    setQuestions((current) => current.map((question) => (
+      question.id === questionId
+        ? { ...question, options: question.options.filter((_, index) => index !== optionIndex) }
+        : question
+    )));
+  };
+
+  const cleanQuestions = () => questions
+    .map((question) => ({
+      ...question,
+      label: question.label.trim(),
+      options: question.options.map((option) => option.trim()).filter(Boolean),
+    }))
+    .filter((question) => question.label);
+
+  const handleSave = async () => {
+    const payload = cleanQuestions();
+    const invalidChoice = payload.find((question) => question.type === 'single_choice' && question.options.length < 2);
+    if (invalidChoice) {
+      addToast({ type: 'error', title: 'Validasi', message: 'Pertanyaan pilihan tunggal butuh minimal 2 opsi.' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await opportunitiesApi.update(opportunity.id, {
+        application_questions: payload,
+      });
+      onOpportunityUpdated({ ...opportunity, ...updated });
+      setQuestions(normalizeApplicationQuestions(updated.application_questions));
+      addToast({ type: 'success', title: 'Berhasil', message: 'Pertanyaan aplikasi berhasil disimpan.' });
+    } catch (err) {
+      addToast({ type: 'error', title: 'Gagal', message: err.message || 'Gagal menyimpan pertanyaan.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <MotionDiv variants={containerVariants} initial="hidden" animate="visible" className="space-y-5">
+      <MotionDiv variants={itemVariants} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-text">Pertanyaan perusahaan</h2>
+          <p className="mt-1 max-w-2xl text-sm text-text-muted">
+            Pertanyaan ini muncul di form aplikasi mahasiswa sebelum pesan untuk recruiter.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="gap-2" onClick={addQuestion}>
+            <Plus size={16} />
+            Tambah
+          </Button>
+          <Button type="button" className="gap-2 text-white" onClick={handleSave} disabled={saving}>
+            <Save size={16} />
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </Button>
+        </div>
+      </MotionDiv>
+
+      <MotionDiv variants={itemVariants} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        {questions.length === 0 ? (
+          <div className="px-5 py-14 text-center">
+            <BookOpen size={34} className="mx-auto mb-3 text-gray-300" />
+            <p className="font-semibold text-text-muted">Belum ada pertanyaan tambahan</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-gray-400">
+              Gunakan ini untuk pertanyaan screening seperti portfolio, ketersediaan mulai, atau motivasi spesifik.
+            </p>
+            <Button type="button" variant="outline" className="mt-5 gap-2" onClick={addQuestion}>
+              <Plus size={16} />
+              Tambah pertanyaan
+            </Button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {questions.map((question, index) => (
+              <section key={question.id} className="p-5">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-start">
+                  <Field label={`Pertanyaan ${index + 1}`}>
+                    <input
+                      value={question.label}
+                      onChange={(event) => updateQuestion(question.id, { label: event.target.value })}
+                      className={FIELD_INPUT_CLASS}
+                      placeholder="Contoh: Link portfolio atau GitHub Anda"
+                    />
+                  </Field>
+                  <Field label="Tipe jawaban">
+                    <Select
+                      value={question.type}
+                      onChange={(event) => updateQuestion(question.id, {
+                        type: event.target.value,
+                        options: event.target.value === 'single_choice' ? question.options : [],
+                      })}
+                      options={QUESTION_TYPES}
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => removeQuestion(question.id)}
+                    className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50"
+                    aria-label="Hapus pertanyaan"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+
+                <label className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-text-muted">
+                  <input
+                    type="checkbox"
+                    checked={question.required}
+                    onChange={(event) => updateQuestion(question.id, { required: event.target.checked })}
+                    className="rounded border-gray-300"
+                  />
+                  Wajib dijawab
+                </label>
+
+                {question.type === 'single_choice' && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-text-muted">Opsi jawaban</p>
+                    {question.options.map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center gap-2">
+                        <input
+                          value={option}
+                          onChange={(event) => updateOption(question.id, optionIndex, event.target.value)}
+                          className={FIELD_INPUT_CLASS}
+                          placeholder={`Opsi ${optionIndex + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(question.id, optionIndex)}
+                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                          aria-label="Hapus opsi"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addOption(question.id)}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-brand transition hover:text-brand-dark"
+                    >
+                      <Plus size={14} />
+                      Tambah opsi
+                    </button>
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
+      </MotionDiv>
+    </MotionDiv>
+  );
+}
+
 function InfoRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-start gap-3">
@@ -1435,6 +1657,10 @@ function ApplicantDetailPanel({
 
   const student = app.student || {};
   const history = app.history || [];
+  const applicationQuestions = Array.isArray(app.opportunity?.application_questions)
+    ? app.opportunity.application_questions
+    : [];
+  const questionAnswers = app.question_answers || {};
 
   return (
     <Card className="rounded-2xl border-gray-100">
@@ -1517,6 +1743,22 @@ function ApplicantDetailPanel({
                 <p className="max-h-[220px] overflow-y-auto whitespace-pre-wrap rounded-xl bg-gray-50 p-3 text-sm leading-6 text-text-muted">
                   {app.cover_letter}
                 </p>
+              </div>
+            )}
+
+            {applicationQuestions.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-semibold text-text-muted">Jawaban pertanyaan</p>
+                <div className="space-y-2">
+                  {applicationQuestions.map((question) => (
+                    <div key={question.id} className="rounded-xl bg-gray-50 p-3">
+                      <p className="text-xs font-semibold text-text">{question.label}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-text-muted">
+                        {questionAnswers[question.id] || '-'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1867,6 +2109,15 @@ export function OpportunityManagement() {
         {activeTab === 'details' && (
           <MotionDiv key="details" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
             <DetailsTab
+              opportunity={opportunity}
+              onOpportunityUpdated={setOpportunity}
+            />
+          </MotionDiv>
+        )}
+
+        {activeTab === 'questions' && (
+          <MotionDiv key="questions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <QuestionsTab
               opportunity={opportunity}
               onOpportunityUpdated={setOpportunity}
             />
