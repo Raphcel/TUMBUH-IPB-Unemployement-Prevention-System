@@ -44,19 +44,26 @@ const CATEGORIES = [
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
 
 const itemVariants = {
-  hidden: { y: 16, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 120, damping: 16 } },
+  hidden: { y: 12, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 130, damping: 18 } },
+};
+
+const statStyles = {
+  time: 'bg-emerald-50 text-brand',
+  entries: 'bg-blue-50 text-blue-600',
+  files: 'bg-amber-50 text-amber-600',
+  progress: 'bg-green-50 text-green-600',
 };
 
 const emptyEntryForm = {
   activity_date: new Date().toISOString().slice(0, 10),
   title: '',
   category: 'Development',
-  hours: '',
+  duration_minutes: '',
   start_time: '',
   end_time: '',
   location: '',
@@ -69,8 +76,20 @@ function numberValue(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function minutesFromHours(value) {
+  return Math.round(numberValue(value) * 60);
+}
+
+function hoursFromMinutes(value) {
+  return Number((numberValue(value) / 60).toFixed(4));
+}
+
 function formatHours(value, t) {
   return `${numberValue(value).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${t('logbook_hours_short')}`;
+}
+
+function formatMinutesFromHours(value, t) {
+  return `${minutesFromHours(value).toLocaleString()} ${t('logbook_minutes_short')}`;
 }
 
 function formatDate(value, locale) {
@@ -94,7 +113,7 @@ function formatTimeRange(startTime, endTime) {
   const start = formatTimeValue(startTime);
   const end = formatTimeValue(endTime);
   if (start && end) return `${start} - ${end}`;
-  return start || end;
+  return start || end || '-';
 }
 
 function formatFileSize(bytes) {
@@ -138,7 +157,7 @@ function entryPayload(form) {
     activity_date: form.activity_date,
     title: form.title.trim(),
     category: form.category || null,
-    hours: Number(form.hours),
+    hours: hoursFromMinutes(form.duration_minutes),
     start_time: form.start_time || null,
     end_time: form.end_time || null,
     location: form.location.trim() || null,
@@ -159,47 +178,89 @@ function semesterOptions(t) {
   return options;
 }
 
-function hoursFromTimeRange(startTime, endTime) {
+function minutesFromTimeRange(startTime, endTime) {
   if (!startTime || !endTime) return '';
   const [startHour, startMinute] = startTime.split(':').map(Number);
   const [endHour, endMinute] = endTime.split(':').map(Number);
   const start = startHour * 60 + startMinute;
   const end = endHour * 60 + endMinute;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '';
-  return String(Number(((end - start) / 60).toFixed(2)));
+  return String(end - start);
 }
 
-function ProgressBar({ percent }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-medium text-text">{percent}%</span>
-        <span className="text-text-muted">100%</span>
-      </div>
-      <div className="h-2 rounded-full bg-surface-muted">
-        <div className="h-2 rounded-full bg-brand transition-all" style={{ width: `${percent}%` }} />
-      </div>
-    </div>
-  );
+function sortedEntries(entries) {
+  return entries
+    .slice()
+    .sort((a, b) => `${b.activity_date}-${b.start_time || ''}`.localeCompare(`${a.activity_date}-${a.start_time || ''}`));
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({ icon: Icon, tone, label, value, helper }) {
   return (
-    <MotionDiv variants={itemVariants} className="rounded-xl border border-surface-border bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">{label}</p>
-        {React.createElement(icon, { size: 17, className: 'text-brand' })}
+    <MotionDiv variants={itemVariants} className="rounded-lg border border-surface-border bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-text-muted">{label}</p>
+          <p className="mt-2 text-2xl font-semibold leading-none text-text">{value}</p>
+        </div>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${statStyles[tone] || statStyles.time}`}>
+          <Icon size={20} />
+        </div>
       </div>
-      <p className="mt-3 text-2xl font-bold text-text">{value}</p>
+      {helper && <p className="mt-3 text-xs leading-5 text-text-light">{helper}</p>}
     </MotionDiv>
   );
 }
 
-function MonthlyHoursCalendar({ entries, logbook, locale, t }) {
+function IconButton({ children, label, className = '', ...props }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition hover:border-surface-border hover:bg-white hover:text-brand ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProgressPanel({ logbook, percent, t }) {
+  return (
+    <MotionDiv variants={itemVariants} className="rounded-lg border border-surface-border bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-text">{t('logbook_progress')}</h2>
+          <p className="mt-1 text-xs text-text-muted">{t('logbook_target')}</p>
+        </div>
+        <span className="rounded-md bg-brand-muted px-2 py-1 text-xs font-semibold text-brand">{percent}%</span>
+      </div>
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-surface-muted">
+        <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${percent}%` }} />
+      </div>
+      <div className="mt-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-lg font-semibold text-text">{formatMinutesFromHours(logbook.total_hours, t)}</p>
+          <p className="mt-1 text-xs text-text-muted">
+            {logbook.target_hours
+              ? `${formatMinutesFromHours(logbook.target_hours, t)} ${t('logbook_target').toLowerCase()}`
+              : t('logbook_no_target')}
+          </p>
+        </div>
+        {logbook.target_hours && (
+          <p className="text-right text-xs leading-5 text-text-light">
+            {formatHours(logbook.total_hours, t)} / {formatHours(logbook.target_hours, t)}
+          </p>
+        )}
+      </div>
+    </MotionDiv>
+  );
+}
+
+function ActivityHeatmap({ entries, logbook, locale, t }) {
   const initialMonth = useMemo(() => {
-    const sorted = entries.slice().sort((a, b) => b.activity_date.localeCompare(a.activity_date));
-    const sourceDate = sorted[0]?.activity_date || logbook?.start_date || new Date().toISOString().slice(0, 10);
-    const date = new Date(`${sourceDate}T00:00:00`);
+    const newest = sortedEntries(entries)[0]?.activity_date || logbook?.start_date || new Date().toISOString().slice(0, 10);
+    const date = new Date(`${newest}T00:00:00`);
     return new Date(date.getFullYear(), date.getMonth(), 1);
   }, [entries, logbook?.start_date]);
   const [month, setMonth] = useState(initialMonth);
@@ -208,10 +269,10 @@ function MonthlyHoursCalendar({ entries, logbook, locale, t }) {
     setMonth(initialMonth);
   }, [initialMonth]);
 
-  const calendar = useMemo(() => {
+  const cells = useMemo(() => {
     const totalsByDay = {};
     entries.forEach((entry) => {
-      totalsByDay[entry.activity_date] = (totalsByDay[entry.activity_date] || 0) + numberValue(entry.hours);
+      totalsByDay[entry.activity_date] = (totalsByDay[entry.activity_date] || 0) + minutesFromHours(entry.hours);
     });
 
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -221,23 +282,18 @@ function MonthlyHoursCalendar({ entries, logbook, locale, t }) {
     const end = new Date(lastDay);
     end.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
 
-    const weeks = [];
-    let week = [];
+    const days = [];
     while (cursor <= end) {
       const key = cursor.toISOString().slice(0, 10);
-      week.push({
+      days.push({
         key,
         day: cursor.getDate(),
         inMonth: cursor.getMonth() === month.getMonth(),
-        hours: totalsByDay[key] || 0,
+        minutes: totalsByDay[key] || 0,
       });
-      if (week.length === 7) {
-        weeks.push(week);
-        week = [];
-      }
       cursor.setDate(cursor.getDate() + 1);
     }
-    return weeks;
+    return days;
   }, [entries, month]);
 
   const weekdays = useMemo(() => {
@@ -251,172 +307,235 @@ function MonthlyHoursCalendar({ entries, logbook, locale, t }) {
 
   const monthLabel = month.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 
+  function heatClass(minutes) {
+    if (minutes >= 240) return 'bg-brand text-white';
+    if (minutes >= 120) return 'bg-brand/70 text-white';
+    if (minutes >= 60) return 'bg-brand/35 text-brand-dark';
+    if (minutes > 0) return 'bg-brand/15 text-brand-dark';
+    return 'bg-surface-muted text-text-light';
+  }
+
   return (
-    <div className="space-y-4">
+    <MotionDiv variants={itemVariants} className="rounded-lg border border-surface-border bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-text">{monthLabel}</h3>
-        <div className="flex items-center gap-1">
+        <h2 className="text-sm font-semibold text-text">{t('logbook_monthly_activity')}</h2>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:border-brand/30 hover:text-brand"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:text-brand"
             aria-label={t('logbook_previous_month')}
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
           </button>
+          <span className="min-w-[116px] text-center text-xs font-medium text-text-muted">{monthLabel}</span>
           <button
             type="button"
             onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:border-brand/30 hover:text-brand"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:text-brand"
             aria-label={t('logbook_next_month')}
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-[680px]">
-          <div className="grid grid-cols-[72px_repeat(7,minmax(72px,1fr))_88px] gap-px overflow-hidden rounded-lg border border-surface-border bg-surface-border text-xs">
-            <div className="bg-surface-muted px-3 py-2 font-semibold text-text-muted">{t('logbook_week')}</div>
-            {weekdays.map((day) => (
-              <div key={day} className="bg-surface-muted px-3 py-2 text-center font-semibold text-text-muted">{day}</div>
-            ))}
-            <div className="bg-surface-muted px-3 py-2 text-right font-semibold text-text-muted">{t('logbook_total')}</div>
-            {calendar.map((week, index) => {
-              const weekTotal = week.reduce((sum, day) => sum + day.hours, 0);
-              return (
-                <React.Fragment key={week[0].key}>
-                  <div className="bg-white px-3 py-3 font-medium text-text-muted">{t('logbook_week')} {index + 1}</div>
-                  {week.map((day) => (
-                    <div key={day.key} className={`min-h-[70px] bg-white p-2 ${day.inMonth ? 'text-text' : 'text-text-light/60'}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-medium">{day.day}</span>
-                        {day.hours > 0 && (
-                          <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
-                            {formatHours(day.hours, t)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="bg-white px-3 py-3 text-right font-semibold text-text">{weekTotal > 0 ? formatHours(weekTotal, t) : ''}</div>
-                </React.Fragment>
-              );
-            })}
+      <div className="mt-5 grid grid-cols-7 gap-1.5">
+        {weekdays.map((day) => (
+          <div key={day} className="pb-1 text-center text-[11px] font-medium text-text-light">{day}</div>
+        ))}
+        {cells.map((cell) => (
+          <div
+            key={cell.key}
+            title={`${cell.key}: ${cell.minutes} ${t('logbook_minutes_short')}`}
+            className={`flex aspect-square items-center justify-center rounded-md text-[11px] font-semibold ${heatClass(cell.minutes)} ${cell.inMonth ? '' : 'opacity-40'}`}
+          >
+            {cell.day}
           </div>
-        </div>
+        ))}
       </div>
-    </div>
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-text-light">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand/15" />&lt; 60</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand/35" />60-120</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand/70" />120-240</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand" />240+</span>
+      </div>
+    </MotionDiv>
   );
 }
 
-function ActivityTable({ entries, locale, t, onEdit, onDelete, onDownload, onDeleteAttachment, onUpload }) {
-  const sortedEntries = useMemo(
-    () => entries.slice().sort((a, b) => `${b.activity_date}-${b.start_time || ''}`.localeCompare(`${a.activity_date}-${a.start_time || ''}`)),
+function EvidencePanel({ entries, t, onDownload, onDeleteAttachment }) {
+  const attachments = useMemo(
+    () => entries.flatMap((entry) => (entry.attachments || []).map((attachment) => ({ ...attachment, entryTitle: entry.title }))).slice(0, 5),
     [entries]
   );
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-surface-border bg-white shadow-sm">
-      <table className="min-w-[1040px] w-full border-collapse text-left text-sm">
-        <thead className="bg-surface-muted text-xs font-semibold uppercase tracking-wide text-text-muted">
-          <tr>
-            <th className="w-12 px-4 py-3">{t('logbook_table_no')}</th>
-            <th className="px-4 py-3">{t('logbook_entry_date')}</th>
-            <th className="px-4 py-3">{t('logbook_time')}</th>
-            <th className="px-4 py-3">{t('logbook_activity')}</th>
-            <th className="px-4 py-3">{t('logbook_entry_category')}</th>
-            <th className="px-4 py-3 text-right">{t('logbook_entry_hours')}</th>
-            <th className="px-4 py-3">{t('logbook_location')}</th>
-            <th className="px-4 py-3">{t('logbook_media')}</th>
-            <th className="px-4 py-3 text-right">{t('logbook_actions')}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-surface-border">
-          {sortedEntries.map((entry, index) => {
-            const config = getCategoryConfig(entry.category);
-            return (
-              <tr key={entry.id} className="align-top transition hover:bg-surface-muted/40">
-                <td className="px-4 py-4 text-text-muted">{index + 1}</td>
-                <td className="whitespace-nowrap px-4 py-4 text-text-muted">{formatDate(entry.activity_date, locale)}</td>
-                <td className="whitespace-nowrap px-4 py-4 font-medium text-text">{formatTimeRange(entry.start_time, entry.end_time)}</td>
-                <td className="px-4 py-4">
-                  <p className="font-semibold text-text">{entry.title}</p>
-                  {entry.description && <p className="mt-1 max-w-[320px] break-words text-xs leading-5 text-text-muted">{entry.description}</p>}
-                </td>
-                <td className="px-4 py-4">
-                  {entry.category && (
-                    <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}>
-                      {entry.category}
-                    </span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-4 py-4 text-right font-semibold text-brand">{formatHours(entry.hours, t)}</td>
-                <td className="px-4 py-4 text-text-muted">
-                  {entry.location && (
-                    <span className="inline-flex max-w-[180px] items-start gap-1.5">
-                      <MapPin size={13} className="mt-0.5 shrink-0 text-text-light" />
-                      <span className="break-words">{entry.location}</span>
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-4">
-                  {entry.attachments?.length > 0 && (
-                    <div className="flex max-w-[220px] flex-col gap-2">
-                      {entry.attachments.map((attachment) => (
-                        <div key={attachment.id} className="flex max-w-full items-center rounded-lg border border-surface-border bg-white">
-                          <button
-                            type="button"
-                            onClick={() => onDownload(attachment)}
-                            className="flex min-w-0 items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition hover:text-brand"
-                          >
-                            <Paperclip size={12} />
-                            <span className="truncate">{attachment.original_filename}</span>
-                            <span className="shrink-0 text-text-light">{formatFileSize(attachment.file_size)}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteAttachment(attachment.id)}
-                            className="border-l border-surface-border px-2 py-1.5 text-text-light transition hover:text-red-600"
-                            aria-label={t('logbook_delete_attachment')}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ))}
+    <MotionDiv variants={itemVariants} className="rounded-lg border border-surface-border bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-text">{t('logbook_evidence_documents')}</h2>
+        <Paperclip size={17} className="text-brand" />
+      </div>
+      {attachments.length > 0 ? (
+        <div className="mt-4 space-y-2">
+          {attachments.map((attachment) => (
+            <div key={attachment.id} className="flex items-center gap-2 rounded-lg border border-surface-border p-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+                <FileText size={15} />
+              </div>
+              <button type="button" onClick={() => onDownload(attachment)} className="min-w-0 flex-1 text-left">
+                <p className="truncate text-xs font-semibold text-text">{attachment.original_filename}</p>
+                <p className="mt-0.5 truncate text-[11px] text-text-light">{formatFileSize(attachment.file_size)} - {attachment.entryTitle}</p>
+              </button>
+              <IconButton label={t('logbook_delete_attachment')} onClick={() => onDeleteAttachment(attachment.id)} className="hover:text-red-600">
+                <Trash2 size={14} />
+              </IconButton>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-dashed border-surface-border bg-surface-muted p-5 text-sm leading-6 text-text-muted">
+          {t('logbook_no_evidence')}
+        </div>
+      )}
+    </MotionDiv>
+  );
+}
+
+function ActivityTable({ entries, locale, t, onEdit, onDelete, onDownload, onDeleteAttachment, onUpload }) {
+  const rows = useMemo(() => sortedEntries(entries), [entries]);
+  const renderActions = (entry) => (
+    <div className="flex justify-end gap-1">
+      <IconButton label={t('logbook_edit')} onClick={() => onEdit(entry)}>
+        <Edit3 size={14} />
+      </IconButton>
+      <label
+        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-transparent text-text-muted transition hover:border-surface-border hover:bg-white hover:text-brand"
+        aria-label={t('logbook_attach')}
+        title={t('logbook_attach')}
+      >
+        <Upload size={14} />
+        <input
+          type="file"
+          className="hidden"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={(event) => {
+            onUpload(entry.id, event.target.files?.[0]);
+            event.target.value = '';
+          }}
+        />
+      </label>
+      {(entry.attachments || []).length > 0 && (
+        <IconButton label={t('logbook_delete_attachment')} onClick={() => onDeleteAttachment(entry.attachments[0].id)} className="hover:text-red-600">
+          <Paperclip size={14} />
+        </IconButton>
+      )}
+      <IconButton label={t('logbook_delete')} onClick={() => onDelete(entry.id)} className="hover:text-red-600">
+        <Trash2 size={14} />
+      </IconButton>
+    </div>
+  );
+  const renderAttachmentList = (entry) => (
+    <div className="flex flex-wrap gap-1.5">
+      {(entry.attachments || []).length > 0 ? (
+        entry.attachments.map((attachment) => (
+          <button
+            key={attachment.id}
+            type="button"
+            onClick={() => onDownload(attachment)}
+            className="inline-flex max-w-[180px] items-center gap-1.5 rounded-md border border-surface-border bg-white px-2 py-1 text-xs text-text-muted transition hover:border-brand/30 hover:text-brand"
+            title={attachment.original_filename}
+          >
+            <Paperclip size={12} />
+            <span className="truncate">{attachment.original_filename}</span>
+          </button>
+        ))
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-surface-border bg-white shadow-sm">
+      <div className="divide-y divide-surface-border md:hidden">
+        {rows.map((entry) => {
+          const config = getCategoryConfig(entry.category);
+          return (
+            <article key={entry.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-text-light">{formatDate(entry.activity_date, locale)}</p>
+                  <h3 className="mt-1 break-words text-sm font-semibold text-text">{entry.title}</h3>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-semibold text-text">{minutesFromHours(entry.hours)}</p>
+                  <p className="text-xs text-text-light">{t('logbook_minutes_short')}</p>
+                </div>
+              </div>
+              {entry.description && <p className="mt-2 break-words text-xs leading-5 text-text-muted">{entry.description}</p>}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                <span className="rounded-md bg-surface-muted px-2 py-1 font-medium text-text">{formatTimeRange(entry.start_time, entry.end_time)}</span>
+                {entry.category && <span className={`rounded-md px-2 py-1 font-medium ${config.bg} ${config.text}`}>{entry.category}</span>}
+                {entry.location && (
+                  <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-surface-muted px-2 py-1">
+                    <MapPin size={12} />
+                    <span className="truncate">{entry.location}</span>
+                  </span>
+                )}
+              </div>
+              {(entry.attachments || []).length > 0 && <div className="mt-3">{renderAttachmentList(entry)}</div>}
+              <div className="mt-3 flex justify-end border-t border-surface-border pt-3">{renderActions(entry)}</div>
+            </article>
+          );
+        })}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="min-w-[760px] w-full border-collapse text-left text-sm">
+          <thead className="border-b border-surface-border bg-surface-muted/70 text-xs font-semibold text-text-muted">
+            <tr>
+              <th className="px-4 py-3">{t('logbook_entry_date')}</th>
+              <th className="px-4 py-3">{t('logbook_time')}</th>
+              <th className="px-4 py-3">{t('logbook_activity')}</th>
+              <th className="px-4 py-3 text-right">{t('logbook_entry_minutes')}</th>
+              <th className="px-4 py-3 text-right">{t('logbook_actions')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-border">
+            {rows.map((entry) => {
+              const config = getCategoryConfig(entry.category);
+              return (
+                <tr key={entry.id} className="align-top transition hover:bg-surface-muted/45">
+                  <td className="whitespace-nowrap px-4 py-4 text-text-muted">{formatDate(entry.activity_date, locale)}</td>
+                  <td className="whitespace-nowrap px-4 py-4 font-medium text-text">{formatTimeRange(entry.start_time, entry.end_time)}</td>
+                  <td className="px-4 py-4">
+                    <p className="font-semibold text-text">{entry.title}</p>
+                    {entry.description && <p className="mt-1 max-w-[360px] break-words text-xs leading-5 text-text-muted">{entry.description}</p>}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {entry.category && (
+                        <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}>
+                          {entry.category}
+                        </span>
+                      )}
+                      {entry.location && (
+                        <span className="inline-flex max-w-[220px] items-center gap-1.5 rounded-md bg-surface-muted px-2 py-0.5 text-xs text-text-muted">
+                          <MapPin size={12} className="shrink-0 text-text-light" />
+                          <span className="truncate">{entry.location}</span>
+                        </span>
+                      )}
+                      {renderAttachmentList(entry)}
                     </div>
-                  )}
-                </td>
-                <td className="px-4 py-4">
-                  <div className="flex justify-end gap-1">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(entry)} className="gap-1">
-                      <Edit3 size={14} />
-                      {t('logbook_edit')}
-                    </Button>
-                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-muted hover:text-brand">
-                      <Upload size={14} />
-                      {t('logbook_attach')}
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/jpeg,image/png,image/webp,application/pdf"
-                        onChange={(event) => {
-                          onUpload(entry.id, event.target.files?.[0]);
-                          event.target.value = '';
-                        }}
-                      />
-                    </label>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => onDelete(entry.id)} className="gap-1">
-                      <Trash2 size={14} />
-                      {t('logbook_delete')}
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4 text-right">
+                    <span className="font-semibold text-text">{minutesFromHours(entry.hours)}</span>
+                    <span className="ml-1 text-xs text-text-light">{t('logbook_minutes_short')}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    {renderActions(entry)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -478,8 +597,8 @@ export function LogbookDetail() {
     setEntryForm((current) => {
       const next = { ...current, [field]: value };
       if (field === 'start_time' || field === 'end_time') {
-        const derivedHours = hoursFromTimeRange(next.start_time, next.end_time);
-        if (derivedHours) next.hours = derivedHours;
+        const derivedMinutes = minutesFromTimeRange(next.start_time, next.end_time);
+        if (derivedMinutes) next.duration_minutes = derivedMinutes;
       }
       return next;
     });
@@ -497,7 +616,7 @@ export function LogbookDetail() {
       activity_date: entry.activity_date,
       title: entry.title || '',
       category: entry.category || 'Development',
-      hours: entry.hours || '',
+      duration_minutes: String(minutesFromHours(entry.hours) || ''),
       start_time: formatTimeValue(entry.start_time),
       end_time: formatTimeValue(entry.end_time),
       location: entry.location || '',
@@ -533,7 +652,7 @@ export function LogbookDetail() {
     const payload = entryPayload(entryForm);
     const fileError = validateFile(entryForm.file, t);
 
-    if (!payload.title || !payload.activity_date || payload.hours <= 0) {
+    if (!payload.title || !payload.activity_date || numberValue(entryForm.duration_minutes) <= 0) {
       addToast({ type: 'error', title: t('logbook_form_invalid'), message: t('logbook_entry_required') });
       return;
     }
@@ -644,7 +763,7 @@ export function LogbookDetail() {
 
   if (!logbook) {
     return (
-      <div className="rounded-xl border border-dashed border-surface-border bg-white p-12 text-center">
+      <div className="rounded-lg border border-dashed border-surface-border bg-white p-12 text-center">
         <BookOpen size={44} className="mx-auto mb-4 text-surface-border" />
         <p className="font-semibold text-text">{t('logbook_not_found')}</p>
         <Button to="/student/logbook" variant="outline" className="mt-5 gap-2">
@@ -656,97 +775,116 @@ export function LogbookDetail() {
   }
 
   return (
-    <MotionDiv variants={containerVariants} initial="hidden" animate="visible" className="space-y-6 pb-10">
-      <MotionDiv variants={itemVariants} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <Link to="/student/logbook" className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-text-muted transition hover:text-brand">
-            <ArrowLeft size={16} />
-            {t('logbook_back')}
-          </Link>
-          <h1 className="break-words text-2xl font-bold tracking-tight text-text">{logbook.title}</h1>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-text-muted">
-            <span className="inline-flex items-center gap-1.5"><Building size={14} />{logbook.company}</span>
-            <span className="inline-flex items-center gap-1.5"><User size={14} />{logbook.role}</span>
-            {logbook.semester && <span className="inline-flex items-center gap-1.5"><BookOpen size={14} />{logbook.semester}</span>}
-            {(logbook.start_date || logbook.end_date) && (
-              <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDateRange(logbook.start_date, logbook.end_date, locale)}</span>
-            )}
-          </div>
-          {logbook.notes && (
-            <p className="mt-4 max-w-3xl break-words rounded-lg border border-surface-border bg-white px-4 py-3 text-sm leading-6 text-text-muted shadow-sm">
-              {logbook.notes}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setShowLogbookModal(true)} className="gap-2">
-            <Edit3 size={16} />
-            {t('logbook_edit')}
-          </Button>
-          <Button variant="outline" onClick={handleExportPdf} className="gap-2">
-            <Download size={16} />
-            {t('logbook_export_pdf')}
-          </Button>
-          <Button variant="danger" onClick={handleDeleteLogbook} disabled={submitting} className="gap-2">
-            <Trash2 size={16} />
-            {t('logbook_delete')}
-          </Button>
-        </div>
+    <MotionDiv variants={containerVariants} initial="hidden" animate="visible" className="space-y-5 pb-10">
+      <MotionDiv variants={itemVariants}>
+        <Link to="/student/logbook" className="inline-flex items-center gap-2 text-sm font-medium text-text-muted transition hover:text-brand">
+          <ArrowLeft size={16} />
+          {t('logbook_back')}
+        </Link>
       </MotionDiv>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard icon={Clock} label={t('logbook_total_hours')} value={formatHours(logbook.total_hours, t)} />
-        <StatCard icon={FileText} label={t('logbook_total_entries')} value={entries.length} />
-        <StatCard icon={Paperclip} label={t('logbook_total_files')} value={logbook.attachment_count || 0} />
-        <StatCard icon={Target} label={t('logbook_progress')} value={`${percent}%`} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <MotionDiv variants={itemVariants} className="self-start rounded-xl border border-surface-border bg-white p-5 shadow-sm xl:col-span-1">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-text"><Target size={18} className="text-brand" />{t('logbook_progress')}</h2>
-          <ProgressBar percent={percent} />
-          <div className="mt-4 text-sm text-text-muted">
-            {logbook.target_hours ? `${formatHours(logbook.total_hours, t)} / ${formatHours(logbook.target_hours, t)}` : t('logbook_no_target')}
+      <MotionDiv variants={itemVariants} className="overflow-hidden rounded-lg border border-surface-border bg-white shadow-sm">
+        <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-surface-border bg-brand-muted text-brand">
+                <Building size={28} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="break-words text-2xl font-semibold tracking-tight text-text">{logbook.title}</h1>
+                  <span className="rounded-md bg-brand-muted px-2 py-1 text-xs font-semibold text-brand">{percent}%</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-text-muted">
+                  <span className="inline-flex items-center gap-1.5"><Building size={14} />{logbook.company}</span>
+                  <span className="inline-flex items-center gap-1.5"><User size={14} />{logbook.role}</span>
+                  {logbook.semester && <span className="inline-flex items-center gap-1.5"><BookOpen size={14} />{logbook.semester}</span>}
+                  {(logbook.start_date || logbook.end_date) && (
+                    <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDateRange(logbook.start_date, logbook.end_date, locale)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </MotionDiv>
-
-        <MotionDiv variants={itemVariants} className="rounded-xl border border-surface-border bg-white p-5 shadow-sm xl:col-span-2">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-text"><Calendar size={18} className="text-brand" />{t('logbook_weekly_hours')}</h2>
-          <MonthlyHoursCalendar entries={entries} logbook={logbook} locale={locale} t={t} />
-        </MotionDiv>
-      </div>
-
-      <MotionDiv variants={itemVariants} className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-bold text-text">{t('logbook_activity_log')}</h2>
-          <Button onClick={openCreateEntry} className="gap-2">
-            <Plus size={16} />
-            {t('logbook_add_entry')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setShowLogbookModal(true)} className="gap-2">
+              <Edit3 size={16} />
+              {t('logbook_edit')}
+            </Button>
+            <Button variant="outline" onClick={handleExportPdf} className="gap-2">
+              <Download size={16} />
+              {t('logbook_export_pdf')}
+            </Button>
+            <Button variant="danger" onClick={handleDeleteLogbook} disabled={submitting} className="gap-2">
+              <Trash2 size={16} />
+              {t('logbook_delete')}
+            </Button>
+          </div>
         </div>
 
-        {entries.length > 0 ? (
-          <ActivityTable
-            entries={entries}
-            locale={locale}
-            t={t}
-            onEdit={openEditEntry}
-            onDelete={handleDeleteEntry}
-            onDownload={handleDownloadAttachment}
-            onDeleteAttachment={handleDeleteAttachment}
-            onUpload={handleUploadAttachment}
-          />
-        ) : (
-          <div className="rounded-xl border border-dashed border-surface-border bg-white p-12 text-center">
-            <FileText size={42} className="mx-auto mb-4 text-surface-border" />
-            <p className="font-semibold text-text">{t('logbook_no_entries')}</p>
-            <Button onClick={openCreateEntry} className="mt-5 gap-2">
+        {(logbook.mentor_name || logbook.notes) && (
+          <div className="grid gap-px border-t border-surface-border bg-surface-border md:grid-cols-2">
+            <div className="bg-white p-4">
+              <p className="text-xs font-medium text-text-light">{t('logbook_field_mentor')}</p>
+              <p className="mt-1 text-sm font-medium text-text">{logbook.mentor_name || '-'}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-xs font-medium text-text-light">{t('logbook_field_notes')}</p>
+              <p className="mt-1 break-words text-sm leading-6 text-text-muted">{logbook.notes || '-'}</p>
+            </div>
+          </div>
+        )}
+      </MotionDiv>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={Clock} tone="time" label={t('logbook_total_minutes')} value={formatMinutesFromHours(logbook.total_hours, t)} helper={formatHours(logbook.total_hours, t)} />
+        <StatCard icon={FileText} tone="entries" label={t('logbook_total_entries')} value={entries.length} helper={t('logbook_activity_log')} />
+        <StatCard icon={Paperclip} tone="files" label={t('logbook_total_files')} value={logbook.attachment_count || 0} helper={t('logbook_media')} />
+        <StatCard icon={Target} tone="progress" label={t('logbook_progress')} value={`${percent}%`} helper={logbook.target_hours ? `${formatMinutesFromHours(logbook.target_hours, t)} ${t('logbook_target').toLowerCase()}` : t('logbook_no_target')} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <MotionDiv variants={itemVariants} className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-text">{t('logbook_activity_log')}</h2>
+              <p className="mt-1 text-sm text-text-muted">{t('logbook_activity_precision_hint')}</p>
+            </div>
+            <Button onClick={openCreateEntry} className="gap-2">
               <Plus size={16} />
               {t('logbook_add_entry')}
             </Button>
           </div>
-        )}
-      </MotionDiv>
+
+          {entries.length > 0 ? (
+            <ActivityTable
+              entries={entries}
+              locale={locale}
+              t={t}
+              onEdit={openEditEntry}
+              onDelete={handleDeleteEntry}
+              onDownload={handleDownloadAttachment}
+              onDeleteAttachment={handleDeleteAttachment}
+              onUpload={handleUploadAttachment}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-surface-border bg-white p-12 text-center shadow-sm">
+              <FileText size={42} className="mx-auto mb-4 text-surface-border" />
+              <p className="font-semibold text-text">{t('logbook_no_entries')}</p>
+              <Button onClick={openCreateEntry} className="mt-5 gap-2">
+                <Plus size={16} />
+                {t('logbook_add_entry')}
+              </Button>
+            </div>
+          )}
+        </MotionDiv>
+
+        <div className="space-y-5">
+          <ProgressPanel logbook={logbook} percent={percent} t={t} />
+          <ActivityHeatmap entries={entries} logbook={logbook} locale={locale} t={t} />
+          <EvidencePanel entries={entries} t={t} onDownload={handleDownloadAttachment} onDeleteAttachment={handleDeleteAttachment} />
+        </div>
+      </div>
 
       <Modal
         isOpen={showLogbookModal}
@@ -808,7 +946,7 @@ export function LogbookDetail() {
         <form id="logbook-entry-form" onSubmit={handleSaveEntry} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input type="date" label={t('logbook_entry_date')} value={entryForm.activity_date} onChange={(e) => updateEntryForm('activity_date', e.target.value)} required />
-            <Input type="number" min="0.5" step="0.5" label={t('logbook_entry_hours')} value={entryForm.hours} onChange={(e) => updateEntryForm('hours', e.target.value)} required />
+            <Input type="number" min="1" step="1" label={t('logbook_entry_minutes')} value={entryForm.duration_minutes} onChange={(e) => updateEntryForm('duration_minutes', e.target.value)} required />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input type="time" label={t('logbook_start_time')} value={entryForm.start_time} onChange={(e) => updateEntryForm('start_time', e.target.value)} />

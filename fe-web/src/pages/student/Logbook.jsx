@@ -190,7 +190,7 @@ function LogbookRow({ logbook, locale, t }) {
     <MotionDiv variants={itemVariants}>
       <Link
         to={`/student/logbook/${logbook.id}`}
-        className="group grid gap-4 border-b border-surface-border bg-white p-4 transition hover:bg-surface-muted/50 sm:grid-cols-[minmax(0,1.4fr)_minmax(120px,.7fr)_minmax(140px,.7fr)_minmax(128px,.6fr)_auto]"
+        className="group grid gap-4 border-b border-surface-border bg-white p-4 transition hover:bg-surface-muted/50 lg:grid-cols-[minmax(0,1.35fr)_minmax(150px,.75fr)_minmax(150px,.75fr)_minmax(128px,.6fr)_auto]"
       >
         <div className="min-w-0">
           <div className="flex items-start gap-3">
@@ -211,8 +211,8 @@ function LogbookRow({ logbook, locale, t }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-text-muted sm:block">
-          <Calendar size={14} className="shrink-0 sm:hidden" />
+        <div className="flex items-center gap-2 text-xs text-text-muted lg:block">
+          <Calendar size={14} className="shrink-0 lg:hidden" />
           <p className="font-medium text-text">{logbook.semester || t('logbook_no_semester')}</p>
           {(logbook.start_date || logbook.end_date) && (
             <p className="mt-1 text-text-light">
@@ -221,8 +221,8 @@ function LogbookRow({ logbook, locale, t }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-text-muted sm:block">
-          <Clock size={14} className="shrink-0 sm:hidden" />
+        <div className="flex items-center gap-2 text-xs text-text-muted lg:block">
+          <Clock size={14} className="shrink-0 lg:hidden" />
           <p className="font-medium text-text">
             {formatHours(logbook.total_hours, t)}
             {logbook.target_hours ? ` / ${formatHours(logbook.target_hours, t)}` : ''}
@@ -232,24 +232,24 @@ function LogbookRow({ logbook, locale, t }) {
 
         <div className="flex items-center gap-3">
           <ProgressLine percent={percent} />
-          <span className="inline-flex items-center gap-1 rounded-md bg-surface-muted px-2 py-1 text-xs text-text-muted sm:hidden">
+          <span className="inline-flex items-center gap-1 rounded-md bg-surface-muted px-2 py-1 text-xs text-text-muted lg:hidden">
             <Paperclip size={12} />
             {logbook.attachment_count || 0}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <div className="min-w-0 text-xs text-text-muted sm:hidden">
+          <div className="min-w-0 text-xs text-text-muted lg:hidden">
             {latestEntry ? `${t('logbook_latest')}: ${latestEntry.title}` : t('logbook_no_entries_short')}
           </div>
-          <div className="hidden items-center gap-1 text-xs text-text-muted sm:flex">
+          <div className="hidden items-center gap-1 text-xs text-text-muted lg:flex">
             <Paperclip size={14} />
             <span>{logbook.attachment_count || 0}</span>
           </div>
           <ArrowUpRight size={17} className="shrink-0 text-text-light transition group-hover:text-brand" />
         </div>
 
-        <div className="hidden min-w-0 rounded-md bg-surface-muted px-3 py-2 text-xs text-text-muted sm:col-span-5 sm:block">
+        <div className="hidden min-w-0 rounded-md bg-surface-muted px-3 py-2 text-xs text-text-muted lg:col-span-5 lg:block">
           {latestEntry
             ? `${t('logbook_latest')}: ${formatDate(latestEntry.activity_date, locale)} - ${latestEntry.title}`
             : t('logbook_no_entries_short')}
@@ -544,7 +544,7 @@ export function Logbook() {
         <StatCard icon={Paperclip} tone="files" label={t('logbook_total_files')} value={summary.files} helper={t('logbook_media')} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <MotionDiv variants={itemVariants} className="overflow-hidden rounded-lg border border-surface-border bg-white shadow-sm">
           <div className="border-b border-surface-border p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
