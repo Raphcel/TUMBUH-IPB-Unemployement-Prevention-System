@@ -10,6 +10,7 @@ from app.services.notification_service import NotificationService
 from app.services.admin_service import AdminService
 from app.services.resume_service import ResumeService
 from app.services.email_service import EmailService
+from app.services.logbook_service import LogbookService
 
 __all__ = [
     "AuthService",
@@ -24,4 +25,5 @@ __all__ = [
     "AdminService",
     "ResumeService",
     "EmailService",
+    "LogbookService",
 ]

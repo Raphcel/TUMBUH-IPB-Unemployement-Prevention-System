@@ -11,3 +11,4 @@ export { default as applicationsApi } from './applications';
 export { default as bookmarksApi } from './bookmarks';
 export { default as externshipsApi } from './externships';
 export { default as usersApi } from './users';
+export { default as logbooksApi } from './logbooks';

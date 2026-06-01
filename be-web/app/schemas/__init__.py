@@ -25,6 +25,11 @@ from app.schemas.externship import (
 from app.schemas.resume import (
     ResumeProfileCreate, ResumeProfileUpdate, ResumeProfileResponse,
 )
+from app.schemas.logbook import (
+    LOGBOOK_CATEGORIES,
+    LogbookCreate, LogbookUpdate, LogbookEntryCreate, LogbookEntryUpdate,
+    LogbookAttachmentResponse, LogbookEntryResponse, LogbookResponse, LogbookListResponse,
+)
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserLogin", "UserResponse", "TokenResponse", "RegistrationResponse",
@@ -38,4 +43,7 @@ __all__ = [
     "CompanyFollowResponse", "CompanyFollowListResponse", "CompanyFollowStatusResponse",
     "ExternshipCreate", "ExternshipUpdate", "ExternshipResponse", "ExternshipListResponse",
     "ResumeProfileCreate", "ResumeProfileUpdate", "ResumeProfileResponse",
+    "LOGBOOK_CATEGORIES",
+    "LogbookCreate", "LogbookUpdate", "LogbookEntryCreate", "LogbookEntryUpdate",
+    "LogbookAttachmentResponse", "LogbookEntryResponse", "LogbookResponse", "LogbookListResponse",
 ]

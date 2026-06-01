@@ -11,11 +11,12 @@ from app.domain.models.user import User
 from app.repositories import (
     UserRepository, CompanyRepository, OpportunityRepository, ApplicationRepository,
     BookmarkRepository, CompanyFollowRepository, ExternshipRepository, NotificationRepository, ResumeRepository,
+    LogbookRepository,
 )
 from app.services import (
     AuthService, UserService, CompanyService, OpportunityService, ApplicationService,
     BookmarkService, CompanyFollowService, ExternshipService, NotificationService, AdminService, ResumeService,
-    EmailService,
+    EmailService, LogbookService,
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -57,6 +58,10 @@ def get_notification_repo(db: Session = Depends(get_db)) -> NotificationReposito
 
 def get_resume_repo(db: Session = Depends(get_db)) -> ResumeRepository:
     return ResumeRepository(db)
+
+
+def get_logbook_repo(db: Session = Depends(get_db)) -> LogbookRepository:
+    return LogbookRepository(db)
 
 
 def get_email_service() -> EmailService:
@@ -138,6 +143,13 @@ def get_resume_service(
     resume_repo: ResumeRepository = Depends(get_resume_repo),
 ) -> ResumeService:
     return ResumeService(resume_repo)
+
+
+def get_logbook_service(
+    logbook_repo: LogbookRepository = Depends(get_logbook_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+) -> LogbookService:
+    return LogbookService(logbook_repo, application_repo)
 
 
 def get_admin_service(

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   FileBadge2,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../context/LanguageContext';
@@ -28,6 +29,7 @@ export function Sidebar({ role = 'student', isCollapsed, isMobileOpen, toggleSid
     { name: t('nav_calendar'), path: '/calendar', icon: Calendar },
     { name: t('nav_my_applications'), path: '/student/applications', icon: FileText },
     { name: t('nav_bookmarks'), path: '/student/bookmarks', icon: Bookmark },
+    { name: t('nav_logbook'), path: '/student/logbook', icon: BookOpen },
     { name: t('nav_cv_builder'), path: '/student/cv-builder', icon: FileBadge2 },
     { name: t('nav_profile'), path: '/student/profile', icon: User },
   ];
