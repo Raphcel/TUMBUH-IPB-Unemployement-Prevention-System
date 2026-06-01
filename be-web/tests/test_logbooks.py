@@ -134,13 +134,27 @@ class LogbookApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_legacy_singular_logbook_list_route_is_supported(self):
+        client = self._client_for_user(1)
+        response = client.get("/api/v1/logbook/?skip=0&limit=100")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"items": [], "total": 0})
+
     def test_manual_logbook_create_entry_validation_and_pdf_export(self):
         client = self._client_for_user(1)
         created = client.post(
             "/api/v1/logbooks/",
-            json={"title": "Manual Internship", "role": "Engineer", "company": "External Co", "target_hours": 400},
+            json={
+                "title": "Manual Internship",
+                "role": "Engineer",
+                "company": "External Co",
+                "semester": "2025/2026 Semester Genap",
+                "target_hours": 400,
+            },
         )
         self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.json()["semester"], "2025/2026 Semester Genap")
         logbook_id = created.json()["id"]
 
         invalid_category = client.post(
@@ -165,6 +179,19 @@ class LogbookApiTests(unittest.TestCase):
         )
         self.assertEqual(future_entry.status_code, 400)
 
+        invalid_time = client.post(
+            f"/api/v1/logbooks/{logbook_id}/entries",
+            json={
+                "activity_date": date.today().isoformat(),
+                "title": "Invalid time",
+                "category": "Development",
+                "hours": 2,
+                "start_time": "16:00",
+                "end_time": "15:00",
+            },
+        )
+        self.assertEqual(invalid_time.status_code, 422)
+
         entry = client.post(
             f"/api/v1/logbooks/{logbook_id}/entries",
             json={
@@ -172,11 +199,17 @@ class LogbookApiTests(unittest.TestCase):
                 "title": "Implemented API",
                 "category": "Development",
                 "hours": 3.5,
+                "start_time": "09:00",
+                "end_time": "12:30",
+                "location": "Engineering Room",
                 "description": "Built logbook endpoints.",
             },
         )
         self.assertEqual(entry.status_code, 201)
         self.assertEqual(entry.json()["hours"], 3.5)
+        self.assertEqual(entry.json()["start_time"], "09:00:00")
+        self.assertEqual(entry.json()["end_time"], "12:30:00")
+        self.assertEqual(entry.json()["location"], "Engineering Room")
 
         empty_title_update = client.put(f"/api/v1/logbooks/{logbook_id}", json={"title": ""})
         self.assertEqual(empty_title_update.status_code, 422)

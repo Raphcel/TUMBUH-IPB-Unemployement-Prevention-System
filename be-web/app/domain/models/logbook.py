@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import CheckConstraint, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import CheckConstraint, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, Time
 from sqlalchemy.orm import relationship
 
 from app.config.database import Base
@@ -25,6 +25,7 @@ class InternshipLogbook(Base):
     title: str = Column(String(300), nullable=False)
     role: str = Column(String(200), nullable=False)
     company: str = Column(String(200), nullable=False)
+    semester: str | None = Column(String(100), nullable=True)
     mentor_name: str | None = Column(String(200), nullable=True)
     start_date: date | None = Column(Date, nullable=True)
     end_date: date | None = Column(Date, nullable=True)
@@ -50,6 +51,7 @@ class LogbookEntry(Base):
     __tablename__ = "logbook_entries"
     __table_args__ = (
         CheckConstraint("hours > 0", name="ck_logbook_entries_hours_positive"),
+        CheckConstraint("start_time IS NULL OR end_time IS NULL OR end_time > start_time", name="ck_logbook_entries_time_range"),
     )
 
     id: int = Column(Integer, primary_key=True, index=True)
@@ -58,6 +60,9 @@ class LogbookEntry(Base):
     title: str = Column(String(300), nullable=False)
     category: str | None = Column(String(100), nullable=True)
     hours: float = Column(Float, nullable=False)
+    start_time = Column(Time, nullable=True)
+    end_time = Column(Time, nullable=True)
+    location: str | None = Column(String(255), nullable=True)
     description: str | None = Column(Text, nullable=True)
 
     created_at: datetime = Column(DateTime, default=_utcnow)

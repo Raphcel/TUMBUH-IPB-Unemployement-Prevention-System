@@ -65,6 +65,7 @@ class LogbookService:
             "title": title,
             "role": role,
             "company": company_name,
+            "semester": data.semester,
             "mentor_name": data.mentor_name,
             "start_date": data.start_date,
             "end_date": data.end_date,
@@ -137,6 +138,7 @@ class LogbookService:
     def create_entry(self, student_id: int, logbook_id: int, data: LogbookEntryCreate) -> LogbookEntryResponse:
         self._get_owned_logbook(student_id, logbook_id)
         self._validate_entry_date(data.activity_date)
+        self._validate_entry_time(None, data.model_dump())
         entry = self._logbook_repo.create_entry({
             "logbook_id": logbook_id,
             **data.model_dump(),
@@ -159,6 +161,7 @@ class LogbookService:
         update_data = data.model_dump(exclude_unset=True)
         if "activity_date" in update_data:
             self._validate_entry_date(update_data["activity_date"])
+        self._validate_entry_time(entry, update_data)
         updated = self._logbook_repo.update_entry(entry, update_data)
 
         audit_log(
@@ -297,6 +300,13 @@ class LogbookService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Activity date cannot be in the future")
 
     @staticmethod
+    def _validate_entry_time(entry: LogbookEntry | None, data: dict) -> None:
+        start_time = data.get("start_time", entry.start_time if entry else None)
+        end_time = data.get("end_time", entry.end_time if entry else None)
+        if start_time and end_time and end_time <= start_time:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time")
+
+    @staticmethod
     def _build_pdf(logbook: InternshipLogbook, student_name: str) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -313,30 +323,41 @@ class LogbookService:
         story.append(Paragraph(f"Student: {student_name}", styles["Normal"]))
         story.append(Paragraph(f"Company: {logbook.company}", styles["Normal"]))
         story.append(Paragraph(f"Role: {logbook.role}", styles["Normal"]))
+        if logbook.semester:
+            story.append(Paragraph(f"Semester: {logbook.semester}", styles["Normal"]))
         if logbook.mentor_name:
             story.append(Paragraph(f"Mentor: {logbook.mentor_name}", styles["Normal"]))
         if logbook.start_date or logbook.end_date:
-            story.append(Paragraph(f"Period: {logbook.start_date or '-'} to {logbook.end_date or '-'}", styles["Normal"]))
+            story.append(Paragraph(f"Period: {logbook.start_date or ''} to {logbook.end_date or ''}", styles["Normal"]))
         target = f"{logbook.target_hours:g} hours" if logbook.target_hours else "Not set"
         progress_text = f" ({progress:.1f}% complete)" if progress is not None else ""
         story.append(Paragraph(f"Total Hours: {total_hours:g} / Target: {target}{progress_text}", styles["Normal"]))
         story.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]))
         story.append(Spacer(1, 18))
 
-        rows = [["Date", "Title", "Category", "Hours", "Description"]]
+        rows = [["Date", "Time", "Title", "Category", "Hours", "Location", "Description"]]
         for entry in sorted(logbook.entries, key=lambda item: item.activity_date):
+            time_range = ""
+            if entry.start_time and entry.end_time:
+                time_range = f"{entry.start_time.strftime('%H:%M')} - {entry.end_time.strftime('%H:%M')}"
+            elif entry.start_time:
+                time_range = entry.start_time.strftime("%H:%M")
+            elif entry.end_time:
+                time_range = entry.end_time.strftime("%H:%M")
             rows.append([
                 entry.activity_date.isoformat(),
+                time_range,
                 Paragraph(entry.title, styles["BodyText"]),
-                entry.category or "-",
+                entry.category or "",
                 f"{entry.hours:g}",
-                Paragraph(entry.description or "-", styles["BodyText"]),
+                entry.location or "",
+                Paragraph(entry.description or "", styles["BodyText"]),
             ])
 
         if len(rows) == 1:
             story.append(Paragraph("No activity entries yet.", styles["Normal"]))
         else:
-            table = Table(rows, colWidths=[66, 110, 82, 42, 190], repeatRows=1)
+            table = Table(rows, colWidths=[58, 48, 92, 64, 34, 62, 132], repeatRows=1)
             table.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a8754")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -23,7 +23,7 @@ def _normalize_optional_text(value: str | None) -> str | None:
 
 
 class LogbookBase(BaseModel):
-    @field_validator("title", "role", "company", "mentor_name", "notes", mode="before", check_fields=False)
+    @field_validator("title", "role", "company", "semester", "mentor_name", "notes", mode="before", check_fields=False)
     @classmethod
     def normalize_optional_text(cls, value):
         return _normalize_optional_text(value)
@@ -36,6 +36,7 @@ class LogbookCreate(LogbookBase):
     title: str | None = Field(default=None, max_length=300)
     role: str | None = Field(default=None, max_length=200)
     company: str | None = Field(default=None, max_length=200)
+    semester: str | None = Field(default=None, max_length=100)
     mentor_name: str | None = Field(default=None, max_length=200)
     start_date: date | None = None
     end_date: date | None = None
@@ -58,6 +59,7 @@ class LogbookUpdate(LogbookBase):
     title: str | None = Field(default=None, max_length=300)
     role: str | None = Field(default=None, max_length=200)
     company: str | None = Field(default=None, max_length=200)
+    semester: str | None = Field(default=None, max_length=100)
     mentor_name: str | None = Field(default=None, max_length=200)
     start_date: date | None = None
     end_date: date | None = None
@@ -81,9 +83,12 @@ class LogbookEntryCreate(BaseModel):
     title: str = Field(..., max_length=300)
     category: str | None = Field(default=None, max_length=100)
     hours: float = Field(..., gt=0)
+    start_time: time | None = None
+    end_time: time | None = None
+    location: str | None = Field(default=None, max_length=255)
     description: str | None = None
 
-    @field_validator("title", "description", mode="before")
+    @field_validator("title", "location", "description", mode="before")
     @classmethod
     def normalize_text(cls, value):
         return _normalize_optional_text(value)
@@ -97,9 +102,11 @@ class LogbookEntryCreate(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_title(self):
+    def validate_entry(self):
         if not self.title:
             raise ValueError("Title is required")
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValueError("End time must be after start time")
         return self
 
 
@@ -110,9 +117,12 @@ class LogbookEntryUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=300)
     category: str | None = Field(default=None, max_length=100)
     hours: float | None = Field(default=None, gt=0)
+    start_time: time | None = None
+    end_time: time | None = None
+    location: str | None = Field(default=None, max_length=255)
     description: str | None = None
 
-    @field_validator("title", "description", mode="before")
+    @field_validator("title", "location", "description", mode="before")
     @classmethod
     def normalize_text(cls, value):
         return _normalize_optional_text(value)
@@ -126,9 +136,11 @@ class LogbookEntryUpdate(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_title(self):
+    def validate_entry(self):
         if "title" in self.model_fields_set and not self.title:
             raise ValueError("Title cannot be empty")
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValueError("End time must be after start time")
         return self
 
 
@@ -152,6 +164,9 @@ class LogbookEntryResponse(BaseModel):
     title: str
     category: str | None = None
     hours: float
+    start_time: time | None = None
+    end_time: time | None = None
+    location: str | None = None
     description: str | None = None
     attachments: list[LogbookAttachmentResponse] = Field(default_factory=list)
     created_at: datetime
@@ -168,6 +183,7 @@ class LogbookResponse(BaseModel):
     title: str
     role: str
     company: str
+    semester: str | None = None
     mentor_name: str | None = None
     start_date: date | None = None
     end_date: date | None = None

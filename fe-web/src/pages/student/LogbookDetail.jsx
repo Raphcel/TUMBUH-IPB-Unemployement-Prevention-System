@@ -6,10 +6,13 @@ import {
   BookOpen,
   Building,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   Edit3,
   FileText,
+  MapPin,
   Paperclip,
   Plus,
   Target,
@@ -54,6 +57,9 @@ const emptyEntryForm = {
   title: '',
   category: 'Development',
   hours: '',
+  start_time: '',
+  end_time: '',
+  location: '',
   description: '',
   file: null,
 };
@@ -68,8 +74,27 @@ function formatHours(value, t) {
 }
 
 function formatDate(value, locale) {
-  if (!value) return '-';
+  if (!value) return '';
   return new Date(value).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDateRange(startDate, endDate, locale) {
+  const start = formatDate(startDate, locale);
+  const end = formatDate(endDate, locale);
+  if (start && end) return `${start} - ${end}`;
+  return start || end;
+}
+
+function formatTimeValue(value) {
+  if (!value) return '';
+  return String(value).slice(0, 5);
+}
+
+function formatTimeRange(startTime, endTime) {
+  const start = formatTimeValue(startTime);
+  const end = formatTimeValue(endTime);
+  if (start && end) return `${start} - ${end}`;
+  return start || end;
 }
 
 function formatFileSize(bytes) {
@@ -87,18 +112,6 @@ function getCategoryConfig(category) {
   return CATEGORIES.find((item) => item.value === category) || CATEGORIES[CATEGORIES.length - 1];
 }
 
-function groupEntriesByDate(entries = []) {
-  const groups = {};
-  entries
-    .slice()
-    .sort((a, b) => b.activity_date.localeCompare(a.activity_date))
-    .forEach((entry) => {
-      if (!groups[entry.activity_date]) groups[entry.activity_date] = [];
-      groups[entry.activity_date].push(entry);
-    });
-  return Object.entries(groups);
-}
-
 function validateFile(file, t) {
   if (!file) return null;
   if (file.size > MAX_FILE_SIZE) return t('logbook_file_too_large');
@@ -111,6 +124,7 @@ function logbookPayload(form) {
     title: form.title.trim(),
     role: form.role.trim(),
     company: form.company.trim(),
+    semester: form.semester || null,
     mentor_name: form.mentor_name.trim() || null,
     start_date: form.start_date || null,
     end_date: form.end_date || null,
@@ -125,8 +139,34 @@ function entryPayload(form) {
     title: form.title.trim(),
     category: form.category || null,
     hours: Number(form.hours),
+    start_time: form.start_time || null,
+    end_time: form.end_time || null,
+    location: form.location.trim() || null,
     description: form.description.trim() || null,
   };
+}
+
+function semesterOptions(t) {
+  const currentYear = new Date().getFullYear();
+  const options = [{ value: '', label: t('logbook_semester_select') }];
+  for (let year = currentYear - 3; year <= currentYear + 2; year += 1) {
+    const academicYear = `${year}/${year + 1}`;
+    options.push(
+      { value: `${academicYear} Semester Ganjil`, label: `${academicYear} Semester Ganjil` },
+      { value: `${academicYear} Semester Genap`, label: `${academicYear} Semester Genap` }
+    );
+  }
+  return options;
+}
+
+function hoursFromTimeRange(startTime, endTime) {
+  if (!startTime || !endTime) return '';
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  const start = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '';
+  return String(Number(((end - start) / 60).toFixed(2)));
 }
 
 function ProgressBar({ percent }) {
@@ -155,126 +195,229 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function WeeklyChart({ entries, locale, t }) {
-  const weeklyData = useMemo(() => {
-    const weeks = {};
+function MonthlyHoursCalendar({ entries, logbook, locale, t }) {
+  const initialMonth = useMemo(() => {
+    const sorted = entries.slice().sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+    const sourceDate = sorted[0]?.activity_date || logbook?.start_date || new Date().toISOString().slice(0, 10);
+    const date = new Date(`${sourceDate}T00:00:00`);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  }, [entries, logbook?.start_date]);
+  const [month, setMonth] = useState(initialMonth);
+
+  useEffect(() => {
+    setMonth(initialMonth);
+  }, [initialMonth]);
+
+  const calendar = useMemo(() => {
+    const totalsByDay = {};
     entries.forEach((entry) => {
-      const d = new Date(`${entry.activity_date}T00:00:00`);
-      const weekStart = new Date(d);
-      weekStart.setDate(d.getDate() - d.getDay());
-      const key = weekStart.toISOString().slice(0, 10);
-      weeks[key] = (weeks[key] || 0) + numberValue(entry.hours);
+      totalsByDay[entry.activity_date] = (totalsByDay[entry.activity_date] || 0) + numberValue(entry.hours);
     });
-    return Object.entries(weeks)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-8)
-      .map(([week, hours]) => ({ week, hours }));
-  }, [entries]);
 
-  const maxHours = Math.max(...weeklyData.map((item) => item.hours), 1);
+    const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+    const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const cursor = new Date(firstDay);
+    cursor.setDate(firstDay.getDate() - firstDay.getDay());
+    const end = new Date(lastDay);
+    end.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
 
-  if (weeklyData.length === 0) {
-    return <div className="rounded-lg border border-dashed border-surface-border p-8 text-center text-sm text-text-muted">{t('logbook_no_weekly_data')}</div>;
-  }
+    const weeks = [];
+    let week = [];
+    while (cursor <= end) {
+      const key = cursor.toISOString().slice(0, 10);
+      week.push({
+        key,
+        day: cursor.getDate(),
+        inMonth: cursor.getMonth() === month.getMonth(),
+        hours: totalsByDay[key] || 0,
+      });
+      if (week.length === 7) {
+        weeks.push(week);
+        week = [];
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return weeks;
+  }, [entries, month]);
+
+  const weekdays = useMemo(() => {
+    const start = new Date(2024, 0, 7);
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      return day.toLocaleDateString(locale, { weekday: 'short' });
+    });
+  }, [locale]);
+
+  const monthLabel = month.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex h-36 items-end gap-2">
-      {weeklyData.map(({ week, hours }) => (
-        <div key={week} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-          <span className="text-xs font-medium text-text-muted">{hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-          <div className="relative w-full overflow-hidden rounded-t-md bg-brand/15" style={{ height: `${Math.max((hours / maxHours) * 100, 8)}%` }}>
-            <div className="absolute inset-0 rounded-t-md bg-brand" />
-          </div>
-          <span className="max-w-full truncate text-[10px] text-text-light">
-            {new Date(`${week}T00:00:00`).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
-          </span>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-text">{monthLabel}</h3>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:border-brand/30 hover:text-brand"
+            aria-label={t('logbook_previous_month')}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-surface-border text-text-muted transition hover:border-brand/30 hover:text-brand"
+            aria-label={t('logbook_next_month')}
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
-      ))}
+      </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-[680px]">
+          <div className="grid grid-cols-[72px_repeat(7,minmax(72px,1fr))_88px] gap-px overflow-hidden rounded-lg border border-surface-border bg-surface-border text-xs">
+            <div className="bg-surface-muted px-3 py-2 font-semibold text-text-muted">{t('logbook_week')}</div>
+            {weekdays.map((day) => (
+              <div key={day} className="bg-surface-muted px-3 py-2 text-center font-semibold text-text-muted">{day}</div>
+            ))}
+            <div className="bg-surface-muted px-3 py-2 text-right font-semibold text-text-muted">{t('logbook_total')}</div>
+            {calendar.map((week, index) => {
+              const weekTotal = week.reduce((sum, day) => sum + day.hours, 0);
+              return (
+                <React.Fragment key={week[0].key}>
+                  <div className="bg-white px-3 py-3 font-medium text-text-muted">{t('logbook_week')} {index + 1}</div>
+                  {week.map((day) => (
+                    <div key={day.key} className={`min-h-[70px] bg-white p-2 ${day.inMonth ? 'text-text' : 'text-text-light/60'}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-medium">{day.day}</span>
+                        {day.hours > 0 && (
+                          <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
+                            {formatHours(day.hours, t)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-white px-3 py-3 text-right font-semibold text-text">{weekTotal > 0 ? formatHours(weekTotal, t) : ''}</div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function EntryCard({ entry, locale, t, onEdit, onDelete, onDownload, onDeleteAttachment, onUpload }) {
-  const config = getCategoryConfig(entry.category);
+function ActivityTable({ entries, locale, t, onEdit, onDelete, onDownload, onDeleteAttachment, onUpload }) {
+  const sortedEntries = useMemo(
+    () => entries.slice().sort((a, b) => `${b.activity_date}-${b.start_time || ''}`.localeCompare(`${a.activity_date}-${a.start_time || ''}`)),
+    [entries]
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group rounded-xl border border-surface-border bg-white p-4 shadow-sm transition-colors hover:border-brand/30"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${config.dot}`} />
-          <div className="min-w-0">
-            <h4 className="break-words font-semibold text-text">{entry.title}</h4>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {entry.category && (
-                <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}>
-                  {entry.category}
-                </span>
-              )}
-              <span className="text-xs text-text-muted">{formatDate(entry.activity_date, locale)}</span>
-            </div>
-          </div>
-        </div>
-        <span className="shrink-0 whitespace-nowrap text-sm font-bold text-brand">{formatHours(entry.hours, t)}</span>
-      </div>
-
-      {entry.description && (
-        <p className="mt-3 break-words pl-5 text-sm leading-6 text-text-muted">{entry.description}</p>
-      )}
-
-      {entry.attachments?.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2 pl-5">
-          {entry.attachments.map((attachment) => (
-            <div key={attachment.id} className="flex max-w-full items-center rounded-lg border border-surface-border bg-surface-muted">
-              <button
-                type="button"
-                onClick={() => onDownload(attachment)}
-                className="flex min-w-0 items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition hover:text-brand"
-              >
-                <Paperclip size={12} />
-                <span className="max-w-[150px] truncate">{attachment.original_filename}</span>
-                <span className="shrink-0 text-text-light">{formatFileSize(attachment.file_size)}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteAttachment(attachment.id)}
-                className="border-l border-surface-border px-2 py-1.5 text-text-light transition hover:text-red-600"
-                aria-label={t('logbook_delete_attachment')}
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 pl-5">
-        <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(entry)} className="gap-1">
-          <Edit3 size={14} />
-          {t('logbook_edit')}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => onDelete(entry.id)} className="gap-1">
-          <Trash2 size={14} />
-          {t('logbook_delete')}
-        </Button>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-muted hover:text-brand">
-          <Upload size={14} />
-          {t('logbook_attach')}
-          <input
-            type="file"
-            className="hidden"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={(event) => {
-              onUpload(entry.id, event.target.files?.[0]);
-              event.target.value = '';
-            }}
-          />
-        </label>
-      </div>
-    </motion.div>
+    <div className="overflow-x-auto rounded-xl border border-surface-border bg-white shadow-sm">
+      <table className="min-w-[1040px] w-full border-collapse text-left text-sm">
+        <thead className="bg-surface-muted text-xs font-semibold uppercase tracking-wide text-text-muted">
+          <tr>
+            <th className="w-12 px-4 py-3">{t('logbook_table_no')}</th>
+            <th className="px-4 py-3">{t('logbook_entry_date')}</th>
+            <th className="px-4 py-3">{t('logbook_time')}</th>
+            <th className="px-4 py-3">{t('logbook_activity')}</th>
+            <th className="px-4 py-3">{t('logbook_entry_category')}</th>
+            <th className="px-4 py-3 text-right">{t('logbook_entry_hours')}</th>
+            <th className="px-4 py-3">{t('logbook_location')}</th>
+            <th className="px-4 py-3">{t('logbook_media')}</th>
+            <th className="px-4 py-3 text-right">{t('logbook_actions')}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-surface-border">
+          {sortedEntries.map((entry, index) => {
+            const config = getCategoryConfig(entry.category);
+            return (
+              <tr key={entry.id} className="align-top transition hover:bg-surface-muted/40">
+                <td className="px-4 py-4 text-text-muted">{index + 1}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-text-muted">{formatDate(entry.activity_date, locale)}</td>
+                <td className="whitespace-nowrap px-4 py-4 font-medium text-text">{formatTimeRange(entry.start_time, entry.end_time)}</td>
+                <td className="px-4 py-4">
+                  <p className="font-semibold text-text">{entry.title}</p>
+                  {entry.description && <p className="mt-1 max-w-[320px] break-words text-xs leading-5 text-text-muted">{entry.description}</p>}
+                </td>
+                <td className="px-4 py-4">
+                  {entry.category && (
+                    <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${config.bg} ${config.text}`}>
+                      {entry.category}
+                    </span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-4 py-4 text-right font-semibold text-brand">{formatHours(entry.hours, t)}</td>
+                <td className="px-4 py-4 text-text-muted">
+                  {entry.location && (
+                    <span className="inline-flex max-w-[180px] items-start gap-1.5">
+                      <MapPin size={13} className="mt-0.5 shrink-0 text-text-light" />
+                      <span className="break-words">{entry.location}</span>
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-4">
+                  {entry.attachments?.length > 0 && (
+                    <div className="flex max-w-[220px] flex-col gap-2">
+                      {entry.attachments.map((attachment) => (
+                        <div key={attachment.id} className="flex max-w-full items-center rounded-lg border border-surface-border bg-white">
+                          <button
+                            type="button"
+                            onClick={() => onDownload(attachment)}
+                            className="flex min-w-0 items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition hover:text-brand"
+                          >
+                            <Paperclip size={12} />
+                            <span className="truncate">{attachment.original_filename}</span>
+                            <span className="shrink-0 text-text-light">{formatFileSize(attachment.file_size)}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteAttachment(attachment.id)}
+                            className="border-l border-surface-border px-2 py-1.5 text-text-light transition hover:text-red-600"
+                            aria-label={t('logbook_delete_attachment')}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex justify-end gap-1">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(entry)} className="gap-1">
+                      <Edit3 size={14} />
+                      {t('logbook_edit')}
+                    </Button>
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-muted hover:text-brand">
+                      <Upload size={14} />
+                      {t('logbook_attach')}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        onChange={(event) => {
+                          onUpload(entry.id, event.target.files?.[0]);
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => onDelete(entry.id)} className="gap-1">
+                      <Trash2 size={14} />
+                      {t('logbook_delete')}
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -294,12 +437,12 @@ export function LogbookDetail() {
   const [entryForm, setEntryForm] = useState(emptyEntryForm);
 
   const entries = useMemo(() => logbook?.entries || [], [logbook]);
-  const groupedEntries = useMemo(() => groupEntriesByDate(entries), [entries]);
   const percent = progressPercent(logbook);
   const categoryOptions = useMemo(
     () => CATEGORIES.map((category) => ({ value: category.value, label: category.value })),
     []
   );
+  const semesterSelectOptions = useMemo(() => semesterOptions(t), [t]);
 
   const loadLogbook = useCallback(async () => {
     try {
@@ -309,6 +452,7 @@ export function LogbookDetail() {
         title: data.title || '',
         role: data.role || '',
         company: data.company || '',
+        semester: data.semester || '',
         mentor_name: data.mentor_name || '',
         start_date: data.start_date || '',
         end_date: data.end_date || '',
@@ -331,7 +475,14 @@ export function LogbookDetail() {
   }
 
   function updateEntryForm(field, value) {
-    setEntryForm((current) => ({ ...current, [field]: value }));
+    setEntryForm((current) => {
+      const next = { ...current, [field]: value };
+      if (field === 'start_time' || field === 'end_time') {
+        const derivedHours = hoursFromTimeRange(next.start_time, next.end_time);
+        if (derivedHours) next.hours = derivedHours;
+      }
+      return next;
+    });
   }
 
   function openCreateEntry() {
@@ -347,6 +498,9 @@ export function LogbookDetail() {
       title: entry.title || '',
       category: entry.category || 'Development',
       hours: entry.hours || '',
+      start_time: formatTimeValue(entry.start_time),
+      end_time: formatTimeValue(entry.end_time),
+      location: entry.location || '',
       description: entry.description || '',
       file: null,
     });
@@ -381,6 +535,10 @@ export function LogbookDetail() {
 
     if (!payload.title || !payload.activity_date || payload.hours <= 0) {
       addToast({ type: 'error', title: t('logbook_form_invalid'), message: t('logbook_entry_required') });
+      return;
+    }
+    if (payload.start_time && payload.end_time && payload.end_time <= payload.start_time) {
+      addToast({ type: 'error', title: t('logbook_form_invalid'), message: t('logbook_time_range_invalid') });
       return;
     }
     if (payload.activity_date > new Date().toISOString().slice(0, 10)) {
@@ -509,10 +667,16 @@ export function LogbookDetail() {
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-text-muted">
             <span className="inline-flex items-center gap-1.5"><Building size={14} />{logbook.company}</span>
             <span className="inline-flex items-center gap-1.5"><User size={14} />{logbook.role}</span>
+            {logbook.semester && <span className="inline-flex items-center gap-1.5"><BookOpen size={14} />{logbook.semester}</span>}
             {(logbook.start_date || logbook.end_date) && (
-              <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDate(logbook.start_date, locale)} - {formatDate(logbook.end_date, locale)}</span>
+              <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDateRange(logbook.start_date, logbook.end_date, locale)}</span>
             )}
           </div>
+          {logbook.notes && (
+            <p className="mt-4 max-w-3xl break-words rounded-lg border border-surface-border bg-white px-4 py-3 text-sm leading-6 text-text-muted shadow-sm">
+              {logbook.notes}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setShowLogbookModal(true)} className="gap-2">
@@ -538,18 +702,17 @@ export function LogbookDetail() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <MotionDiv variants={itemVariants} className="rounded-xl border border-surface-border bg-white p-5 shadow-sm xl:col-span-1">
+        <MotionDiv variants={itemVariants} className="self-start rounded-xl border border-surface-border bg-white p-5 shadow-sm xl:col-span-1">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-text"><Target size={18} className="text-brand" />{t('logbook_progress')}</h2>
           <ProgressBar percent={percent} />
           <div className="mt-4 text-sm text-text-muted">
             {logbook.target_hours ? `${formatHours(logbook.total_hours, t)} / ${formatHours(logbook.target_hours, t)}` : t('logbook_no_target')}
           </div>
-          {logbook.notes && <p className="mt-4 break-words rounded-lg bg-surface-muted p-3 text-sm text-text-muted">{logbook.notes}</p>}
         </MotionDiv>
 
         <MotionDiv variants={itemVariants} className="rounded-xl border border-surface-border bg-white p-5 shadow-sm xl:col-span-2">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-text"><Calendar size={18} className="text-brand" />{t('logbook_weekly_hours')}</h2>
-          <WeeklyChart entries={entries} locale={locale} t={t} />
+          <MonthlyHoursCalendar entries={entries} logbook={logbook} locale={locale} t={t} />
         </MotionDiv>
       </div>
 
@@ -562,32 +725,17 @@ export function LogbookDetail() {
           </Button>
         </div>
 
-        {groupedEntries.length > 0 ? (
-          <div className="space-y-6">
-            {groupedEntries.map(([date, dateEntries]) => (
-              <div key={date}>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-text-muted">{formatDate(date, locale)}</span>
-                  <div className="h-px flex-1 bg-surface-border" />
-                </div>
-                <div className="mt-3 space-y-3 sm:ml-4">
-                  {dateEntries.map((entry) => (
-                    <EntryCard
-                      key={entry.id}
-                      entry={entry}
-                      locale={locale}
-                      t={t}
-                      onEdit={openEditEntry}
-                      onDelete={handleDeleteEntry}
-                      onDownload={handleDownloadAttachment}
-                      onDeleteAttachment={handleDeleteAttachment}
-                      onUpload={handleUploadAttachment}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        {entries.length > 0 ? (
+          <ActivityTable
+            entries={entries}
+            locale={locale}
+            t={t}
+            onEdit={openEditEntry}
+            onDelete={handleDeleteEntry}
+            onDownload={handleDownloadAttachment}
+            onDeleteAttachment={handleDeleteAttachment}
+            onUpload={handleUploadAttachment}
+          />
         ) : (
           <div className="rounded-xl border border-dashed border-surface-border bg-white p-12 text-center">
             <FileText size={42} className="mx-auto mb-4 text-surface-border" />
@@ -619,6 +767,13 @@ export function LogbookDetail() {
               <Input label={t('logbook_field_role')} value={logbookForm.role} onChange={(e) => updateLogbookForm('role', e.target.value)} required />
               <Input label={t('logbook_field_company')} value={logbookForm.company} onChange={(e) => updateLogbookForm('company', e.target.value)} required />
             </div>
+            <Select
+              label={t('logbook_field_semester')}
+              value={logbookForm.semester}
+              onChange={(e) => updateLogbookForm('semester', e.target.value)}
+              options={semesterSelectOptions}
+              placeholder={t('logbook_semester_select')}
+            />
             <Input label={t('logbook_field_mentor')} value={logbookForm.mentor_name} onChange={(e) => updateLogbookForm('mentor_name', e.target.value)} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input type="date" label={t('logbook_field_start')} value={logbookForm.start_date} onChange={(e) => updateLogbookForm('start_date', e.target.value)} />
@@ -654,6 +809,11 @@ export function LogbookDetail() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input type="date" label={t('logbook_entry_date')} value={entryForm.activity_date} onChange={(e) => updateEntryForm('activity_date', e.target.value)} required />
             <Input type="number" min="0.5" step="0.5" label={t('logbook_entry_hours')} value={entryForm.hours} onChange={(e) => updateEntryForm('hours', e.target.value)} required />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Input type="time" label={t('logbook_start_time')} value={entryForm.start_time} onChange={(e) => updateEntryForm('start_time', e.target.value)} />
+            <Input type="time" label={t('logbook_end_time')} value={entryForm.end_time} onChange={(e) => updateEntryForm('end_time', e.target.value)} />
+            <Input label={t('logbook_location')} value={entryForm.location} onChange={(e) => updateEntryForm('location', e.target.value)} />
           </div>
           <Input label={t('logbook_entry_title')} value={entryForm.title} onChange={(e) => updateEntryForm('title', e.target.value)} required />
           <Select

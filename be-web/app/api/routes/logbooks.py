@@ -25,7 +25,7 @@ from app.services.user_asset_service import (
     ensure_upload_dirs,
 )
 
-router = APIRouter(prefix="/logbooks", tags=["Logbooks"])
+router = APIRouter(tags=["Logbooks"])
 
 MAX_EVIDENCE_SIZE = 5 * 1024 * 1024
 ALLOWED_EVIDENCE_TYPES = {
